@@ -12,6 +12,8 @@ obj/
 .vs/
 .vscode/
 *.sln.docstates
+.claude/
+.omc/
 
 ## OS
 Thumbs.db

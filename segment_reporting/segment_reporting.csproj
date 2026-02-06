@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>segment_reporting</AssemblyName>
+    <RootNamespace>segment_reporting</RootNamespace>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="mediabrowser.server.core" Version="4.8.*" />
+    <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
+    <PackageReference Include="System.Memory" Version="4.5.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Pages\*.html" />
+    <EmbeddedResource Include="Pages\*.js" />
+    <EmbeddedResource Include="thumb.png" />
+  </ItemGroup>
+
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('$(EMBY_PLUGINS_DIR)')">
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(EMBY_PLUGINS_DIR)" />
+  </Target>
+
+</Project>
