@@ -1,0 +1,92 @@
+<div id="segmentDashboardPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_dashboard.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">Segment Coverage Dashboard</h2>
+                <button id="btnSyncNow" class="raised button-submit emby-button" style="margin-left: 1em;">
+                    <span>Sync Now</span>
+                </button>
+            </div>
+
+            <!-- Sync Status Indicator -->
+            <div id="syncStatusSection" style="margin-bottom: 2em; padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                <div style="display: flex; align-items: center;">
+                    <i class="md-icon" style="margin-right: 0.5em;">sync</i>
+                    <span id="syncStatusText">Loading sync status...</span>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div id="summaryCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em; margin-bottom: 2em;">
+
+                <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">Total Items</div>
+                    <div id="cardTotalItems" style="font-size: 2em; font-weight: bold;">-</div>
+                </div>
+
+                <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">Intro Coverage</div>
+                    <div id="cardIntroCoverage" style="font-size: 2em; font-weight: bold; color: #4CAF50;">-</div>
+                </div>
+
+                <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">Credits Coverage</div>
+                    <div id="cardCreditsCoverage" style="font-size: 2em; font-weight: bold; color: #FF9800;">-</div>
+                </div>
+
+                <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">Both Segments</div>
+                    <div id="cardBothCoverage" style="font-size: 2em; font-weight: bold; color: #2196F3;">-</div>
+                </div>
+
+                <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+                    <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">No Segments</div>
+                    <div id="cardNeitherCoverage" style="font-size: 2em; font-weight: bold; color: #F44336;">-</div>
+                </div>
+
+            </div>
+
+            <!-- Chart Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Coverage by Library</h3>
+                <div style="background-color: rgba(255, 255, 255, 0.05); padding: 1.5em; border-radius: 4px; margin-bottom: 2em;">
+                    <canvas id="libraryChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Library Table -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Library Details</h3>
+                <div class="paperList">
+                    <table id="libraryTable" class="tblLibraries" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Library Name</th>
+                                <th>Total Items</th>
+                                <th>With Intro</th>
+                                <th>With Credits</th>
+                                <th>Both</th>
+                                <th>Neither</th>
+                                <th>Coverage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="libraryTableBody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 2em;">
+                                    Loading library data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

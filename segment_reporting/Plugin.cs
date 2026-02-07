@@ -49,48 +49,8 @@ namespace segment_reporting
                 },
                 new PluginPageInfo
                 {
-                    Name = "segment_library",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_library.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_series",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_series.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_settings",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_settings.html"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_custom_query",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_custom_query.html"
-                },
-                new PluginPageInfo
-                {
                     Name = "segment_dashboard.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_dashboard.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_library.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_library.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_series.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_series.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_settings.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_settings.js"
-                },
-                new PluginPageInfo
-                {
-                    Name = "segment_custom_query.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_custom_query.js"
                 },
                 new PluginPageInfo
                 {
