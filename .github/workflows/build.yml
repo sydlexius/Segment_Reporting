@@ -26,10 +26,13 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore segment_reporting/segment_reporting.csproj
+        run: dotnet restore Segment_Reporting.sln
 
-      - name: Build
-        run: dotnet build segment_reporting/segment_reporting.csproj --configuration Release --no-restore
+      - name: Build with analyzers
+        run: dotnet build Segment_Reporting.sln --configuration Release --no-restore -warnaserror
+
+      - name: Check code formatting
+        run: dotnet format Segment_Reporting.sln --verify-no-changes --no-restore
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -54,10 +57,10 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore segment_reporting/segment_reporting.csproj
+        run: dotnet restore Segment_Reporting.sln
 
       - name: Build
-        run: dotnet build segment_reporting/segment_reporting.csproj --configuration Release --no-restore
+        run: dotnet build Segment_Reporting.sln --configuration Release --no-restore
 
       - name: Download artifact
         uses: actions/download-artifact@v4
