@@ -375,6 +375,51 @@ namespace segment_reporting.Data
             }
         }
 
+        public void UpdateSegmentTicks(string itemId, string markerType, long ticks)
+        {
+            string column;
+
+            switch (markerType)
+            {
+                case "IntroStart":
+                    column = "IntroStartTicks";
+                    break;
+                case "IntroEnd":
+                    column = "IntroEndTicks";
+                    break;
+                case "CreditsStart":
+                    column = "CreditsStartTicks";
+                    break;
+                default:
+                    _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
+                    return;
+            }
+
+            lock (_dbLock)
+            {
+                var sql = "UPDATE MediaSegments SET " + column + " = @Ticks";
+
+                if (markerType == "IntroStart" || markerType == "IntroEnd")
+                {
+                    sql += ", HasIntro = 1";
+                }
+                else
+                {
+                    sql += ", HasCredits = 1";
+                }
+
+                sql += ", LastSyncDate = @LastSyncDate WHERE ItemId = @ItemId";
+
+                using (var stmt = _connection.PrepareStatement(sql))
+                {
+                    TryBind(stmt, "@Ticks", ticks);
+                    TryBindDateTime(stmt, "@LastSyncDate", DateTime.UtcNow);
+                    TryBind(stmt, "@ItemId", itemId);
+                    stmt.MoveNext();
+                }
+            }
+        }
+
         private void BindSegmentParams(IStatement stmt, SegmentInfo segment)
         {
             TryBind(stmt, "@ItemId", segment.ItemId);
