@@ -43,21 +43,28 @@
             <!-- Results Table -->
             <div class="verticalSection">
                 <h3 class="sectionTitle">Details</h3>
+                <style>
+                    .tblSeries th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+                    .tblSeries th[data-sort]:hover { color: #2196F3; }
+                    .tblSeries th .sort-arrow { margin-left: 4px; font-size: 0.8em; opacity: 0.4; }
+                    .tblSeries th.sort-active .sort-arrow { opacity: 1; }
+                </style>
                 <div class="paperList">
                     <table id="seriesTable" class="tblSeries" style="width: 100%;">
                         <thead>
                             <tr>
-                                <th>Name</th>
-                                <th>Total Items</th>
-                                <th>With Intro</th>
-                                <th>With Credits</th>
-                                <th>Both</th>
-                                <th>Coverage</th>
+                                <th data-sort="name">Name <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="total">Total Items <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="intro">With Intro <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="credits">With Credits <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="both">Both <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="introPct">Intro % <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="creditsPct">Credits % <span class="sort-arrow">&#9650;</span></th>
                             </tr>
                         </thead>
                         <tbody id="seriesTableBody">
                             <tr>
-                                <td colspan="6" style="text-align: center; padding: 2em;">
+                                <td colspan="7" style="text-align: center; padding: 2em;">
                                     Loading series data...
                                 </td>
                             </tr>

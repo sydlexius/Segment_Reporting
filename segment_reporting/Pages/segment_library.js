@@ -25,6 +25,8 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
         var chart = null;
         var currentFilter = 'all';
         var currentSearch = '';
+        var sortColumn = null;
+        var sortAscending = true;
 
         /**
          * Load series list from API
@@ -125,6 +127,76 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
             currentSearch = view.querySelector('#searchBox').value.trim();
             applyClientFilters();
             updateChart();
+            updateTable();
+        }
+
+        /**
+         * Get the sortable value for a given column key
+         */
+        function getSortValue(item, key) {
+            var total = item.TotalEpisodes || 0;
+            switch (key) {
+                case 'name': return (item.SeriesName || '').toLowerCase();
+                case 'total': return total;
+                case 'intro': return item.WithIntro || 0;
+                case 'credits': return item.WithCredits || 0;
+                case 'both': return Math.min(item.WithIntro || 0, item.WithCredits || 0);
+                case 'introPct': return total > 0 ? (item.WithIntro || 0) / total : 0;
+                case 'creditsPct': return total > 0 ? (item.WithCredits || 0) / total : 0;
+                default: return 0;
+            }
+        }
+
+        /**
+         * Sort filteredData by the current sort column and direction
+         */
+        function applySorting() {
+            if (!sortColumn) return;
+            var col = sortColumn;
+            var asc = sortAscending;
+            filteredData.sort(function (a, b) {
+                var va = getSortValue(a, col);
+                var vb = getSortValue(b, col);
+                if (typeof va === 'string') {
+                    var cmp = va.localeCompare(vb);
+                    return asc ? cmp : -cmp;
+                }
+                return asc ? va - vb : vb - va;
+            });
+        }
+
+        /**
+         * Update sort arrow indicators in the table header
+         */
+        function updateSortIndicators() {
+            var headers = view.querySelectorAll('#seriesTable th[data-sort]');
+            headers.forEach(function (th) {
+                var arrow = th.querySelector('.sort-arrow');
+                if (th.getAttribute('data-sort') === sortColumn) {
+                    th.classList.add('sort-active');
+                    arrow.innerHTML = sortAscending ? '&#9650;' : '&#9660;';
+                } else {
+                    th.classList.remove('sort-active');
+                    arrow.innerHTML = '&#9650;';
+                }
+            });
+        }
+
+        /**
+         * Handle column header click for sorting
+         */
+        function handleSortClick(e) {
+            var th = e.target.closest('th[data-sort]');
+            if (!th) return;
+            var col = th.getAttribute('data-sort');
+            if (sortColumn === col) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = col;
+                sortAscending = (col === 'name'); // default asc for name, desc for numbers
+            }
+            applySorting();
+            updateSortIndicators();
             updateTable();
         }
 
@@ -279,10 +351,12 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
 
             if (filteredData.length === 0) {
                 var emptyRow = document.createElement('tr');
-                emptyRow.innerHTML = '<td colspan="6" style="text-align: center; padding: 2em;">No results found. Try adjusting your filters.</td>';
+                emptyRow.innerHTML = '<td colspan="7" style="text-align: center; padding: 2em;">No results found. Try adjusting your filters.</td>';
                 tbody.appendChild(emptyRow);
                 return;
             }
+
+            applySorting();
 
             filteredData.forEach(function (item) {
                 var row = document.createElement('tr');
@@ -294,9 +368,8 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                 var withCredits = item.WithCredits || 0;
                 var withBoth = Math.min(withIntro, withCredits);
 
-                // Coverage = percentage of items with at least one segment
-                var itemsWithSegments = withIntro + withCredits - withBoth;
-                var coveragePct = helpers.percentage(itemsWithSegments, totalItems);
+                var introPct = helpers.percentage(withIntro, totalItems);
+                var creditsPct = helpers.percentage(withCredits, totalItems);
 
                 row.innerHTML =
                     '<td>' + (item.SeriesName || 'Unknown') + '</td>' +
@@ -304,7 +377,8 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                     '<td>' + withIntro.toLocaleString() + '</td>' +
                     '<td>' + withCredits.toLocaleString() + '</td>' +
                     '<td>' + withBoth.toLocaleString() + '</td>' +
-                    '<td><strong>' + coveragePct + '</strong></td>';
+                    '<td><strong>' + introPct + '</strong></td>' +
+                    '<td><strong>' + creditsPct + '</strong></td>';
 
                 row.addEventListener('click', function () {
                     helpers.navigate('segment_series', { seriesId: item.SeriesId });
@@ -352,6 +426,11 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
             var filterDropdown = view.querySelector('#filterDropdown');
             if (filterDropdown) {
                 filterDropdown.addEventListener('change', handleFilterChange);
+            }
+
+            var thead = view.querySelector('#seriesTable thead');
+            if (thead) {
+                thead.addEventListener('click', handleSortClick);
             }
 
             var searchBox = view.querySelector('#searchBox');
