@@ -42,8 +42,8 @@ From the plugin Settings page, you can:
 
 ### Prerequisites
 
-- .NET 6 SDK or later
-- Emby Server SDK (included as a NuGet package reference)
+- .NET SDK (any modern version such as .NET 6, 7, or 8 to compile the project)
+- The project compiles to `.NET Standard 2.0` for compatibility with Emby Server
 
 ### Build
 
@@ -54,6 +54,12 @@ dotnet build --configuration Release
 ```
 
 The compiled DLL will be in `bin/Release/`.
+
+### Dependencies
+
+- `mediabrowser.server.core` (4.8.x) — Emby server SDK
+- `SQLitePCL.pretty.core` (1.2.2) — SQLite database wrapper
+- `System.Memory` (4.5.5) — Memory utilities
 
 ## Supported Segment Types
 

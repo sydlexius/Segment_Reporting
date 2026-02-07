@@ -1,4 +1,4 @@
-# Segment Reporting v0.0.6 - Initial Release
+# Segment Reporting v0.0.7 - Initial Release
 
 An Emby server plugin that caches media segment markers (Intros, Credits) into a local SQLite database and provides comprehensive reporting, charts, inline editing, and bulk management through embedded web pages.
 
