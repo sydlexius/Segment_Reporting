@@ -1,0 +1,74 @@
+<div id="segmentCustomQueryPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_custom_query.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">Custom Query</h2>
+            </div>
+
+            <!-- Query Input Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">SQL Query</h3>
+
+                <!-- Canned Queries Dropdown -->
+                <div style="margin-bottom: 1em;">
+                    <label for="cannedQueriesDropdown" style="display: block; margin-bottom: 0.5em;">Quick Queries</label>
+                    <select id="cannedQueriesDropdown" style="width: 100%; padding: 0.5em; border-radius: 4px;">
+                        <option value="">-- Select a canned query --</option>
+                    </select>
+                </div>
+
+                <!-- SQL Input -->
+                <div style="margin-bottom: 1em;">
+                    <label for="sqlInput" style="display: block; margin-bottom: 0.5em;">SQL Query (read-only)</label>
+                    <textarea id="sqlInput" style="width: 100%; min-height: 150px; padding: 0.5em; border-radius: 4px; font-family: monospace; border: 1px solid rgba(128, 128, 128, 0.3);"
+                        placeholder="SELECT * FROM MediaSegments WHERE HasIntro = 0 LIMIT 50"></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="margin-bottom: 2em;">
+                    <button id="btnExecute" class="raised button-submit emby-button" style="margin-right: 1em;">
+                        <span>Execute Query</span>
+                    </button>
+                    <button id="btnExportCsv" class="raised emby-button" style="margin-right: 1em; display: none;">
+                        <span>Export to CSV</span>
+                    </button>
+                    <button id="btnClear" class="raised emby-button">
+                        <span>Clear Results</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Results Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Results</h3>
+
+                <!-- Result Info -->
+                <div id="resultInfo" style="margin-bottom: 1em; padding: 0.5em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; display: none;">
+                    <span id="resultCount" style="display: none;">Rows returned: <strong id="rowCount">0</strong></span>
+                    <span id="resultError" style="color: #F44336; display: none;"></span>
+                </div>
+
+                <!-- Results Table -->
+                <div class="paperList" style="overflow-x: auto;">
+                    <table id="resultsTable" style="width: 100%; border-collapse: collapse; display: none;">
+                        <thead id="resultsTableHead">
+                        </thead>
+                        <tbody id="resultsTableBody">
+                        </tbody>
+                    </table>
+                    <div id="noResults" style="text-align: center; padding: 2em; color: rgba(128, 128, 128, 0.7);">
+                        No results to display. Execute a query to see results.
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

@@ -321,6 +321,13 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                 btnSyncNow.addEventListener('click', handleSyncNow);
             }
 
+            var btnCustomQuery = view.querySelector('#btnCustomQuery');
+            if (btnCustomQuery) {
+                btnCustomQuery.addEventListener('click', function () {
+                    helpers.navigate('segment_custom_query');
+                });
+            }
+
             var btnSettings = view.querySelector('#btnSettings');
             if (btnSettings) {
                 btnSettings.addEventListener('click', function () {
