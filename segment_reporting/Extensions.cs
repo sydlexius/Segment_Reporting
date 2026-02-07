@@ -1,7 +1,7 @@
-using MediaBrowser.Common.Configuration;
-using MediaBrowser.Model.Serialization;
 using System.Collections.Generic;
 using System.IO;
+using MediaBrowser.Common.Configuration;
+using MediaBrowser.Model.Serialization;
 
 namespace segment_reporting
 {

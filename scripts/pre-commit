@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Pre-commit hook: runs code quality checks before allowing a commit.
+# Install via: ./scripts/setup-hooks.sh
+
+set -e
+
+SOLUTION="Segment_Reporting.sln"
+
+# Resolve repo root (works whether invoked from .git/hooks or directly)
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "=== Pre-commit: checking code quality ==="
+
+# 1. Verify the project builds cleanly (analyzers run during build)
+echo "[1/2] Building with analyzers..."
+dotnet build "$REPO_ROOT/$SOLUTION" -c Release --no-restore -consoleloggerparameters:NoSummary -warnaserror 2>&1
+BUILD_EXIT=$?
+if [ $BUILD_EXIT -ne 0 ]; then
+    echo ""
+    echo "COMMIT BLOCKED: Build failed or analyzer warnings found."
+    echo "Fix the issues above, then try again."
+    exit 1
+fi
+
+# 2. Check formatting (dotnet format --verify-no-changes)
+echo "[2/2] Checking code formatting..."
+dotnet format "$REPO_ROOT/$SOLUTION" --verify-no-changes --no-restore 2>&1
+FORMAT_EXIT=$?
+if [ $FORMAT_EXIT -ne 0 ]; then
+    echo ""
+    echo "COMMIT BLOCKED: Code formatting issues found."
+    echo "Run 'dotnet format' to fix them, then try again."
+    exit 1
+fi
+
+echo "=== Pre-commit: all checks passed ==="

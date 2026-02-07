@@ -1,11 +1,11 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Drawing;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace segment_reporting
 {

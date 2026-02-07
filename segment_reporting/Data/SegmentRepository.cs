@@ -1,8 +1,8 @@
-using MediaBrowser.Model.Logging;
-using SQLitePCL.pretty;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using MediaBrowser.Model.Logging;
+using SQLitePCL.pretty;
 
 namespace segment_reporting.Data
 {
@@ -16,7 +16,7 @@ namespace segment_reporting.Data
         private readonly ILogger _logger;
         private readonly string _dbPath;
 
-        private static readonly string[] DateFormats = new[]
+        private static readonly string[] _dateFormats = new[]
         {
             "yyyy-MM-dd HH:mm:ss.fff",
             "yyyy-MM-dd HH:mm:ss",
@@ -256,7 +256,7 @@ namespace segment_reporting.Data
 
             var str = row.GetString(index);
             DateTime result;
-            if (DateTime.TryParseExact(str, DateFormats, CultureInfo.InvariantCulture,
+            if (DateTime.TryParseExact(str, _dateFormats, CultureInfo.InvariantCulture,
                     DateTimeStyles.None, out result))
             {
                 return result;
