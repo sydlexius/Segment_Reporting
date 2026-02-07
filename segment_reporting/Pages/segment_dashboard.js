@@ -320,6 +320,13 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
             if (btnSyncNow) {
                 btnSyncNow.addEventListener('click', handleSyncNow);
             }
+
+            var btnSettings = view.querySelector('#btnSettings');
+            if (btnSettings) {
+                btnSettings.addEventListener('click', function () {
+                    helpers.navigate('segment_settings');
+                });
+            }
         });
 
         view.addEventListener('viewhide', function (e) {

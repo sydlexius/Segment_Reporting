@@ -1,0 +1,67 @@
+<div id="segmentSettingsPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_settings.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">Segment Reporting Settings</h2>
+            </div>
+
+            <!-- Cache Stats Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Cache Statistics</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em;">
+
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Cached Rows</div>
+                            <div id="statRowCount" style="font-size: 1.5em; font-weight: bold;">-</div>
+                        </div>
+
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Database Size</div>
+                            <div id="statDbSize" style="font-size: 1.5em; font-weight: bold;">-</div>
+                        </div>
+
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Last Sync</div>
+                            <div id="statLastSync" style="font-size: 1.5em; font-weight: bold;">-</div>
+                        </div>
+
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Last Sync Duration</div>
+                            <div id="statSyncDuration" style="font-size: 1.5em; font-weight: bold;">-</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Advanced</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em;">
+
+                    <p style="margin-bottom: 1em; opacity: 0.8;">
+                        Force a full rescan to drop and rebuild the entire segment cache from Emby's data.
+                        Your segment data in Emby is not affected.
+                    </p>
+
+                    <button id="btnForceRescan" class="raised button-submit emby-button" style="margin-right: 1em;">
+                        <span>Force Full Rescan</span>
+                    </button>
+
+                    <button id="btnRefreshStats" class="raised emby-button">
+                        <span>Refresh Stats</span>
+                    </button>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

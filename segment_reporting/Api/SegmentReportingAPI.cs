@@ -170,6 +170,13 @@ namespace segment_reporting.Api
     {
     }
 
+    // http://localhost:8096/emby/segment_reporting/cache_stats
+    [Route("/segment_reporting/cache_stats", "GET", Summary = "Get cache row count, DB file size, and last sync info")]
+    [Authenticated(Roles = "admin")]
+    public class GetCacheStats : IReturn<object>
+    {
+    }
+
     // http://localhost:8096/emby/segment_reporting/submit_custom_query
     [Route("/segment_reporting/submit_custom_query", "POST", Summary = "Execute read-only SQL against the cache")]
     [Authenticated(Roles = "admin")]
@@ -660,6 +667,32 @@ namespace segment_reporting.Api
                 _logger.ErrorException("ForceRescan: Failed", ex);
                 return new { error = ex.Message };
             }
+        }
+
+        public object Get(GetCacheStats request)
+        {
+            _logger.Info("GetCacheStats");
+
+            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
+            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+
+            int rowCount = repo.GetRowCount();
+            SyncStatusInfo syncStatus = repo.GetSyncStatus();
+
+            long dbFileSize = 0;
+            if (File.Exists(dbPath))
+            {
+                dbFileSize = new FileInfo(dbPath).Length;
+            }
+
+            return new
+            {
+                rowCount,
+                dbFileSize,
+                lastFullSync = syncStatus?.LastFullSync,
+                itemsScanned = syncStatus?.ItemsScanned ?? 0,
+                syncDuration = syncStatus?.SyncDuration ?? 0
+            };
         }
 
         public object Post(SubmitCustomQuery request)
