@@ -130,15 +130,18 @@ define([], function () {
          * @param {object} params - Query parameters as key-value pairs
          */
         navigate: function (page, params) {
-            var queryString = Object.keys(params)
-                .map(function (key) {
-                    return encodeURIComponent(key) + '=' + encodeURIComponent(params[key]);
-                })
-                .join('&');
+            // Store parameters in sessionStorage for reliable retrieval
+            if (params && Object.keys(params).length > 0) {
+                sessionStorage.setItem('segment_reporting_nav_params', JSON.stringify(params));
+            }
 
             var url = 'configurationpage?name=' + page;
-            if (queryString) {
-                url += '&' + queryString;
+
+            // Skip verification for known internal segment_reporting pages
+            var knownPages = ['segment_dashboard', 'segment_library', 'segment_series', 'segment_settings', 'segment_custom_query'];
+            if (knownPages.indexOf(page) >= 0) {
+                Dashboard.navigate(url);
+                return;
             }
 
             // Verify the target page exists before navigating to avoid crashing the view
@@ -165,13 +168,34 @@ define([], function () {
         },
 
         /**
-         * Get query parameter from URL
+         * Get query parameter from URL (reads from sessionStorage for plugin pages)
          * @param {string} name - Parameter name
          * @returns {string|null} Parameter value or null
          */
         getQueryParam: function (name) {
+            // First try sessionStorage (for plugin page navigation)
+            var storedParams = sessionStorage.getItem('segment_reporting_nav_params');
+            if (storedParams) {
+                try {
+                    var params = JSON.parse(storedParams);
+                    if (params && params[name]) {
+                        return params[name];
+                    }
+                } catch (e) {
+                    console.error('Failed to parse navigation params:', e);
+                }
+            }
+
+            // Fallback to URL query string parameters
             var urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(name);
+        },
+
+        /**
+         * Clear stored navigation parameters (call after consuming them)
+         */
+        clearNavParams: function () {
+            sessionStorage.removeItem('segment_reporting_nav_params');
         },
 
         /**

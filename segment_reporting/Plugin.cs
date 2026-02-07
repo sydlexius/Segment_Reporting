@@ -54,6 +54,16 @@ namespace segment_reporting
                 },
                 new PluginPageInfo
                 {
+                    Name = "segment_library",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_library.html"
+                },
+                new PluginPageInfo
+                {
+                    Name = "segment_library.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_library.js"
+                },
+                new PluginPageInfo
+                {
                     Name = "helper_function.js",
                     EmbeddedResourcePath = GetType().Namespace + ".Pages.helper_function.js"
                 },

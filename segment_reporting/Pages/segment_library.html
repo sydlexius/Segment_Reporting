@@ -1,0 +1,72 @@
+<div id="segmentLibraryPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_library.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <button id="btnBackToDashboard" class="raised button-cancel emby-button" style="margin-right: 1em;">
+                    <span>← Back to Dashboard</span>
+                </button>
+                <h2 id="pageTitle" class="sectionTitle">Library</h2>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="verticalSection" style="margin-bottom: 2em;">
+                <div style="display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 0 0 auto;">
+                        <label for="filterDropdown" style="margin-right: 0.5em;">Filter:</label>
+                        <select id="filterDropdown" class="emby-select-withcolor emby-select" style="width: 200px;">
+                            <option value="all">All</option>
+                            <option value="complete">Complete (Both Segments)</option>
+                            <option value="missing_intro">Missing Intros</option>
+                            <option value="missing_credits">Missing Credits</option>
+                            <option value="no_segments">No Segments</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1 1 300px;">
+                        <input id="searchBox" type="text" class="emby-input" placeholder="Search by name..." style="width: 100%; max-width: 400px;" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Coverage by Series/Movie</h3>
+                <div style="background-color: rgba(255, 255, 255, 0.05); padding: 1.5em; border-radius: 4px; margin-bottom: 2em;">
+                    <canvas id="seriesChart" style="max-height: 400px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Results Table -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Details</h3>
+                <div class="paperList">
+                    <table id="seriesTable" class="tblSeries" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Total Items</th>
+                                <th>With Intro</th>
+                                <th>With Credits</th>
+                                <th>Both</th>
+                                <th>Coverage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="seriesTableBody">
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 2em;">
+                                    Loading series data...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
