@@ -1,0 +1,34 @@
+meta {
+  name: Get Canned Queries
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/canned_queries
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Canned Queries
+
+  Returns list of 6 built-in queries:
+  1. All movies missing intros
+  2. All movies missing credits
+  3. All episodes missing intros
+  4. All episodes missing credits
+  5. Longest intros (top 50)
+  6. Coverage summary by library
+
+  Each query has `name` and `sql` fields.
+
+  **Acceptance Criteria:**
+  - ✅ Returns array of 6 pre-built queries
+  - ✅ Each has name and sql fields
+  - ✅ Requires admin authentication
+}

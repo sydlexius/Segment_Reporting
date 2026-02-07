@@ -1,0 +1,5 @@
+# Bruno local environment files (may contain API keys)
+**/environments/*.local.bru
+
+# Bruno collections run results
+**/collections.run.json

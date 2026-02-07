@@ -1,0 +1,46 @@
+meta {
+  name: Force Rescan
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/force_rescan
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Force Rescan
+
+  ⚠️ **DESTRUCTIVE ACTION** - Drops and rebuilds entire cache.
+
+  This endpoint:
+  1. Calls `SegmentRepository.DeleteAllData()` - drops MediaSegments and SyncStatus tables
+  2. Queues TaskSyncSegments to rebuild cache from Emby's source data
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Cache dropped and sync task queued"
+  }
+  ```
+
+  **Verification:**
+  1. Before calling: Run custom query `SELECT COUNT(*) FROM MediaSegments` (should have data)
+  2. Call this endpoint
+  3. Immediately after: Run same query (should return 0 or table not found)
+  4. Wait for sync task to complete
+  5. After sync: Run query again (should have data repopulated)
+
+  **Acceptance Criteria:**
+  - ✅ Drops all cache data
+  - ✅ Queues full resync
+  - ✅ Cache is rebuilt from Emby source
+  - ✅ Requires admin authentication
+}

@@ -1,0 +1,40 @@
+meta {
+  name: Submit Custom Query - Invalid (Should Reject)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/submit_custom_query?query=DELETE FROM MediaSegments
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Submit Custom Query - Security Test
+
+  This should be **REJECTED** because DELETE is not allowed.
+
+  **Expected Response:**
+  ```json
+  {
+    "Columns": [],
+    "Rows": [],
+    "Message": "Only SELECT, PRAGMA, and EXPLAIN queries are allowed"
+  }
+  ```
+
+  **Other invalid queries to test:**
+  - `INSERT INTO MediaSegments ...`
+  - `UPDATE MediaSegments SET ...`
+  - `DROP TABLE MediaSegments`
+  - `ALTER TABLE MediaSegments ...`
+
+  **Acceptance Criteria:**
+  - ✅ Rejects non-SELECT queries
+  - ✅ Returns appropriate error message
+}

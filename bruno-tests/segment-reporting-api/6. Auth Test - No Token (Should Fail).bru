@@ -1,0 +1,31 @@
+meta {
+  name: Auth Test - No Token (Should Fail)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/sync_status
+  body: none
+  auth: none
+}
+
+docs {
+  ## Authentication Test
+
+  This request deliberately **omits the X-Emby-Token header**.
+
+  **Expected Result:**
+  - HTTP 401 Unauthorized or 403 Forbidden
+  - Request should be rejected
+
+  **Acceptance Criteria:**
+  - ✅ All endpoints require admin authentication
+  - ✅ Requests without token are rejected
+  - ✅ Non-admin users are rejected (if you have a non-admin user to test)
+
+  **To Test:**
+  1. Run this request (no token) → should fail
+  2. Add invalid token → should fail
+  3. Add valid admin token → should succeed
+}

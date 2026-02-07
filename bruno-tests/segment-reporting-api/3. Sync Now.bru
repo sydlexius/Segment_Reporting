@@ -1,0 +1,40 @@
+meta {
+  name: Sync Now
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/sync_now
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Sync Now
+
+  Triggers immediate full sync by queuing TaskSyncSegments.
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true,
+    "message": "Sync task queued"
+  }
+  ```
+
+  **Verification:**
+  After calling this endpoint, check:
+  - Emby Dashboard → Scheduled Tasks → "Sync Segment Data" should be running
+  - Check logs for "TaskSyncSegments: Starting full segment sync"
+
+  **Acceptance Criteria:**
+  - ✅ Queues TaskSyncSegments
+  - ✅ Returns success status
+  - ✅ Task appears in Emby's Scheduled Tasks
+  - ✅ Requires admin authentication
+}

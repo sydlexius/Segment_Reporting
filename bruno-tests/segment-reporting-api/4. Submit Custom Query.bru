@@ -1,0 +1,51 @@
+meta {
+  name: Submit Custom Query
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/submit_custom_query?query=SELECT COUNT(*) as TotalSegments FROM MediaSegments
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Submit Custom Query
+
+  Executes read-only SQL against the cache database.
+
+  **Security:** Only SELECT, PRAGMA, and EXPLAIN queries are allowed.
+
+  **Test Queries:**
+
+  Valid:
+  - `SELECT COUNT(*) FROM MediaSegments`
+  - `SELECT * FROM MediaSegments LIMIT 10`
+  - `PRAGMA table_info(MediaSegments)`
+
+  Invalid (should be rejected):
+  - `INSERT INTO MediaSegments ...`
+  - `UPDATE MediaSegments SET ...`
+  - `DELETE FROM MediaSegments`
+  - `DROP TABLE MediaSegments`
+
+  **Expected Response:**
+  ```json
+  {
+    "Columns": ["TotalSegments"],
+    "Rows": [["42"]],
+    "Message": "1 row(s) returned"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Executes SELECT queries successfully
+  - ✅ Rejects INSERT/UPDATE/DELETE queries
+  - ✅ Returns columns, rows, and message
+  - ✅ Requires admin authentication
+}

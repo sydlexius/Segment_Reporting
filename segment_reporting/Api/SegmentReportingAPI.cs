@@ -25,7 +25,9 @@ using MediaBrowser.Controller.Persistence;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Logging;
 using MediaBrowser.Model.Services;
+using MediaBrowser.Model.Tasks;
 using segment_reporting.Data;
+using segment_reporting.Tasks;
 
 namespace segment_reporting.Api
 {
@@ -135,12 +137,50 @@ namespace segment_reporting.Api
         public string MarkerTypes { get; set; }
     }
 
+    // http://localhost:8096/emby/segment_reporting/sync_now
+    [Route("/segment_reporting/sync_now", "POST", Summary = "Trigger immediate full sync")]
+    [Authenticated(Roles = "admin")]
+    public class SyncNow : IReturn<object>
+    {
+    }
+
+    // http://localhost:8096/emby/segment_reporting/sync_status
+    [Route("/segment_reporting/sync_status", "GET", Summary = "Get last sync time, items scanned, duration")]
+    [Authenticated(Roles = "admin")]
+    public class GetSyncStatus : IReturn<object>
+    {
+    }
+
+    // http://localhost:8096/emby/segment_reporting/force_rescan
+    [Route("/segment_reporting/force_rescan", "POST", Summary = "Drop and rebuild entire cache from scratch")]
+    [Authenticated(Roles = "admin")]
+    public class ForceRescan : IReturn<object>
+    {
+    }
+
+    // http://localhost:8096/emby/segment_reporting/submit_custom_query
+    [Route("/segment_reporting/submit_custom_query", "POST", Summary = "Execute read-only SQL against the cache")]
+    [Authenticated(Roles = "admin")]
+    public class SubmitCustomQuery : IReturn<object>
+    {
+        [ApiMember(Name = "query", Description = "SQL query to execute", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string Query { get; set; }
+    }
+
+    // http://localhost:8096/emby/segment_reporting/canned_queries
+    [Route("/segment_reporting/canned_queries", "GET", Summary = "Return list of built-in queries")]
+    [Authenticated(Roles = "admin")]
+    public class GetCannedQueries : IReturn<object>
+    {
+    }
+
     public class SegmentReportingAPI : IService, IRequiresRequest
     {
         private readonly ILogger _logger;
         private readonly IServerConfigurationManager _config;
         private readonly ILibraryManager _libraryManager;
         private readonly IItemRepository _itemRepository;
+        private readonly ITaskManager _taskManager;
 
         private static readonly HashSet<string> _validMarkerTypes = new HashSet<string>
         {
@@ -150,12 +190,14 @@ namespace segment_reporting.Api
         public SegmentReportingAPI(ILogManager logger,
             IServerConfigurationManager config,
             ILibraryManager libraryManager,
-            IItemRepository itemRepository)
+            IItemRepository itemRepository,
+            ITaskManager taskManager)
         {
             _logger = logger.GetLogger("SegmentReporting - API");
             _config = config;
             _libraryManager = libraryManager;
             _itemRepository = itemRepository;
+            _taskManager = taskManager;
         }
 
         public IRequest Request { get; set; }
@@ -475,6 +517,130 @@ namespace segment_reporting.Api
             }
 
             return new { succeeded, failed, errors };
+        }
+
+        public object Post(SyncNow request)
+        {
+            _logger.Info("SyncNow: Triggering sync task");
+
+            try
+            {
+                _taskManager.QueueScheduledTask<TaskSyncSegments>();
+                return new { success = true, message = "Sync task queued" };
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorException("SyncNow: Failed to queue sync task", ex);
+                return new { error = ex.Message };
+            }
+        }
+
+        public object Get(GetSyncStatus request)
+        {
+            _logger.Info("GetSyncStatus");
+
+            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
+            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+
+            SyncStatusInfo status = repo.GetSyncStatus();
+
+            if (status == null)
+            {
+                return new
+                {
+                    lastFullSync = (DateTime?)null,
+                    itemsScanned = 0,
+                    syncDuration = 0,
+                    message = "No sync has been performed yet"
+                };
+            }
+
+            return new
+            {
+                lastFullSync = status.LastFullSync,
+                itemsScanned = status.ItemsScanned,
+                syncDuration = status.SyncDuration
+            };
+        }
+
+        public object Post(ForceRescan request)
+        {
+            _logger.Info("ForceRescan: Dropping and rebuilding cache");
+
+            try
+            {
+                string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
+                SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+
+                repo.DeleteAllData();
+
+                _taskManager.QueueScheduledTask<TaskSyncSegments>();
+
+                return new { success = true, message = "Cache dropped and sync task queued" };
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorException("ForceRescan: Failed", ex);
+                return new { error = ex.Message };
+            }
+        }
+
+        public object Post(SubmitCustomQuery request)
+        {
+            _logger.Info("SubmitCustomQuery: query={0}", request.Query);
+
+            if (string.IsNullOrWhiteSpace(request.Query))
+            {
+                return new { error = "query is required" };
+            }
+
+            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
+            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+
+            QueryResult result = repo.RunCustomQuery(request.Query);
+
+            return result;
+        }
+
+        public object Get(GetCannedQueries request)
+        {
+            _logger.Info("GetCannedQueries");
+
+            var queries = new List<object>
+            {
+                new
+                {
+                    name = "All movies missing intros",
+                    sql = "SELECT * FROM MediaSegments WHERE ItemType = 'Movie' AND HasIntro = 0"
+                },
+                new
+                {
+                    name = "All movies missing credits",
+                    sql = "SELECT * FROM MediaSegments WHERE ItemType = 'Movie' AND HasCredits = 0"
+                },
+                new
+                {
+                    name = "All episodes missing intros",
+                    sql = "SELECT * FROM MediaSegments WHERE ItemType = 'Episode' AND HasIntro = 0"
+                },
+                new
+                {
+                    name = "All episodes missing credits",
+                    sql = "SELECT * FROM MediaSegments WHERE ItemType = 'Episode' AND HasCredits = 0"
+                },
+                new
+                {
+                    name = "Longest intros",
+                    sql = "SELECT ItemName, SeriesName, (IntroEndTicks - IntroStartTicks) / 10000000.0 AS DurationSec FROM MediaSegments WHERE HasIntro = 1 ORDER BY DurationSec DESC LIMIT 50"
+                },
+                new
+                {
+                    name = "Coverage summary by library",
+                    sql = "SELECT LibraryName, COUNT(*) AS Total, SUM(HasIntro) AS WithIntro, SUM(HasCredits) AS WithCredits FROM MediaSegments GROUP BY LibraryName"
+                }
+            };
+
+            return queries;
         }
 
         private void WriteSegmentToEmby(long internalId, string markerType, long? ticks)

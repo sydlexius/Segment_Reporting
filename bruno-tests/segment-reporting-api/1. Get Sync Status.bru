@@ -1,0 +1,30 @@
+meta {
+  name: Get Sync Status
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/sync_status
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Sync Status
+
+  Returns last sync statistics:
+  - lastFullSync: DateTime of last sync
+  - itemsScanned: Number of items processed
+  - syncDuration: Duration in milliseconds
+
+  Returns null values if no sync has been performed yet.
+
+  **Acceptance Criteria:**
+  - ✅ Returns sync status or "No sync performed" message
+  - ✅ Requires admin authentication
+}
