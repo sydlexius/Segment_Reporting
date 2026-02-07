@@ -26,6 +26,7 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
         var chart = null;
         var bulkSource = null;  // { ItemId, ItemName, IntroStartTicks, IntroEndTicks, CreditsStartTicks }
         var editingRow = null;  // currently editing row element (only one at a time)
+        var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
 
         // ── Data Loading ──
 
@@ -246,32 +247,51 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
 
         function renderEpisodeTable(episodes, container) {
             container.innerHTML = '';
+            var seasonId = container.getAttribute('data-season-id');
 
             if (episodes.length === 0) {
                 container.innerHTML = '<div style="text-align: center; padding: 1em; opacity: 0.7;">No episodes found.</div>';
                 return;
             }
 
+            // Initialize selection tracking for this season
+            if (!selectedItems[seasonId]) {
+                selectedItems[seasonId] = {};
+            }
+
+            // Bulk action row
+            var bulkRow = createBulkActionRow(seasonId, episodes, container);
+            container.appendChild(bulkRow);
+
             var table = document.createElement('table');
             table.style.cssText = 'width: 100%; border-collapse: collapse;';
 
-            // Header
+            // Header with checkbox
+            var thStyle = 'padding: 0.5em; border-bottom: 1px solid rgba(128,128,128,0.3);';
             var thead = document.createElement('thead');
             thead.innerHTML =
                 '<tr>' +
-                    '<th style="padding: 0.5em; text-align: left; border-bottom: 1px solid rgba(128,128,128,0.3);">#</th>' +
-                    '<th style="padding: 0.5em; text-align: left; border-bottom: 1px solid rgba(128,128,128,0.3);">Episode Name</th>' +
-                    '<th style="padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.3);">IntroStart</th>' +
-                    '<th style="padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.3);">IntroEnd</th>' +
-                    '<th style="padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.3);">CreditsStart</th>' +
-                    '<th style="padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128,128,128,0.3);">Actions</th>' +
+                    '<th style="' + thStyle + ' text-align: center; width: 40px;"><input type="checkbox" class="select-all-cb" title="Select all"></th>' +
+                    '<th style="' + thStyle + ' text-align: left;">#</th>' +
+                    '<th style="' + thStyle + ' text-align: left;">Episode Name</th>' +
+                    '<th style="' + thStyle + ' text-align: center;">IntroStart</th>' +
+                    '<th style="' + thStyle + ' text-align: center;">IntroEnd</th>' +
+                    '<th style="' + thStyle + ' text-align: center;">CreditsStart</th>' +
+                    '<th style="' + thStyle + ' text-align: center;">Actions</th>' +
                 '</tr>';
+
+            // Select-all handler
+            var selectAllCb = thead.querySelector('.select-all-cb');
+            selectAllCb.addEventListener('change', function () {
+                toggleSelectAll(seasonId, this.checked, episodes, container);
+            });
+
             table.appendChild(thead);
 
             // Body
             var tbody = document.createElement('tbody');
             episodes.forEach(function (ep) {
-                var row = createEpisodeRow(ep);
+                var row = createEpisodeRow(ep, seasonId);
                 tbody.appendChild(row);
             });
             table.appendChild(tbody);
@@ -279,7 +299,7 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
             container.appendChild(table);
         }
 
-        function createEpisodeRow(ep) {
+        function createEpisodeRow(ep, seasonId) {
             var row = document.createElement('tr');
             row.setAttribute('data-item-id', ep.ItemId);
             row.style.borderBottom = '1px solid rgba(128,128,128,0.15)';
@@ -291,14 +311,22 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
 
             var cellStyle = 'padding: 0.5em; ';
             var centerStyle = cellStyle + 'text-align: center; ';
+            var isChecked = selectedItems[seasonId] && selectedItems[seasonId][ep.ItemId];
 
             row.innerHTML =
+                '<td style="' + centerStyle + 'width: 40px;"><input type="checkbox" class="row-select-cb"' + (isChecked ? ' checked' : '') + '></td>' +
                 '<td style="' + cellStyle + '">' + (ep.EpisodeNumber || '-') + '</td>' +
                 '<td style="' + cellStyle + '">' + (ep.ItemName || 'Unknown') + '</td>' +
                 '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + helpers.ticksToTime(ep.IntroStartTicks) + '</td>' +
                 '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + helpers.ticksToTime(ep.IntroEndTicks) + '</td>' +
                 '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + helpers.ticksToTime(ep.CreditsStartTicks) + '</td>' +
                 '<td style="' + centerStyle + '">' + buildActionButtons(ep) + '</td>';
+
+            // Row checkbox handler
+            var cb = row.querySelector('.row-select-cb');
+            cb.addEventListener('change', function () {
+                toggleRowSelect(seasonId, ep.ItemId, this.checked, row);
+            });
 
             // Hover effect
             row.addEventListener('mouseenter', function () {
@@ -325,7 +353,8 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
         function buildActionButtons(ep) {
             return '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>' +
                    '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>' +
-                   '<button class="raised emby-button btn-copy" title="Mark as bulk copy source" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Copy</button>';
+                   '<button class="raised emby-button btn-copy" title="Mark as bulk copy source" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Copy</button>' +
+                   '<button class="raised emby-button btn-end-credits" title="Set CreditsStart to end of episode" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">End</button>';
         }
 
         function attachRowActions(row, ep) {
@@ -351,6 +380,14 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                 btnCopy.addEventListener('click', function (e) {
                     e.stopPropagation();
                     markAsCopySource(ep);
+                });
+            }
+
+            var btnEndCredits = row.querySelector('.btn-end-credits');
+            if (btnEndCredits) {
+                btnEndCredits.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    setCreditsToEnd(row, ep);
                 });
             }
         }
@@ -512,18 +549,19 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
             // Re-fetch the single item to get updated ticks
             helpers.apiCall('item_segments?itemId=' + encodeURIComponent(ep.ItemId), 'GET')
                 .then(function (data) {
-                    if (data && data.length > 0) {
-                        var updated = data[0];
+                    if (data && !data.error) {
                         // Update cached data
-                        ep.IntroStartTicks = updated.IntroStartTicks;
-                        ep.IntroEndTicks = updated.IntroEndTicks;
-                        ep.CreditsStartTicks = updated.CreditsStartTicks;
-                        ep.HasIntro = updated.HasIntro;
-                        ep.HasCredits = updated.HasCredits;
+                        ep.IntroStartTicks = data.IntroStartTicks;
+                        ep.IntroEndTicks = data.IntroEndTicks;
+                        ep.CreditsStartTicks = data.CreditsStartTicks;
+                        ep.HasIntro = data.HasIntro;
+                        ep.HasCredits = data.HasCredits;
                     }
 
                     // Rebuild the row in-place
-                    var newRow = createEpisodeRow(ep);
+                    var container = row.closest('[data-season-id]');
+                    var seasonId = container ? container.getAttribute('data-season-id') : null;
+                    var newRow = createEpisodeRow(ep, seasonId);
                     row.parentNode.replaceChild(newRow, row);
                     editingRow = null;
                 })
@@ -643,6 +681,9 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                     }
                 }
             });
+
+            // Show the "Apply Source" button in all bulk action rows
+            updateAllBulkApplyButtons();
         }
 
         function clearBulkSource() {
@@ -656,6 +697,383 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                     row.style.backgroundColor = '';
                 }
             });
+
+            // Hide the "Apply Source" button in all bulk action rows
+            updateAllBulkApplyButtons();
+        }
+
+        // ── Bulk Operations ──
+
+        function createBulkActionRow(seasonId, episodes, container) {
+            var row = document.createElement('div');
+            row.className = 'bulk-action-row';
+            row.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.5em 0.75em; margin-bottom: 0.5em; background-color: rgba(255,255,255,0.03); border-radius: 4px; flex-wrap: wrap; gap: 0.5em;';
+
+            var leftSide = document.createElement('div');
+            leftSide.style.cssText = 'display: flex; align-items: center; gap: 0.75em;';
+
+            var selectionInfo = document.createElement('span');
+            selectionInfo.className = 'selection-info';
+            selectionInfo.style.cssText = 'font-size: 0.9em; opacity: 0.8;';
+            selectionInfo.textContent = episodes.length + ' episodes';
+            leftSide.appendChild(selectionInfo);
+
+            var rightSide = document.createElement('div');
+            rightSide.style.cssText = 'display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap;';
+
+            // Apply Source button (only visible when bulk source is set)
+            var btnApply = document.createElement('button');
+            btnApply.className = 'raised emby-button btn-bulk-apply';
+            btnApply.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;' + (bulkSource ? '' : ' display: none;');
+            btnApply.textContent = 'Apply Source to All';
+            btnApply.addEventListener('click', function () {
+                executeBulkApply(seasonId, episodes, container);
+            });
+
+            // Delete Intros button
+            var btnDeleteIntro = document.createElement('button');
+            btnDeleteIntro.className = 'raised emby-button btn-bulk-delete-intro';
+            btnDeleteIntro.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+            btnDeleteIntro.textContent = 'Delete All Intros';
+            btnDeleteIntro.addEventListener('click', function () {
+                executeBulkDelete(seasonId, episodes, container, ['IntroStart', 'IntroEnd']);
+            });
+
+            // Delete Credits button
+            var btnDeleteCredits = document.createElement('button');
+            btnDeleteCredits.className = 'raised emby-button btn-bulk-delete-credits';
+            btnDeleteCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+            btnDeleteCredits.textContent = 'Delete All Credits';
+            btnDeleteCredits.addEventListener('click', function () {
+                executeBulkDelete(seasonId, episodes, container, ['CreditsStart']);
+            });
+
+            // Set Credits to End button
+            var btnCreditsEnd = document.createElement('button');
+            btnCreditsEnd.className = 'raised emby-button btn-bulk-credits-end';
+            btnCreditsEnd.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+            btnCreditsEnd.textContent = 'Set All Credits to End';
+            btnCreditsEnd.title = 'Set CreditsStart to runtime end for each episode';
+            btnCreditsEnd.addEventListener('click', function () {
+                executeBulkSetCreditsEnd(seasonId, episodes, container);
+            });
+
+            rightSide.appendChild(btnApply);
+            rightSide.appendChild(btnDeleteIntro);
+            rightSide.appendChild(btnDeleteCredits);
+            rightSide.appendChild(btnCreditsEnd);
+
+            row.appendChild(leftSide);
+            row.appendChild(rightSide);
+
+            return row;
+        }
+
+        function toggleSelectAll(seasonId, checked, episodes, container) {
+            if (!selectedItems[seasonId]) {
+                selectedItems[seasonId] = {};
+            }
+
+            episodes.forEach(function (ep) {
+                if (checked) {
+                    selectedItems[seasonId][ep.ItemId] = true;
+                } else {
+                    delete selectedItems[seasonId][ep.ItemId];
+                }
+            });
+
+            // Update all row checkboxes
+            var checkboxes = container.querySelectorAll('.row-select-cb');
+            checkboxes.forEach(function (cb) {
+                cb.checked = checked;
+            });
+
+            updateBulkActionRow(seasonId, episodes, container);
+        }
+
+        function toggleRowSelect(seasonId, itemId, checked, row) {
+            if (!selectedItems[seasonId]) {
+                selectedItems[seasonId] = {};
+            }
+
+            if (checked) {
+                selectedItems[seasonId][itemId] = true;
+            } else {
+                delete selectedItems[seasonId][itemId];
+            }
+
+            var container = row.closest('[data-season-id]');
+            if (container) {
+                var episodes = loadedSeasons[seasonId] || [];
+                updateBulkActionRow(seasonId, episodes, container);
+
+                // Update select-all checkbox state
+                var selectAllCb = container.querySelector('.select-all-cb');
+                if (selectAllCb) {
+                    var selectedCount = Object.keys(selectedItems[seasonId]).length;
+                    selectAllCb.checked = selectedCount === episodes.length;
+                    selectAllCb.indeterminate = selectedCount > 0 && selectedCount < episodes.length;
+                }
+            }
+        }
+
+        function updateBulkActionRow(seasonId, episodes, container) {
+            var bulkRow = container.querySelector('.bulk-action-row');
+            if (!bulkRow) return;
+
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            var selectionInfo = bulkRow.querySelector('.selection-info');
+            var btnApply = bulkRow.querySelector('.btn-bulk-apply');
+            var btnDeleteIntro = bulkRow.querySelector('.btn-bulk-delete-intro');
+            var btnDeleteCredits = bulkRow.querySelector('.btn-bulk-delete-credits');
+            var btnCreditsEnd = bulkRow.querySelector('.btn-bulk-credits-end');
+
+            if (selectedCount > 0) {
+                selectionInfo.textContent = selectedCount + ' of ' + episodes.length + ' selected';
+                if (btnApply) {
+                    btnApply.textContent = 'Apply Source to Selected (' + selectedCount + ')';
+                    btnApply.style.display = bulkSource ? '' : 'none';
+                }
+                if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete Intros (' + selectedCount + ')';
+                if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete Credits (' + selectedCount + ')';
+                if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set Credits to End (' + selectedCount + ')';
+            } else {
+                selectionInfo.textContent = episodes.length + ' episodes';
+                if (btnApply) {
+                    btnApply.textContent = 'Apply Source to All';
+                    btnApply.style.display = bulkSource ? '' : 'none';
+                }
+                if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete All Intros';
+                if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete All Credits';
+                if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set All Credits to End';
+            }
+        }
+
+        function updateAllBulkApplyButtons() {
+            var applyButtons = view.querySelectorAll('.btn-bulk-apply');
+            applyButtons.forEach(function (btn) {
+                btn.style.display = bulkSource ? '' : 'none';
+            });
+        }
+
+        function executeBulkApply(seasonId, episodes, container) {
+            if (!bulkSource) {
+                helpers.showError('No source episode selected. Click "Copy" on an episode first.');
+                return;
+            }
+
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            var targetEpisodes;
+
+            if (selectedCount > 0) {
+                targetEpisodes = episodes.filter(function (ep) {
+                    return selectedItems[seasonId][ep.ItemId] && ep.ItemId !== bulkSource.ItemId;
+                });
+            } else {
+                targetEpisodes = episodes.filter(function (ep) {
+                    return ep.ItemId !== bulkSource.ItemId;
+                });
+            }
+
+            if (targetEpisodes.length === 0) {
+                helpers.showError('No target episodes to apply to.');
+                return;
+            }
+
+            // Build confirmation message
+            var sourceLabel = 'E' + (bulkSource.EpisodeNumber || '?') + ' "' + (bulkSource.ItemName || 'Unknown') + '"';
+            var segments = [];
+            if (bulkSource.IntroStartTicks) segments.push('IntroStart (' + helpers.ticksToTime(bulkSource.IntroStartTicks) + ')');
+            if (bulkSource.IntroEndTicks) segments.push('IntroEnd (' + helpers.ticksToTime(bulkSource.IntroEndTicks) + ')');
+            if (bulkSource.CreditsStartTicks) segments.push('CreditsStart (' + helpers.ticksToTime(bulkSource.CreditsStartTicks) + ')');
+
+            if (segments.length === 0) {
+                helpers.showError('Source episode has no segments to copy.');
+                return;
+            }
+
+            var msg = 'Copy segments from ' + sourceLabel + ' to ' + targetEpisodes.length + ' episode(s)?\n\n' +
+                      'Segments: ' + segments.join(', ');
+
+            if (!confirm(msg)) return;
+
+            var targetIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
+            var markerTypes = [];
+            if (bulkSource.IntroStartTicks) markerTypes.push('IntroStart');
+            if (bulkSource.IntroEndTicks) markerTypes.push('IntroEnd');
+            if (bulkSource.CreditsStartTicks) markerTypes.push('CreditsStart');
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_apply', 'POST', JSON.stringify({
+                SourceItemId: bulkSource.ItemId,
+                TargetItemIds: targetIds,
+                MarkerTypes: markerTypes.join(',')
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                var resultMsg = 'Bulk apply complete: ' + result.succeeded + ' succeeded';
+                if (result.failed > 0) {
+                    resultMsg += ', ' + result.failed + ' failed';
+                    if (result.errors && result.errors.length > 0) {
+                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
+                    }
+                    helpers.showError(resultMsg);
+                } else {
+                    helpers.showSuccess(resultMsg);
+                }
+                refreshSeasonEpisodes(seasonId, container);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Bulk apply failed:', error);
+                helpers.showError('Bulk apply failed: ' + (error.message || 'Unknown error'));
+            });
+        }
+
+        function executeBulkDelete(seasonId, episodes, container, markerTypes) {
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            var targetEpisodes;
+
+            if (selectedCount > 0) {
+                targetEpisodes = episodes.filter(function (ep) {
+                    return selectedItems[seasonId][ep.ItemId];
+                });
+            } else {
+                targetEpisodes = episodes;
+            }
+
+            if (targetEpisodes.length === 0) {
+                helpers.showError('No episodes to delete from.');
+                return;
+            }
+
+            var typeLabel = markerTypes.indexOf('CreditsStart') >= 0 ? 'credits' : 'intro';
+            var msg = 'Delete all ' + typeLabel + ' segments from ' + targetEpisodes.length + ' episode(s) in this season?\n\nThis cannot be undone.';
+
+            if (!confirm(msg)) return;
+
+            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_delete', 'POST', JSON.stringify({
+                ItemIds: itemIds,
+                MarkerTypes: markerTypes.join(',')
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                var resultMsg = 'Bulk delete complete: ' + result.succeeded + ' succeeded';
+                if (result.failed > 0) {
+                    resultMsg += ', ' + result.failed + ' failed';
+                    if (result.errors && result.errors.length > 0) {
+                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
+                    }
+                    helpers.showError(resultMsg);
+                } else {
+                    helpers.showSuccess(resultMsg);
+                }
+                refreshSeasonEpisodes(seasonId, container);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Bulk delete failed:', error);
+                helpers.showError('Bulk delete failed: ' + (error.message || 'Unknown error'));
+            });
+        }
+
+        function setCreditsToEnd(row, ep) {
+            var msg = 'Set CreditsStart to end of "' + (ep.ItemName || 'this episode') + '"?';
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_set_credits_end', 'POST', JSON.stringify({
+                ItemIds: ep.ItemId,
+                OffsetTicks: 0
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                if (result.failed > 0) {
+                    helpers.showError('Failed: ' + (result.errors && result.errors.length > 0 ? result.errors[0] : 'Unknown error'));
+                } else {
+                    helpers.showSuccess('CreditsStart set to end of episode.');
+                    refreshRow(row, ep);
+                }
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Set credits to end failed:', error);
+                helpers.showError('Failed to set credits to end.');
+            });
+        }
+
+        function executeBulkSetCreditsEnd(seasonId, episodes, container) {
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            var targetEpisodes;
+
+            if (selectedCount > 0) {
+                targetEpisodes = episodes.filter(function (ep) {
+                    return selectedItems[seasonId][ep.ItemId];
+                });
+            } else {
+                targetEpisodes = episodes;
+            }
+
+            if (targetEpisodes.length === 0) {
+                helpers.showError('No episodes to update.');
+                return;
+            }
+
+            var msg = 'Set CreditsStart to end of episode for ' + targetEpisodes.length + ' episode(s)?\n\nThis marks each episode as having credits at its runtime end.';
+            if (!confirm(msg)) return;
+
+            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_set_credits_end', 'POST', JSON.stringify({
+                ItemIds: itemIds,
+                OffsetTicks: 0
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                var resultMsg = 'Set credits to end: ' + result.succeeded + ' succeeded';
+                if (result.failed > 0) {
+                    resultMsg += ', ' + result.failed + ' failed';
+                    if (result.errors && result.errors.length > 0) {
+                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
+                    }
+                    helpers.showError(resultMsg);
+                } else {
+                    helpers.showSuccess(resultMsg);
+                }
+                refreshSeasonEpisodes(seasonId, container);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Bulk set credits to end failed:', error);
+                helpers.showError('Bulk set credits to end failed: ' + (error.message || 'Unknown error'));
+            });
+        }
+
+        function refreshSeasonEpisodes(seasonId, container) {
+            // Clear cache and selection, then reload
+            delete loadedSeasons[seasonId];
+            if (selectedItems[seasonId]) {
+                selectedItems[seasonId] = {};
+            }
+            loadEpisodes(seasonId, container);
+
+            // Refresh the season chart (coverage stats may have changed)
+            helpers.apiCall('season_list?seriesId=' + encodeURIComponent(seriesId), 'GET')
+                .then(function (data) {
+                    seasonData = data || [];
+                    updateSeasonChart();
+                })
+                .catch(function () {
+                    // Non-critical
+                });
         }
 
         // ── Helpers ──

@@ -137,6 +137,18 @@ namespace segment_reporting.Api
         public string MarkerTypes { get; set; }
     }
 
+    // http://localhost:8096/emby/segment_reporting/bulk_set_credits_end
+    [Route("/segment_reporting/bulk_set_credits_end", "POST", Summary = "Sets CreditsStart to runtime minus offset for items")]
+    [Authenticated(Roles = "admin")]
+    public class BulkSetCreditsEnd : IReturn<object>
+    {
+        [ApiMember(Name = "ItemIds", Description = "Comma-separated item IDs", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string ItemIds { get; set; }
+
+        [ApiMember(Name = "OffsetTicks", Description = "Offset from end in ticks (default 0)", IsRequired = false, DataType = "long", ParameterType = "query", Verb = "POST")]
+        public long OffsetTicks { get; set; }
+    }
+
     // http://localhost:8096/emby/segment_reporting/sync_now
     [Route("/segment_reporting/sync_now", "POST", Summary = "Trigger immediate full sync")]
     [Authenticated(Roles = "admin")]
@@ -513,6 +525,71 @@ namespace segment_reporting.Api
                         _logger.Warn("BulkDelete: Failed for item {0} marker {1}: {2}",
                             itemId, markerType, ex.Message);
                     }
+                }
+            }
+
+            return new { succeeded, failed, errors };
+        }
+
+        public object Post(BulkSetCreditsEnd request)
+        {
+            _logger.Info("BulkSetCreditsEnd: itemIds={0}, offsetTicks={1}",
+                request.ItemIds, request.OffsetTicks);
+
+            if (string.IsNullOrEmpty(request.ItemIds))
+            {
+                return new { error = "itemIds is required" };
+            }
+
+            var itemIds = request.ItemIds
+                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => id.Trim())
+                .ToArray();
+
+            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
+            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+
+            int succeeded = 0;
+            int failed = 0;
+            var errors = new List<string>();
+
+            foreach (var itemId in itemIds)
+            {
+                try
+                {
+                    long internalId = long.Parse(itemId);
+                    var item = _libraryManager.GetItemById(internalId);
+                    if (item == null)
+                    {
+                        failed++;
+                        errors.Add(itemId + ": Item not found");
+                        continue;
+                    }
+
+                    long? runtimeTicks = item.RunTimeTicks;
+                    if (!runtimeTicks.HasValue || runtimeTicks.Value <= 0)
+                    {
+                        failed++;
+                        errors.Add(itemId + ": No runtime available");
+                        continue;
+                    }
+
+                    long creditsStartTicks = runtimeTicks.Value - request.OffsetTicks;
+                    if (creditsStartTicks < 0)
+                    {
+                        creditsStartTicks = 0;
+                    }
+
+                    WriteSegmentToEmby(internalId, "CreditsStart", creditsStartTicks);
+                    repo.UpdateSegmentTicks(itemId, "CreditsStart", creditsStartTicks);
+                    succeeded++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    errors.Add(itemId + ": " + ex.Message);
+                    _logger.Warn("BulkSetCreditsEnd: Failed for item {0}: {1}",
+                        itemId, ex.Message);
                 }
             }
 

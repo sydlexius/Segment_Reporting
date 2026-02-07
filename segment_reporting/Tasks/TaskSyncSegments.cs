@@ -86,21 +86,36 @@ namespace segment_reporting.Tasks
             var segments = new List<SegmentInfo>(totalItems);
             var validItemIds = new List<string>(totalItems);
             var syncDate = DateTime.UtcNow;
+            int skipped = 0;
 
             for (int i = 0; i < totalItems; i++)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
                 var item = items[i];
-                var segment = BuildSegmentInfo(item, syncDate);
 
-                segments.Add(segment);
-                validItemIds.Add(segment.ItemId);
+                try
+                {
+                    var segment = BuildSegmentInfo(item, syncDate);
+                    segments.Add(segment);
+                    validItemIds.Add(segment.ItemId);
+                }
+                catch (Exception ex)
+                {
+                    skipped++;
+                    _logger.Warn("TaskSyncSegments: Failed to build segment info for item {0} ({1}): {2}",
+                        item.InternalId, item.Name, ex.Message);
+                }
 
                 if (i % 100 == 0)
                 {
                     progress.Report((double)i / totalItems * 90);
                 }
+            }
+
+            if (skipped > 0)
+            {
+                _logger.Warn("TaskSyncSegments: Skipped {0} items due to errors", skipped);
             }
 
             progress.Report(90);
@@ -128,24 +143,32 @@ namespace segment_reporting.Tasks
             long? introEnd = null;
             long? creditsStart = null;
 
-            var chapters = _itemRepository.GetChapters(item);
-            if (chapters != null)
+            try
             {
-                foreach (var chapter in chapters)
+                var chapters = _itemRepository.GetChapters(item);
+                if (chapters != null)
                 {
-                    switch (chapter.MarkerType)
+                    foreach (var chapter in chapters)
                     {
-                        case MarkerType.IntroStart:
-                            introStart = chapter.StartPositionTicks;
-                            break;
-                        case MarkerType.IntroEnd:
-                            introEnd = chapter.StartPositionTicks;
-                            break;
-                        case MarkerType.CreditsStart:
-                            creditsStart = chapter.StartPositionTicks;
-                            break;
+                        switch (chapter.MarkerType)
+                        {
+                            case MarkerType.IntroStart:
+                                introStart = chapter.StartPositionTicks;
+                                break;
+                            case MarkerType.IntroEnd:
+                                introEnd = chapter.StartPositionTicks;
+                                break;
+                            case MarkerType.CreditsStart:
+                                creditsStart = chapter.StartPositionTicks;
+                                break;
+                        }
                     }
                 }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn("BuildSegmentInfo: GetChapters failed for item {0}: {1}",
+                    item.InternalId, ex.Message);
             }
 
             var segment = new SegmentInfo
