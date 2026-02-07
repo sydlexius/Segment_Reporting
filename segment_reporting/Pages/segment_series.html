@@ -1,0 +1,40 @@
+<div id="segmentSeriesPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_series.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <button id="btnBackToLibrary" class="raised button-cancel emby-button" style="margin-right: 1em;">
+                    <span>&larr; Back to Library</span>
+                </button>
+                <h2 id="pageTitle" class="sectionTitle">Series</h2>
+            </div>
+
+            <!-- Season Coverage Charts -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Season Coverage</h3>
+                <div style="background-color: rgba(255, 255, 255, 0.05); padding: 1.5em; border-radius: 4px; margin-bottom: 2em;">
+                    <canvas id="seasonChart" style="max-height: 300px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Bulk Source Indicator -->
+            <div id="bulkSourceBanner" class="verticalSection" style="display: none; margin-bottom: 1.5em;">
+                <div style="background-color: rgba(33, 150, 243, 0.15); border: 1px solid #2196F3; border-radius: 4px; padding: 0.75em 1em; display: flex; align-items: center; justify-content: space-between;">
+                    <span id="bulkSourceText" style="font-weight: bold;"></span>
+                    <button id="btnClearBulkSource" class="raised emby-button" style="margin-left: 1em;">Clear</button>
+                </div>
+            </div>
+
+            <!-- Season Accordion -->
+            <div id="seasonContainer" class="verticalSection">
+                <div style="text-align: center; padding: 2em;">Loading season data...</div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
