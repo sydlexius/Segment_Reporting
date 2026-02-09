@@ -246,6 +246,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         // ── Episode Table ──
 
+        function renderTimestamp(ticks, itemId) {
+            var display = helpers.ticksToTime(ticks);
+            if (!ticks || ticks === 0) {
+                return display;
+            }
+            return '<a href="#" class="timestamp-link" data-ticks="' + ticks + '" data-item-id="' + itemId + '" ' +
+                   'title="Click to play at ' + display + '" ' +
+                   'style="color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; cursor: pointer;">' +
+                   display + '</a>';
+        }
+
         function renderEpisodeTable(episodes, container) {
             container.innerHTML = '';
             var seasonId = container.getAttribute('data-season-id');
@@ -318,9 +329,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 '<td style="' + centerStyle + 'width: 40px;"><input type="checkbox" class="row-select-cb"' + (isChecked ? ' checked' : '') + '></td>' +
                 '<td style="' + cellStyle + '">' + (ep.EpisodeNumber || '-') + '</td>' +
                 '<td style="' + cellStyle + '">' + (ep.ItemName || 'Unknown') + '</td>' +
-                '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + helpers.ticksToTime(ep.IntroStartTicks) + '</td>' +
-                '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + helpers.ticksToTime(ep.IntroEndTicks) + '</td>' +
-                '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + helpers.ticksToTime(ep.CreditsStartTicks) + '</td>' +
+                '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + renderTimestamp(ep.IntroStartTicks, ep.ItemId) + '</td>' +
+                '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + renderTimestamp(ep.IntroEndTicks, ep.ItemId) + '</td>' +
+                '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + renderTimestamp(ep.CreditsStartTicks, ep.ItemId) + '</td>' +
                 '<td style="' + centerStyle + '">' + buildActionButtons(ep) + '</td>';
 
             // Row checkbox handler
@@ -347,6 +358,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             // Attach button handlers
             attachRowActions(row, ep);
+
+            // Timestamp playback click handlers
+            row.addEventListener('click', function (e) {
+                var link = e.target.closest('.timestamp-link');
+                if (!link) return;
+                if (row.classList.contains('editing')) return;
+                e.preventDefault();
+                var ticks = parseInt(link.getAttribute('data-ticks'), 10);
+                var itemId = link.getAttribute('data-item-id');
+                helpers.launchPlayback(itemId, ticks);
+            });
 
             return row;
         }
@@ -520,11 +542,12 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 ? 'rgba(33, 150, 243, 0.1)'
                 : '';
 
-            // Restore tick cells
+            // Restore tick cells with clickable timestamps
             var tickCells = row.querySelectorAll('.tick-cell');
             tickCells.forEach(function (cell) {
-                var originalDisplay = cell.getAttribute('data-original-display');
-                cell.innerHTML = originalDisplay || helpers.ticksToTime(null);
+                var marker = cell.getAttribute('data-marker');
+                var ticks = ep[marker + 'Ticks'];
+                cell.innerHTML = renderTimestamp(ticks, ep.ItemId);
             });
 
             // Restore action buttons

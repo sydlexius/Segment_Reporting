@@ -188,6 +188,29 @@ function segmentReportingShowSuccess(message) {
     });
 }
 
+function segmentReportingLaunchPlayback(itemId, positionTicks) {
+    if (!itemId) {
+        return;
+    }
+    if (!positionTicks || positionTicks === 0) {
+        return;
+    }
+
+    require(['playbackManager'], function (playbackManager) {
+        ApiClient.getItem(ApiClient.getCurrentUserId(), itemId).then(function (item) {
+            playbackManager.play({
+                items: [item],
+                startPositionTicks: positionTicks
+            });
+        }).catch(function (error) {
+            console.error('Playback launch failed:', error);
+            require(['toast'], function (toast) {
+                toast({ type: 'error', text: 'Failed to start playback' });
+            });
+        });
+    });
+}
+
 function segmentReportingRgbToHex(r, g, b) {
     return '#' + [r, g, b].map(function (x) {
         var hex = x.toString(16);
@@ -335,6 +358,7 @@ function getSegmentReportingHelpers() {
         hideLoading: segmentReportingHideLoading,
         showError: segmentReportingShowError,
         showSuccess: segmentReportingShowSuccess,
+        launchPlayback: segmentReportingLaunchPlayback,
         detectAccentColor: segmentReportingDetectAccentColor,
         rgbToHex: segmentReportingRgbToHex,
         hexToRgb: segmentReportingHexToRgb,
