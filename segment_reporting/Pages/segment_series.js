@@ -89,7 +89,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var palette = themeColors.chart;
 
                 var labels = seasonData.map(function (s) {
-                    return s.SeasonName || (s.SeasonId ? ('Season ' + s.SeasonNumber) : 'Unassigned');
+                    return s.SeasonName || ('Season ' + (s.SeasonNumber || 1));
                 });
 
                 var introPct = seasonData.map(function (s) {
@@ -176,7 +176,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 // Season header (clickable)
                 var header = document.createElement('div');
                 header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75em 1em; background-color: rgba(255,255,255,0.05); border-radius: 4px; cursor: pointer; user-select: none;';
-                var seasonLabel = season.SeasonName || (season.SeasonId ? ('Season ' + season.SeasonNumber) : 'Unassigned');
+                var seasonLabel = season.SeasonName || ('Season ' + (season.SeasonNumber || 1));
 
                 header.innerHTML =
                     '<div style="display: flex; align-items: center; gap: 1em;">' +

@@ -1,5 +1,13 @@
 # Segment Reporting - Release Notes
 
+## v0.0.13.0 - Better Display for Shows Without Season Folders
+
+### Fixed
+
+- **Shows without season folders now display "Season 1"** (#37) - Shows that don't use season folders previously had their episodes grouped under "Unassigned" in the series view. They now display as "Season 1" (or the appropriate season number when available), which better reflects the actual library structure.
+
+---
+
 ## v0.0.12.0 - About Page
 
 ### Added
