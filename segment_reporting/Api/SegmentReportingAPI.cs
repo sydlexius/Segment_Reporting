@@ -201,10 +201,7 @@ namespace segment_reporting.Api
         private readonly IItemRepository _itemRepository;
         private readonly ITaskManager _taskManager;
 
-        private static readonly HashSet<string> _validMarkerTypes = new HashSet<string>
-        {
-            "IntroStart", "IntroEnd", "CreditsStart"
-        };
+        private const string DbFileName = "segment_reporting.db";
 
         public SegmentReportingAPI(ILogManager logger,
             IServerConfigurationManager config,
@@ -221,16 +218,46 @@ namespace segment_reporting.Api
 
         public IRequest Request { get; set; }
 
+        private string GetDbPath()
+        {
+            return Path.Combine(_config.ApplicationPaths.DataPath, DbFileName);
+        }
+
+        private SegmentRepository GetRepository()
+        {
+            return SegmentRepository.GetInstance(GetDbPath(), _logger);
+        }
+
+        private static string[] SplitAndTrim(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return Array.Empty<string>();
+            return input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(x => x.Trim())
+                        .ToArray();
+        }
+
+        private object ValidateMarkerTypes(params string[] types)
+        {
+            foreach (var t in types)
+            {
+                if (!MarkerTypes.Valid.Contains(t))
+                {
+                    return new { error = "Invalid markerType: " + t };
+                }
+            }
+
+            return null;
+        }
+
         public object Get(GetLibrarySummary request)
         {
             _logger.Info("GetLibrarySummary");
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             List<LibrarySummaryItem> summary = repo.GetLibrarySummary();
 
-            // Note: Future enhancement - could enrich with image URLs using _libraryManager.GetItemById()
             return summary;
         }
 
@@ -244,20 +271,12 @@ namespace segment_reporting.Api
                 return new { error = "libraryId is required" };
             }
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
-            string[] filters = null;
-            if (!string.IsNullOrEmpty(request.Filter))
-            {
-                filters = request.Filter.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                    .Select(f => f.Trim())
-                    .ToArray();
-            }
+            string[] filters = SplitAndTrim(request.Filter);
 
             List<SeriesListItem> seriesList = repo.GetSeriesList(request.LibraryId, request.Search, filters);
 
-            // Note: Future enhancement - could enrich with image URLs using _libraryManager.GetItemById()
             return seriesList;
         }
 
@@ -270,12 +289,10 @@ namespace segment_reporting.Api
                 return new { error = "seriesId is required" };
             }
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             List<SeasonListItem> seasonList = repo.GetSeasonList(request.SeriesId);
 
-            // Note: Future enhancement - could enrich with image URLs using _libraryManager.GetItemById()
             return seasonList;
         }
 
@@ -283,8 +300,7 @@ namespace segment_reporting.Api
         {
             _logger.Info("GetEpisodeList: seasonId={0}, seriesId={1}", request.SeasonId, request.SeriesId);
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             List<SegmentInfo> episodes;
 
@@ -301,7 +317,6 @@ namespace segment_reporting.Api
                 return new { error = "Either seasonId or seriesId is required" };
             }
 
-            // Note: Future enhancement - could enrich with image URLs using _libraryManager.GetItemById()
             return episodes;
         }
 
@@ -314,8 +329,7 @@ namespace segment_reporting.Api
                 return new { error = "itemId is required" };
             }
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             SegmentInfo segment = repo.GetItemSegments(request.ItemId);
 
@@ -324,7 +338,6 @@ namespace segment_reporting.Api
                 return new { error = "Item not found" };
             }
 
-            // Note: Future enhancement - could enrich with image URLs using _libraryManager.GetItemById()
             return segment;
         }
 
@@ -337,10 +350,9 @@ namespace segment_reporting.Api
             {
                 return new { error = "itemId is required" };
             }
-            if (!_validMarkerTypes.Contains(request.MarkerType))
-            {
-                return new { error = "markerType must be one of: IntroStart, IntroEnd, CreditsStart" };
-            }
+            var validationError = ValidateMarkerTypes(request.MarkerType);
+            if (validationError != null)
+                return validationError;
             if (request.Ticks < 0)
             {
                 return new { error = "ticks must be non-negative" };
@@ -351,8 +363,7 @@ namespace segment_reporting.Api
                 long internalId = long.Parse(request.ItemId);
                 WriteSegmentToEmby(internalId, request.MarkerType, request.Ticks);
 
-                string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-                SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+                SegmentRepository repo = GetRepository();
                 repo.UpdateSegmentTicks(request.ItemId, request.MarkerType, request.Ticks);
 
                 return new { success = true };
@@ -373,18 +384,16 @@ namespace segment_reporting.Api
             {
                 return new { error = "itemId is required" };
             }
-            if (!_validMarkerTypes.Contains(request.MarkerType))
-            {
-                return new { error = "markerType must be one of: IntroStart, IntroEnd, CreditsStart" };
-            }
+            var validationError = ValidateMarkerTypes(request.MarkerType);
+            if (validationError != null)
+                return validationError;
 
             try
             {
                 long internalId = long.Parse(request.ItemId);
                 WriteSegmentToEmby(internalId, request.MarkerType, null);
 
-                string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-                SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+                SegmentRepository repo = GetRepository();
                 repo.DeleteSegment(request.ItemId, request.MarkerType);
 
                 return new { success = true };
@@ -414,26 +423,14 @@ namespace segment_reporting.Api
                 return new { error = "markerTypes is required" };
             }
 
-            var targetIds = request.TargetItemIds
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => id.Trim())
-                .ToArray();
+            var targetIds = SplitAndTrim(request.TargetItemIds);
+            var markerTypes = SplitAndTrim(request.MarkerTypes);
 
-            var markerTypes = request.MarkerTypes
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .ToArray();
+            var validationError = ValidateMarkerTypes(markerTypes);
+            if (validationError != null)
+                return validationError;
 
-            foreach (var mt in markerTypes)
-            {
-                if (!_validMarkerTypes.Contains(mt))
-                {
-                    return new { error = "Invalid markerType: " + mt };
-                }
-            }
-
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             SegmentInfo sourceSegment = repo.GetItemSegments(request.SourceItemId);
             if (sourceSegment == null)
@@ -489,26 +486,14 @@ namespace segment_reporting.Api
                 return new { error = "markerTypes is required" };
             }
 
-            var itemIds = request.ItemIds
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => id.Trim())
-                .ToArray();
+            var itemIds = SplitAndTrim(request.ItemIds);
+            var markerTypes = SplitAndTrim(request.MarkerTypes);
 
-            var markerTypes = request.MarkerTypes
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(t => t.Trim())
-                .ToArray();
+            var validationError = ValidateMarkerTypes(markerTypes);
+            if (validationError != null)
+                return validationError;
 
-            foreach (var mt in markerTypes)
-            {
-                if (!_validMarkerTypes.Contains(mt))
-                {
-                    return new { error = "Invalid markerType: " + mt };
-                }
-            }
-
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             int succeeded = 0;
             int failed = 0;
@@ -548,13 +533,9 @@ namespace segment_reporting.Api
                 return new { error = "itemIds is required" };
             }
 
-            var itemIds = request.ItemIds
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => id.Trim())
-                .ToArray();
+            var itemIds = SplitAndTrim(request.ItemIds);
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             int succeeded = 0;
             int failed = 0;
@@ -587,8 +568,8 @@ namespace segment_reporting.Api
                         creditsStartTicks = 0;
                     }
 
-                    WriteSegmentToEmby(internalId, "CreditsStart", creditsStartTicks);
-                    repo.UpdateSegmentTicks(itemId, "CreditsStart", creditsStartTicks);
+                    WriteSegmentToEmby(internalId, MarkerTypes.CreditsStart, creditsStartTicks);
+                    repo.UpdateSegmentTicks(itemId, MarkerTypes.CreditsStart, creditsStartTicks);
                     succeeded++;
                 }
                 catch (Exception ex)
@@ -623,8 +604,7 @@ namespace segment_reporting.Api
         {
             _logger.Info("GetSyncStatus");
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             SyncStatusInfo status = repo.GetSyncStatus();
 
@@ -653,8 +633,7 @@ namespace segment_reporting.Api
 
             try
             {
-                string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-                SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+                SegmentRepository repo = GetRepository();
 
                 repo.DeleteAllData();
 
@@ -673,13 +652,13 @@ namespace segment_reporting.Api
         {
             _logger.Info("GetCacheStats");
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             int rowCount = repo.GetRowCount();
             SyncStatusInfo syncStatus = repo.GetSyncStatus();
 
             long dbFileSize = 0;
+            string dbPath = GetDbPath();
             if (File.Exists(dbPath))
             {
                 dbFileSize = new FileInfo(dbPath).Length;
@@ -704,8 +683,7 @@ namespace segment_reporting.Api
                 return new { error = "query is required" };
             }
 
-            string dbPath = Path.Combine(_config.ApplicationPaths.DataPath, "segment_reporting.db");
-            SegmentRepository repo = SegmentRepository.GetInstance(dbPath, _logger);
+            SegmentRepository repo = GetRepository();
 
             QueryResult result = repo.RunCustomQuery(request.Query);
 
@@ -769,13 +747,13 @@ namespace segment_reporting.Api
             MarkerType embyMarkerType;
             switch (markerType)
             {
-                case "IntroStart":
+                case MarkerTypes.IntroStart:
                     embyMarkerType = MarkerType.IntroStart;
                     break;
-                case "IntroEnd":
+                case MarkerTypes.IntroEnd:
                     embyMarkerType = MarkerType.IntroEnd;
                     break;
-                case "CreditsStart":
+                case MarkerTypes.CreditsStart:
                     embyMarkerType = MarkerType.CreditsStart;
                     break;
                 default:
@@ -814,11 +792,11 @@ namespace segment_reporting.Api
         {
             switch (markerType)
             {
-                case "IntroStart":
+                case MarkerTypes.IntroStart:
                     return segment.IntroStartTicks;
-                case "IntroEnd":
+                case MarkerTypes.IntroEnd:
                     return segment.IntroEndTicks;
-                case "CreditsStart":
+                case MarkerTypes.CreditsStart:
                     return segment.CreditsStartTicks;
                 default:
                     return null;

@@ -16,6 +16,8 @@ namespace segment_reporting.Tasks
 {
     public class TaskCleanSegmentDb : IScheduledTask
     {
+        private const double DivergenceThreshold = 5.0;
+
         private readonly ILibraryManager _libraryManager;
         private readonly ILogger _logger;
         private readonly IApplicationPaths _appPaths;
@@ -106,9 +108,10 @@ namespace segment_reporting.Tasks
                 _logger.Info("  DB file size: {0} KB", dbFileSizeKb);
                 _logger.Info("  Last sync: {0}", lastSyncStr);
 
-                if (divergencePercent > 5.0)
+                if (divergencePercent > DivergenceThreshold)
                 {
-                    _logger.Warn("TaskCleanSegmentDb: Cache divergence exceeds 5% ({0:F2}%) - consider running sync task", divergencePercent);
+                    _logger.Warn("TaskCleanSegmentDb: Cache divergence exceeds {0}% ({1:F2}%) - consider running sync task",
+                        DivergenceThreshold, divergencePercent);
                 }
 
                 stopwatch.Stop();

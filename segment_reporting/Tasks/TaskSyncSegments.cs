@@ -18,6 +18,8 @@ namespace segment_reporting.Tasks
 {
     public class TaskSyncSegments : IScheduledTask
     {
+        private const int ProgressReportInterval = 100;
+
         private readonly ILibraryManager _libraryManager;
         private readonly IItemRepository _itemRepository;
         private readonly ILogger _logger;
@@ -107,7 +109,7 @@ namespace segment_reporting.Tasks
                         item.InternalId, item.Name, ex.Message);
                 }
 
-                if (i % 100 == 0)
+                if (i % ProgressReportInterval == 0)
                 {
                     progress.Report((double)i / totalItems * 90);
                 }

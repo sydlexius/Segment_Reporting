@@ -383,29 +383,19 @@ namespace segment_reporting.Data
 
         public void UpdateSegmentTicks(string itemId, string markerType, long ticks)
         {
-            string column;
+            string column = MarkerTypes.GetColumnName(markerType);
 
-            switch (markerType)
+            if (!MarkerTypes.Valid.Contains(markerType))
             {
-                case "IntroStart":
-                    column = "IntroStartTicks";
-                    break;
-                case "IntroEnd":
-                    column = "IntroEndTicks";
-                    break;
-                case "CreditsStart":
-                    column = "CreditsStartTicks";
-                    break;
-                default:
-                    _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
-                    return;
+                _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
+                return;
             }
 
             lock (_dbLock)
             {
                 var sql = "UPDATE MediaSegments SET " + column + " = @Ticks";
 
-                if (markerType == "IntroStart" || markerType == "IntroEnd")
+                if (MarkerTypes.IsIntroType(markerType))
                 {
                     sql += ", HasIntro = 1";
                 }
@@ -448,6 +438,19 @@ namespace segment_reporting.Data
         }
 
         #endregion
+
+        private static void ApplySegmentFilters(List<string> clauses, string[] filters)
+        {
+            if (filters == null)
+                return;
+            foreach (var f in filters)
+            {
+                if (string.Equals(f, "missing_intro", StringComparison.OrdinalIgnoreCase))
+                    clauses.Add("HasIntro = 0");
+                else if (string.Equals(f, "missing_credits", StringComparison.OrdinalIgnoreCase))
+                    clauses.Add("HasCredits = 0");
+            }
+        }
 
         #region Reporting Queries
 
@@ -496,16 +499,7 @@ namespace segment_reporting.Data
                 whereClauses.Add("SeriesName LIKE @Search");
             }
 
-            if (filters != null)
-            {
-                foreach (var filter in filters)
-                {
-                    if (string.Equals(filter, "missing_intro", StringComparison.OrdinalIgnoreCase))
-                        whereClauses.Add("HasIntro = 0");
-                    else if (string.Equals(filter, "missing_credits", StringComparison.OrdinalIgnoreCase))
-                        whereClauses.Add("HasCredits = 0");
-                }
-            }
+            ApplySegmentFilters(whereClauses, filters);
 
             var sql = "SELECT SeriesId, SeriesName, " +
                       "COUNT(*) as TotalEpisodes, " +
@@ -617,55 +611,6 @@ namespace segment_reporting.Data
             return results;
         }
 
-        public List<SegmentInfo> GetItemsByLibrary(string libraryId, string itemType, string search, string[] filters)
-        {
-            var results = new List<SegmentInfo>();
-            var whereClauses = new List<string> { "LibraryId = @LibraryId" };
-
-            if (!string.IsNullOrEmpty(itemType))
-            {
-                whereClauses.Add("ItemType = @ItemType");
-            }
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                whereClauses.Add("ItemName LIKE @Search");
-            }
-
-            if (filters != null)
-            {
-                foreach (var filter in filters)
-                {
-                    if (string.Equals(filter, "missing_intro", StringComparison.OrdinalIgnoreCase))
-                        whereClauses.Add("HasIntro = 0");
-                    else if (string.Equals(filter, "missing_credits", StringComparison.OrdinalIgnoreCase))
-                        whereClauses.Add("HasCredits = 0");
-                }
-            }
-
-            var sql = "SELECT * FROM MediaSegments " +
-                      "WHERE " + string.Join(" AND ", whereClauses) + " " +
-                      "ORDER BY ItemName";
-
-            lock (_dbLock)
-            {
-                using (var stmt = _connection.PrepareStatement(sql))
-                {
-                    TryBind(stmt, "@LibraryId", libraryId);
-                    if (!string.IsNullOrEmpty(itemType))
-                        TryBind(stmt, "@ItemType", itemType);
-                    if (!string.IsNullOrWhiteSpace(search))
-                        TryBind(stmt, "@Search", "%" + search + "%");
-
-                    while (stmt.MoveNext())
-                    {
-                        results.Add(ReadSegmentInfo(stmt.Current));
-                    }
-                }
-            }
-            return results;
-        }
-
         public SegmentInfo GetItemSegments(string itemId)
         {
             lock (_dbLock)
@@ -689,41 +634,28 @@ namespace segment_reporting.Data
 
         public void DeleteSegment(string itemId, string markerType)
         {
-            string column;
-            string hasColumn;
-
-            switch (markerType)
+            if (!MarkerTypes.Valid.Contains(markerType))
             {
-                case "IntroStart":
-                    column = "IntroStartTicks";
-                    hasColumn = null;
-                    break;
-                case "IntroEnd":
-                    column = "IntroEndTicks";
-                    hasColumn = null;
-                    break;
-                case "CreditsStart":
-                    column = "CreditsStartTicks";
-                    hasColumn = "HasCredits";
-                    break;
-                default:
-                    _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
-                    return;
+                _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
+                return;
             }
+
+            string column = MarkerTypes.GetColumnName(markerType);
 
             lock (_dbLock)
             {
                 var sql = "UPDATE MediaSegments SET " + column + " = NULL";
 
-                if (markerType == "IntroStart" || markerType == "IntroEnd")
+                if (MarkerTypes.IsIntroType(markerType))
                 {
-                    sql += ", HasIntro = CASE WHEN " +
-                           (markerType == "IntroStart" ? "IntroEndTicks" : "IntroStartTicks") +
-                           " IS NOT NULL THEN 1 ELSE 0 END";
+                    string otherColumn = markerType == MarkerTypes.IntroStart
+                        ? MarkerTypes.GetColumnName(MarkerTypes.IntroEnd)
+                        : MarkerTypes.GetColumnName(MarkerTypes.IntroStart);
+                    sql += ", HasIntro = CASE WHEN " + otherColumn + " IS NOT NULL THEN 1 ELSE 0 END";
                 }
-                else if (hasColumn != null)
+                else
                 {
-                    sql += ", " + hasColumn + " = 0";
+                    sql += ", HasCredits = 0";
                 }
 
                 sql += " WHERE ItemId = @ItemId";

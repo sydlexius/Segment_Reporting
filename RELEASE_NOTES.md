@@ -1,5 +1,20 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.4 - Reduce Backend Duplication
+
+### Improved
+
+- **Marker type constants** (#26) - Introduced a `MarkerTypes` constants class so `"IntroStart"`, `"IntroEnd"`, and `"CreditsStart"` are defined once. Typos in marker names now cause build errors instead of silent bugs.
+- **API helper methods** (#26) - Extracted `GetRepository()`, `SplitAndTrim()`, and `ValidateMarkerTypes()` helpers, replacing dozens of duplicated blocks across API endpoints.
+- **Repository filter helper** (#26) - Consolidated duplicated segment-filter logic into a shared `ApplySegmentFilters()` method.
+- **Named constants for magic numbers** (#26) - Progress report interval and cache divergence threshold are now named constants in the sync and cleanup tasks.
+
+### Removed
+
+- **Dead code cleanup** (#26) - Removed unused `SegmentReportingOptions` configuration class, its factory and extension methods, an uncalled `GetItemsByLibrary()` repository method, and duplicate "future enhancement" comments.
+
+---
+
 ## v0.0.9.3 - Reduce Frontend Duplication
 
 ### Improved

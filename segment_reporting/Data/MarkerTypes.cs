@@ -1,0 +1,27 @@
+using System;
+using System.Collections.Generic;
+
+namespace segment_reporting.Data
+{
+    public static class MarkerTypes
+    {
+        public const string IntroStart = "IntroStart";
+        public const string IntroEnd = "IntroEnd";
+        public const string CreditsStart = "CreditsStart";
+
+        public static readonly HashSet<string> Valid = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            IntroStart, IntroEnd, CreditsStart
+        };
+
+        public static string GetColumnName(string markerType)
+        {
+            return markerType + "Ticks";
+        }
+
+        public static bool IsIntroType(string markerType)
+        {
+            return markerType == IntroStart || markerType == IntroEnd;
+        }
+    }
+}
