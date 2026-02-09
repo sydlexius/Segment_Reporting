@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v0.0.17.0 - Palette Preview on Settings Page
+
+### Added
+
+- **Live chart preview on settings page** (#36) - The Chart Theme section now shows a sample stacked bar chart that updates instantly when you switch palettes or adjust custom colors, so you can see exactly how the dashboard will look before saving.
+
+---
+
 ## v0.0.16.0 - Breadcrumb Navigation
 
 ### Added

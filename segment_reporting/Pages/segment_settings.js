@@ -4,6 +4,69 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
     return function (view, params) {
 
         var helpers = getSegmentReportingHelpers();
+        var previewChart = null;
+
+        // --- Palette preview ---
+
+        function getPreviewPalette() {
+            var selected = view.querySelector('#prefChartPalette').value;
+            if (selected === 'custom') {
+                return {
+                    name: 'Custom',
+                    bothSegments: view.querySelector('#colorBothText').value.trim() || '#003366',
+                    introOnly: view.querySelector('#colorIntroText').value.trim() || '#87CEEB',
+                    creditsOnly: view.querySelector('#colorCreditsText').value.trim() || '#F5F5DC',
+                    noSegments: view.querySelector('#colorNoneText').value.trim() || '#d90429'
+                };
+            } else if (selected === 'auto') {
+                var accent = helpers.detectAccentColor(view);
+                return helpers.generateChartPalette(accent);
+            } else {
+                return helpers.getPaletteByName(selected);
+            }
+        }
+
+        function renderPreviewChart() {
+            var container = view.querySelector('#palettePreviewContainer');
+            if (!container) return;
+
+            require([Dashboard.getConfigurationResourceUrl('segment_reporting_chart.min.js')], function (Chart) {
+                if (previewChart) {
+                    previewChart.destroy();
+                    previewChart = null;
+                }
+
+                var palette = getPreviewPalette();
+                var textColor = getComputedStyle(view).color || '#fff';
+                var ctx = view.querySelector('#palettePreviewChart').getContext('2d');
+
+                previewChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['TV Shows', 'Anime', 'Documentaries'],
+                        datasets: [
+                            { label: 'Both Segments', data: [65, 40, 10], backgroundColor: palette.bothSegments, borderColor: palette.bothSegments, borderWidth: 1 },
+                            { label: 'Intro Only', data: [20, 30, 15], backgroundColor: palette.introOnly, borderColor: palette.introOnly, borderWidth: 1 },
+                            { label: 'Credits Only', data: [10, 15, 25], backgroundColor: palette.creditsOnly, borderColor: palette.creditsOnly, borderWidth: 1 },
+                            { label: 'No Segments', data: [5, 15, 50], backgroundColor: palette.noSegments, borderColor: palette.noSegments, borderWidth: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        animation: { duration: 300 },
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: textColor } },
+                            tooltip: { enabled: false }
+                        },
+                        scales: {
+                            x: { stacked: true, ticks: { color: textColor }, grid: { color: '#99999944' } },
+                            y: { stacked: true, ticks: { color: textColor, beginAtZero: true }, grid: { color: '#99999944' } }
+                        }
+                    }
+                });
+            });
+        }
 
         // --- Color picker sync ---
 
@@ -12,11 +75,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var textInput = view.querySelector('#' + textId);
             colorInput.addEventListener('input', function () {
                 textInput.value = colorInput.value.toUpperCase();
+                renderPreviewChart();
             });
             textInput.addEventListener('input', function () {
                 var val = textInput.value.trim();
                 if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
                     colorInput.value = val;
+                    renderPreviewChart();
                 }
             });
         }
@@ -48,6 +113,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var panel = view.querySelector('#customColorsPanel');
             var selected = view.querySelector('#prefChartPalette').value;
             panel.style.display = selected === 'custom' ? '' : 'none';
+            renderPreviewChart();
         }
 
         // --- Save preferences ---
@@ -134,6 +200,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.invalidatePreferencesCache();
             helpers.loadPreferences().then(function (prefs) {
                 populateForm(prefs);
+                renderPreviewChart();
             });
 
             loadCacheStats();
@@ -156,6 +223,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         });
 
         view.addEventListener('viewhide', function () {
+            if (previewChart) { previewChart.destroy(); previewChart = null; }
             view.querySelector('#prefChartPalette').removeEventListener('change', toggleCustomPanel);
             view.querySelector('#btnSavePreferences').removeEventListener('click', savePreferences);
             view.querySelector('#btnForceRescan').removeEventListener('click', onForceRescanClick);
