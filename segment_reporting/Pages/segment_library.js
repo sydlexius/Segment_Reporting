@@ -1,5 +1,5 @@
 /*
-Copyright(C) 2024
+Copyright(C) 2026
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,11 +14,11 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see<http://www.gnu.org/licenses/>.
 */
 
-define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (helpers) {
+define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], function () {
     'use strict';
 
     return function (view, params) {
-
+        var helpers = getSegmentReportingHelpers();
         var libraryId = null;
         var seriesData = [];
         var filteredData = [];
@@ -204,7 +204,7 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
          * Create or update the bar chart
          */
         function updateChart() {
-            require([Dashboard.getConfigurationResourceUrl('chart.min.js')], function (Chart) {
+            require([Dashboard.getConfigurationResourceUrl('segment_reporting_chart.min.js')], function (Chart) {
                 var ctx = view.querySelector('#seriesChart').getContext('2d');
 
                 var labels = filteredData.map(function (item) {
@@ -244,8 +244,9 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                     chart.destroy();
                 }
 
-                // Read the current theme's text color
-                var themeTextColor = getComputedStyle(view).color;
+                // Get theme colors based on Emby's accent color
+                var themeColors = helpers.getThemeColors(view);
+                var palette = themeColors.chart;
 
                 chart = new Chart(ctx, {
                     type: 'bar',
@@ -255,29 +256,29 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                             {
                                 label: 'Both Segments',
                                 data: withBoth,
-                                backgroundColor: '#4CAF50',
-                                borderColor: '#4CAF50',
+                                backgroundColor: palette.bothSegments,
+                                borderColor: palette.bothSegments,
                                 borderWidth: 1
                             },
                             {
                                 label: 'Intro Only',
                                 data: introOnly,
-                                backgroundColor: '#2196F3',
-                                borderColor: '#2196F3',
+                                backgroundColor: palette.introOnly,
+                                borderColor: palette.introOnly,
                                 borderWidth: 1
                             },
                             {
                                 label: 'Credits Only',
                                 data: creditsOnly,
-                                backgroundColor: '#FF9800',
-                                borderColor: '#FF9800',
+                                backgroundColor: palette.creditsOnly,
+                                borderColor: palette.creditsOnly,
                                 borderWidth: 1
                             },
                             {
                                 label: 'No Segments',
                                 data: withNeither,
-                                backgroundColor: '#F44336',
-                                borderColor: '#F44336',
+                                backgroundColor: palette.noSegments,
+                                borderColor: palette.noSegments,
                                 borderWidth: 1
                             }
                         ]
@@ -289,7 +290,7 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                             legend: {
                                 position: 'bottom',
                                 labels: {
-                                    color: themeTextColor
+                                    color: themeColors.text
                                 }
                             },
                             tooltip: {
@@ -309,22 +310,22 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                             x: {
                                 stacked: true,
                                 ticks: {
-                                    color: themeTextColor,
+                                    color: themeColors.text,
                                     maxRotation: 45,
                                     minRotation: 0
                                 },
                                 grid: {
-                                    color: '#99999944'
+                                    color: themeColors.gridColor
                                 }
                             },
                             y: {
                                 stacked: true,
                                 ticks: {
-                                    color: themeTextColor,
+                                    color: themeColors.text,
                                     beginAtZero: true
                                 },
                                 grid: {
-                                    color: '#99999944'
+                                    color: themeColors.gridColor
                                 }
                             }
                         },

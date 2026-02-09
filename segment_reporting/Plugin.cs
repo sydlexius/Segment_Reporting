@@ -94,13 +94,13 @@ namespace segment_reporting
                 },
                 new PluginPageInfo
                 {
-                    Name = "helper_function.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.helper_function.js"
+                    Name = "segment_reporting_helpers.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_reporting_helpers.js"
                 },
                 new PluginPageInfo
                 {
-                    Name = "chart.min.js",
-                    EmbeddedResourcePath = GetType().Namespace + ".Pages.chart.min.js"
+                    Name = "segment_reporting_chart.min.js",
+                    EmbeddedResourcePath = GetType().Namespace + ".Pages.segment_reporting_chart.min.js"
                 }
             };
         }

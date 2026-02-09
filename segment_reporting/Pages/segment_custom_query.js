@@ -14,11 +14,12 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see<http://www.gnu.org/licenses/>.
 */
 
-define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (helpers) {
+define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], function () {
     'use strict';
 
     return function (view, params) {
 
+        var helpers = getSegmentReportingHelpers();
         var currentResults = [];
         var currentColumns = [];
 

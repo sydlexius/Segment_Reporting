@@ -1,7 +1,9 @@
-define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (helpers) {
+define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], function () {
     'use strict';
 
     return function (view, params) {
+
+        var helpers = getSegmentReportingHelpers();
 
         function formatBytes(bytes) {
             if (!bytes || bytes === 0) {

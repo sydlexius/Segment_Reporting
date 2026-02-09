@@ -1,5 +1,5 @@
 /*
-Copyright(C) 2024
+Copyright(C) 2026
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -14,11 +14,11 @@ You should have received a copy of the GNU General Public License
 along with this program. If not, see<http://www.gnu.org/licenses/>.
 */
 
-define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (helpers) {
+define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], function () {
     'use strict';
 
     return function (view, params) {
-
+        var helpers = getSegmentReportingHelpers();
         var seriesId = null;
         var libraryId = null;
         var seasonData = [];
@@ -100,7 +100,7 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
         // ── Season Chart ──
 
         function updateSeasonChart() {
-            require([Dashboard.getConfigurationResourceUrl('chart.min.js')], function (Chart) {
+            require([Dashboard.getConfigurationResourceUrl('segment_reporting_chart.min.js')], function (Chart) {
                 var ctx = view.querySelector('#seasonChart').getContext('2d');
 
                 var labels = seasonData.map(function (s) {
@@ -128,24 +128,25 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                     chart.destroy();
                 }
 
-                var themeTextColor = getComputedStyle(view).color;
+                var themeColors = helpers.getThemeColors(view);
+                var palette = themeColors.chart;
 
                 chart = new Chart(ctx, {
                     type: 'bar',
                     data: {
                         labels: labels,
                         datasets: [
-                            { label: 'Both Segments', data: withBoth, backgroundColor: '#4CAF50', borderColor: '#4CAF50', borderWidth: 1 },
-                            { label: 'Intro Only', data: introOnly, backgroundColor: '#2196F3', borderColor: '#2196F3', borderWidth: 1 },
-                            { label: 'Credits Only', data: creditsOnly, backgroundColor: '#FF9800', borderColor: '#FF9800', borderWidth: 1 },
-                            { label: 'No Segments', data: withNeither, backgroundColor: '#F44336', borderColor: '#F44336', borderWidth: 1 }
+                            { label: 'Both Segments', data: withBoth, backgroundColor: palette.bothSegments, borderColor: palette.bothSegments, borderWidth: 1 },
+                            { label: 'Intro Only', data: introOnly, backgroundColor: palette.introOnly, borderColor: palette.introOnly, borderWidth: 1 },
+                            { label: 'Credits Only', data: creditsOnly, backgroundColor: palette.creditsOnly, borderColor: palette.creditsOnly, borderWidth: 1 },
+                            { label: 'No Segments', data: withNeither, backgroundColor: palette.noSegments, borderColor: palette.noSegments, borderWidth: 1 }
                         ]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: true,
                         plugins: {
-                            legend: { position: 'bottom', labels: { color: themeTextColor } },
+                            legend: { position: 'bottom', labels: { color: themeColors.text } },
                             tooltip: {
                                 mode: 'index',
                                 intersect: false,
@@ -158,8 +159,8 @@ define([Dashboard.getConfigurationResourceUrl('helper_function.js')], function (
                             }
                         },
                         scales: {
-                            x: { stacked: true, ticks: { color: themeTextColor }, grid: { color: '#99999944' } },
-                            y: { stacked: true, ticks: { color: themeTextColor, beginAtZero: true }, grid: { color: '#99999944' } }
+                            x: { stacked: true, ticks: { color: themeColors.text }, grid: { color: themeColors.gridColor } },
+                            y: { stacked: true, ticks: { color: themeColors.text, beginAtZero: true }, grid: { color: themeColors.gridColor } }
                         }
                     }
                 });
