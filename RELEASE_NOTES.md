@@ -1,6 +1,12 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.0.0-RC0 - Pre-Production Release
+
+This is a pre-production release candidate. All planned features are implemented and working. Please report any issues before the final v1.0.0.0 release.
+
+---
+
 ## v0.0.17.0 - Palette Preview on Settings Page
 
 ### Added
