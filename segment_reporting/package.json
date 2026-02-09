@@ -1,0 +1,19 @@
+{
+  "name": "segment_reporting",
+  "private": true,
+  "description": "Build tools for Segment Reporting Emby plugin",
+  "scripts": {
+    "build:js": "node scripts/build-js.mjs minify",
+    "build:chart": "node scripts/build-js.mjs chart",
+    "build:restore": "node scripts/build-js.mjs restore",
+    "build:thumb": "node scripts/optimize-thumb.mjs"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "chart.js": "4.5.1",
+    "esbuild": "^0.27.3",
+    "rollup": "^4.57.1",
+    "sharp": "^0.34.5"
+  }
+}

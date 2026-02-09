@@ -1,5 +1,21 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.2 - Reduce DLL Size
+
+### Improved
+
+- **37% smaller plugin DLL** (#24) - Reduced from 461 KB to 293 KB through Chart.js tree-shaking, JS minification, and image optimization.
+- **Custom Chart.js build** - Upgraded to Chart.js v4.5.1 with a tree-shaken bundle that includes only bar chart components (138 KB, down from 195 KB).
+- **Build-time JS minification** - Custom JS files are automatically minified during Release builds using esbuild, cutting 90 KB from the embedded resources.
+- **Optimized thumbnail** - Plugin icon compressed from 18 KB to 4 KB with no visible quality loss.
+
+### Developer Notes
+
+- JS minification runs in CI before the dotnet build step. For local Release builds with minification, run `npm ci && npm run build:js` in the `segment_reporting/` directory first.
+- To update Chart.js: bump the version in `package.json`, run `npm run build:chart`, and commit the result.
+
+---
+
 ## v0.0.9.1 - Fix Duplicate Button Clicks on Page Re-navigation
 
 ### Fixed
