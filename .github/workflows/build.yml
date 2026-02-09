@@ -68,11 +68,44 @@ jobs:
           name: segment_reporting-dll
           path: ./release-assets
 
+      - name: Extract release notes
+        id: notes
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+
+          # Extract the section for this version from RELEASE_NOTES.md
+          # Matches from "## vX.Y.Z" up to the next "---" delimiter or next "## v"
+          NOTES=$(awk -v tag="$TAG" '
+            BEGIN { found=0 }
+            /^## v/ {
+              if (found) exit
+              gsub(/^## /, "")
+              split($0, a, " - ")
+              ver = a[1]
+              if (ver == tag || ver == substr(tag, 2)) { found=1; next }
+            }
+            /^---$/ { if (found) exit; next }
+            found { print }
+          ' RELEASE_NOTES.md)
+
+          if [ -z "$NOTES" ]; then
+            NOTES="See commit history for changes in this release."
+          fi
+
+          # Append full changelog link
+          PREV_TAG=$(git tag --sort=-v:refname | grep -A1 "^${TAG}$" | tail -1)
+          if [ -n "$PREV_TAG" ] && [ "$PREV_TAG" != "$TAG" ]; then
+            printf '%s\n\n**Full Changelog**: https://github.com/%s/compare/%s...%s\n' \
+              "$NOTES" "${{ github.repository }}" "$PREV_TAG" "$TAG" > release-notes.md
+          else
+            printf '%s\n' "$NOTES" > release-notes.md
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: ./release-assets/**/*.dll
-          generate_release_notes: true
+          body_path: release-notes.md
           draft: false
           prerelease: false
         env:

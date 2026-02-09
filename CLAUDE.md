@@ -54,10 +54,22 @@ This plugin follows the architecture pattern established by [playback_reporting]
 - `chart.min.js` is embedded as a resource for charting
 - Segment types: `IntroStart`, `IntroEnd`, `CreditsStart` (the three types Emby currently supports)
 - Time values stored as ticks (BIGINT), displayed as `HH:MM:SS.fff`
-- Shared utilities live in `Pages/helper_function.js` (tick conversion, chart navigation, API helpers)
+- Shared utilities live in `Pages/segment_reporting_helpers.js` (tick conversion, chart navigation, API helpers, HTML escaping)
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/build.yml`): build on push to main/develop and PRs. Tag push (`v*`) creates a GitHub Release with the compiled DLL.
+GitHub Actions (`.github/workflows/build.yml`): build on push to main/develop and PRs. Tag push (`v*`) creates a GitHub Release with the compiled DLL. Release notes are extracted from `RELEASE_NOTES.md` automatically.
 
-Prefer solving tasks in a single session. only spawn subagents for genuinely independent workstreams.
+## Releasing a New Version
+
+When asked to tag/release a version, follow these steps in order:
+
+1. **Bump version** in `Properties/AssemblyInfo.cs` (both `AssemblyVersion` and `AssemblyFileVersion`)
+2. **Add a section to `RELEASE_NOTES.md`** at the top (below the `# title`), using the format `## vX.Y.Z.W - Short Title`. Write user-friendly descriptions (not technical jargon). CI extracts this section automatically for the GitHub Release page.
+3. **Build** to verify: `dotnet build segment_reporting/segment_reporting.csproj -c Release`
+4. **Stage, commit, push** the version bump + release notes + any pending changes
+5. **Tag and push the tag**: `git tag vX.Y.Z.W && git push origin vX.Y.Z.W`
+6. **Wait for CI** to create the GitHub Release (check with `gh release view vX.Y.Z.W`)
+7. **Close related issues** if applicable, with a comment referencing the version
+
+Prefer solving tasks in a single session. Only spawn subagents for genuinely independent workstreams.
