@@ -315,16 +315,31 @@ function segmentReportingDetectAccentColor(view) {
 }
 
 function segmentReportingGenerateChartPalette(accentHex) {
+    var palettes = [
+        { hue: 122, both: '#003366', intro: '#87CEEB', credits: '#F5F5DC', none: '#d90429' },
+        { hue: 207, both: '#003459', intro: '#f4a44e', credits: '#bfdbf7', none: '#d90429' },
+        { hue:   4, both: '#002a3a', intro: '#216f8d', credits: '#eaaa00', none: '#d90429' },
+        { hue: 322, both: '#cdb4db', intro: '#ffafcc', credits: '#a2d2ff', none: '#d90429' },
+        { hue: 271, both: '#9b26af', intro: '#3f51b5', credits: '#f44235', none: '#d90429' }
+    ];
+
     var rgb = segmentReportingHexToRgb(accentHex);
     var hsl = segmentReportingRgbToHsl(rgb.r, rgb.g, rgb.b);
+    var h = hsl.h;
 
-    var isReddish = (hsl.h >= 340 || hsl.h <= 20);
+    var best = palettes[0];
+    var bestDist = 360;
+    for (var i = 0; i < palettes.length; i++) {
+        var d = Math.abs(h - palettes[i].hue);
+        if (d > 180) d = 360 - d;
+        if (d < bestDist) { bestDist = d; best = palettes[i]; }
+    }
 
     return {
-        bothSegments: segmentReportingHslToHexString(hsl.h, Math.min(hsl.s + 10, 100), Math.min(hsl.l + 15, 85)),
-        introOnly: accentHex,
-        creditsOnly: segmentReportingHslToHexString((hsl.h + 30) % 360, hsl.s, hsl.l),
-        noSegments: isReddish ? '#FF9800' : '#F44336'
+        bothSegments: best.both,
+        introOnly: best.intro,
+        creditsOnly: best.credits,
+        noSegments: best.none
     };
 }
 

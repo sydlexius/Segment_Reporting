@@ -1,5 +1,13 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.8 - Curated Chart Color Palettes
+
+### Improved
+
+- **Hand-picked chart color palettes** (#21) - Chart and dashboard card colors now use curated palettes matched to the active Emby accent color (green, blue, red, pink, or purple) instead of auto-generated HSL variations.
+
+---
+
 ## v0.0.9.7 - Movie Library Browsing
 
 ### Added
