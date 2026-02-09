@@ -22,6 +22,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var helpers = getSegmentReportingHelpers();
         var libraryData = [];
         var chart = null;
+        var listenersAttached = false;
 
         /**
          * Load library summary data from API
@@ -331,27 +332,31 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         view.addEventListener('viewshow', function (e) {
+            if (!listenersAttached) {
+                listenersAttached = true;
+
+                var btnSyncNow = view.querySelector('#btnSyncNow');
+                if (btnSyncNow) {
+                    btnSyncNow.addEventListener('click', handleSyncNow);
+                }
+
+                var btnCustomQuery = view.querySelector('#btnCustomQuery');
+                if (btnCustomQuery) {
+                    btnCustomQuery.addEventListener('click', function () {
+                        helpers.navigate('segment_custom_query');
+                    });
+                }
+
+                var btnSettings = view.querySelector('#btnSettings');
+                if (btnSettings) {
+                    btnSettings.addEventListener('click', function () {
+                        helpers.navigate('segment_settings');
+                    });
+                }
+            }
+
             loadLibrarySummary();
             loadSyncStatus();
-
-            var btnSyncNow = view.querySelector('#btnSyncNow');
-            if (btnSyncNow) {
-                btnSyncNow.addEventListener('click', handleSyncNow);
-            }
-
-            var btnCustomQuery = view.querySelector('#btnCustomQuery');
-            if (btnCustomQuery) {
-                btnCustomQuery.addEventListener('click', function () {
-                    helpers.navigate('segment_custom_query');
-                });
-            }
-
-            var btnSettings = view.querySelector('#btnSettings');
-            if (btnSettings) {
-                btnSettings.addEventListener('click', function () {
-                    helpers.navigate('segment_settings');
-                });
-            }
         });
 
         view.addEventListener('viewhide', function (e) {

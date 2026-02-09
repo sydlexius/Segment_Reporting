@@ -1,5 +1,13 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.1 - Fix Duplicate Button Clicks on Page Re-navigation
+
+### Fixed
+
+- **Event listener accumulation** (#28) - Buttons on the Dashboard, Library, and Series pages no longer fire multiple times after navigating away and back. Listeners are now attached only once per page lifecycle.
+
+---
+
 ## v0.0.9.0 - Security Fixes
 
 ### Security

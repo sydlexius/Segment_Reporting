@@ -27,6 +27,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var currentSearch = '';
         var sortColumn = null;
         var sortAscending = true;
+        var listenersAttached = false;
 
         /**
          * Load series list from API
@@ -415,34 +416,36 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             // Clear stored navigation params after consuming them
             helpers.clearNavParams();
 
+            if (!listenersAttached) {
+                listenersAttached = true;
+
+                var btnBack = view.querySelector('#btnBackToDashboard');
+                if (btnBack) {
+                    btnBack.addEventListener('click', handleBackClick);
+                }
+
+                var filterDropdown = view.querySelector('#filterDropdown');
+                if (filterDropdown) {
+                    filterDropdown.addEventListener('change', handleFilterChange);
+                }
+
+                var thead = view.querySelector('#seriesTable thead');
+                if (thead) {
+                    thead.addEventListener('click', handleSortClick);
+                }
+
+                var searchBox = view.querySelector('#searchBox');
+                if (searchBox) {
+                    var searchTimeout;
+                    searchBox.addEventListener('input', function () {
+                        clearTimeout(searchTimeout);
+                        searchTimeout = setTimeout(handleSearch, 300);
+                    });
+                }
+            }
+
             // Load initial data
             loadSeriesList();
-
-            // Attach event listeners
-            var btnBack = view.querySelector('#btnBackToDashboard');
-            if (btnBack) {
-                btnBack.addEventListener('click', handleBackClick);
-            }
-
-            var filterDropdown = view.querySelector('#filterDropdown');
-            if (filterDropdown) {
-                filterDropdown.addEventListener('change', handleFilterChange);
-            }
-
-            var thead = view.querySelector('#seriesTable thead');
-            if (thead) {
-                thead.addEventListener('click', handleSortClick);
-            }
-
-            var searchBox = view.querySelector('#searchBox');
-            if (searchBox) {
-                // Debounce search input
-                var searchTimeout;
-                searchBox.addEventListener('input', function () {
-                    clearTimeout(searchTimeout);
-                    searchTimeout = setTimeout(handleSearch, 300);
-                });
-            }
         });
 
         view.addEventListener('viewhide', function (e) {

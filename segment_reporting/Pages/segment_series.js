@@ -27,6 +27,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var bulkSource = null;  // { ItemId, ItemName, IntroStartTicks, IntroEndTicks, CreditsStartTicks }
         var editingRow = null;  // currently editing row element (only one at a time)
         var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
+        var listenersAttached = false;
 
         // ── Data Loading ──
 
@@ -1135,18 +1136,21 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             helpers.clearNavParams();
 
+            if (!listenersAttached) {
+                listenersAttached = true;
+
+                var btnBack = view.querySelector('#btnBackToLibrary');
+                if (btnBack) {
+                    btnBack.addEventListener('click', handleBackClick);
+                }
+
+                var btnClearSource = view.querySelector('#btnClearBulkSource');
+                if (btnClearSource) {
+                    btnClearSource.addEventListener('click', clearBulkSource);
+                }
+            }
+
             loadSeasons();
-
-            // Attach event listeners
-            var btnBack = view.querySelector('#btnBackToLibrary');
-            if (btnBack) {
-                btnBack.addEventListener('click', handleBackClick);
-            }
-
-            var btnClearSource = view.querySelector('#btnClearBulkSource');
-            if (btnClearSource) {
-                btnClearSource.addEventListener('click', clearBulkSource);
-            }
         });
 
         view.addEventListener('viewhide', function () {
