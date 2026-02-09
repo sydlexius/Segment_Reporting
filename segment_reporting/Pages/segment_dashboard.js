@@ -292,6 +292,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         helpers.navigate('segment_settings');
                     });
                 }
+
+                var btnAbout = view.querySelector('#btnAbout');
+                if (btnAbout) {
+                    btnAbout.addEventListener('click', function () {
+                        helpers.navigate('segment_about');
+                    });
+                }
             }
 
             // Check for EmbyCredits plugin and show/hide detect button

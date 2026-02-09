@@ -1,5 +1,18 @@
 # Segment Reporting - Release Notes
 
+## v0.0.12.0 - About Page
+
+### Added
+
+- **About page** (#38) - New "About" button on the dashboard opens a page showing plugin version, acknowledgements for ChapterApi, Playback Reporting, and EmbyCredits, links to the GitHub repository, and a quick-reference list of all REST API endpoints.
+- **Plugin info API endpoint** - New `GET /segment_reporting/plugin_info` endpoint returns the plugin name, version, and description.
+
+### Fixed
+
+- **API comment URLs** - Developer-facing URL examples in the API source code now use a generic `http(s)://<host>:<port>` placeholder instead of `localhost:8096`.
+
+---
+
 ## v0.0.11.0 - EmbyCredits Plugin Integration
 
 ### Added

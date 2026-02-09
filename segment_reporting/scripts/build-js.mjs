@@ -27,6 +27,7 @@ const CUSTOM_JS_FILES = [
     'segment_library.js',
     'segment_series.js',
     'segment_custom_query.js',
+    'segment_about.js',
     'segment_reporting_helpers.js',
     'segment_settings.js'
 ];

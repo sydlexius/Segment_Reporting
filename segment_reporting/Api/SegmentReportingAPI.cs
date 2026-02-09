@@ -31,14 +31,14 @@ using segment_reporting.Tasks;
 
 namespace segment_reporting.Api
 {
-    // http://localhost:8096/emby/segment_reporting/library_summary
+    // http(s)://<host>:<port>/emby/segment_reporting/library_summary
     [Route("/segment_reporting/library_summary", "GET", Summary = "Gets per-library coverage stats")]
     [Authenticated(Roles = "admin")]
     public class GetLibrarySummary : IReturn<object>
     {
     }
 
-    // http://localhost:8096/emby/segment_reporting/series_list?libraryId=X&search=&filter=
+    // http(s)://<host>:<port>/emby/segment_reporting/series_list?libraryId=X&search=&filter=
     [Route("/segment_reporting/series_list", "GET", Summary = "Gets series/movies in a library with coverage stats")]
     [Authenticated(Roles = "admin")]
     public class GetSeriesList : IReturn<object>
@@ -53,7 +53,7 @@ namespace segment_reporting.Api
         public string Filter { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/season_list?seriesId=X
+    // http(s)://<host>:<port>/emby/segment_reporting/season_list?seriesId=X
     [Route("/segment_reporting/season_list", "GET", Summary = "Gets seasons for a series with coverage stats")]
     [Authenticated(Roles = "admin")]
     public class GetSeasonList : IReturn<object>
@@ -62,7 +62,7 @@ namespace segment_reporting.Api
         public string SeriesId { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/episode_list?seasonId=X or ?seriesId=X
+    // http(s)://<host>:<port>/emby/segment_reporting/episode_list?seasonId=X or ?seriesId=X
     [Route("/segment_reporting/episode_list", "GET", Summary = "Gets episodes with full segment tick values")]
     [Authenticated(Roles = "admin")]
     public class GetEpisodeList : IReturn<object>
@@ -74,7 +74,7 @@ namespace segment_reporting.Api
         public string SeriesId { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/item_segments?itemId=X
+    // http(s)://<host>:<port>/emby/segment_reporting/item_segments?itemId=X
     [Route("/segment_reporting/item_segments", "GET", Summary = "Gets segment detail for a single item")]
     [Authenticated(Roles = "admin")]
     public class GetItemSegments : IReturn<object>
@@ -83,7 +83,7 @@ namespace segment_reporting.Api
         public string ItemId { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/update_segment
+    // http(s)://<host>:<port>/emby/segment_reporting/update_segment
     [Route("/segment_reporting/update_segment", "POST", Summary = "Updates or adds a segment on one item")]
     [Authenticated(Roles = "admin")]
     public class UpdateSegment : IReturn<object>
@@ -98,7 +98,7 @@ namespace segment_reporting.Api
         public long Ticks { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/delete_segment
+    // http(s)://<host>:<port>/emby/segment_reporting/delete_segment
     [Route("/segment_reporting/delete_segment", "POST", Summary = "Removes a segment marker from an item")]
     [Authenticated(Roles = "admin")]
     public class DeleteSegmentRequest : IReturn<object>
@@ -110,7 +110,7 @@ namespace segment_reporting.Api
         public string MarkerType { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/bulk_apply
+    // http(s)://<host>:<port>/emby/segment_reporting/bulk_apply
     [Route("/segment_reporting/bulk_apply", "POST", Summary = "Copies segments from source item to target items")]
     [Authenticated(Roles = "admin")]
     public class BulkApply : IReturn<object>
@@ -125,7 +125,7 @@ namespace segment_reporting.Api
         public string MarkerTypes { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/bulk_delete
+    // http(s)://<host>:<port>/emby/segment_reporting/bulk_delete
     [Route("/segment_reporting/bulk_delete", "POST", Summary = "Removes segment types from multiple items")]
     [Authenticated(Roles = "admin")]
     public class BulkDelete : IReturn<object>
@@ -137,7 +137,7 @@ namespace segment_reporting.Api
         public string MarkerTypes { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/bulk_set_credits_end
+    // http(s)://<host>:<port>/emby/segment_reporting/bulk_set_credits_end
     [Route("/segment_reporting/bulk_set_credits_end", "POST", Summary = "Sets CreditsStart to runtime minus offset for items")]
     [Authenticated(Roles = "admin")]
     public class BulkSetCreditsEnd : IReturn<object>
@@ -149,35 +149,35 @@ namespace segment_reporting.Api
         public long OffsetTicks { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/sync_now
+    // http(s)://<host>:<port>/emby/segment_reporting/sync_now
     [Route("/segment_reporting/sync_now", "POST", Summary = "Trigger immediate full sync")]
     [Authenticated(Roles = "admin")]
     public class SyncNow : IReturn<object>
     {
     }
 
-    // http://localhost:8096/emby/segment_reporting/sync_status
+    // http(s)://<host>:<port>/emby/segment_reporting/sync_status
     [Route("/segment_reporting/sync_status", "GET", Summary = "Get last sync time, items scanned, duration")]
     [Authenticated(Roles = "admin")]
     public class GetSyncStatus : IReturn<object>
     {
     }
 
-    // http://localhost:8096/emby/segment_reporting/force_rescan
+    // http(s)://<host>:<port>/emby/segment_reporting/force_rescan
     [Route("/segment_reporting/force_rescan", "POST", Summary = "Drop and rebuild entire cache from scratch")]
     [Authenticated(Roles = "admin")]
     public class ForceRescan : IReturn<object>
     {
     }
 
-    // http://localhost:8096/emby/segment_reporting/cache_stats
+    // http(s)://<host>:<port>/emby/segment_reporting/cache_stats
     [Route("/segment_reporting/cache_stats", "GET", Summary = "Get cache row count, DB file size, and last sync info")]
     [Authenticated(Roles = "admin")]
     public class GetCacheStats : IReturn<object>
     {
     }
 
-    // http://localhost:8096/emby/segment_reporting/submit_custom_query
+    // http(s)://<host>:<port>/emby/segment_reporting/submit_custom_query
     [Route("/segment_reporting/submit_custom_query", "POST", Summary = "Execute read-only SQL against the cache")]
     [Authenticated(Roles = "admin")]
     public class SubmitCustomQuery : IReturn<object>
@@ -186,10 +186,17 @@ namespace segment_reporting.Api
         public string Query { get; set; }
     }
 
-    // http://localhost:8096/emby/segment_reporting/canned_queries
+    // http(s)://<host>:<port>/emby/segment_reporting/canned_queries
     [Route("/segment_reporting/canned_queries", "GET", Summary = "Return list of built-in queries")]
     [Authenticated(Roles = "admin")]
     public class GetCannedQueries : IReturn<object>
+    {
+    }
+
+    // http(s)://<host>:<port>/emby/segment_reporting/plugin_info
+    [Route("/segment_reporting/plugin_info", "GET", Summary = "Get plugin name, version, and description")]
+    [Authenticated(Roles = "admin")]
+    public class GetPluginInfo : IReturn<object>
     {
     }
 
@@ -773,6 +780,19 @@ namespace segment_reporting.Api
             };
 
             return queries;
+        }
+
+        public object Get(GetPluginInfo request)
+        {
+            var plugin = Plugin.Instance;
+            var version = plugin.GetType().Assembly.GetName().Version;
+
+            return new
+            {
+                name = plugin.Name,
+                version = version.ToString(),
+                description = plugin.Description
+            };
         }
 
         private void WriteSegmentToEmby(long internalId, string markerType, long? ticks)

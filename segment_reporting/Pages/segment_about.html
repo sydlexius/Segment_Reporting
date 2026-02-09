@@ -1,0 +1,130 @@
+<div id="segmentAboutPage" data-role="page" class="page type-interior pluginConfigurationPage"
+     data-require="emby-button"
+     data-controller="__plugin/segment_about.js">
+
+    <div data-role="content">
+        <div class="content-primary">
+
+            <!-- Header -->
+            <div class="sectionTitleContainer flex align-items-center">
+                <h2 class="sectionTitle">About Segment Reporting</h2>
+            </div>
+
+            <!-- Version Info -->
+            <div class="verticalSection">
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em;">
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Plugin Name</div>
+                            <div id="aboutPluginName" style="font-size: 1.3em; font-weight: bold;">-</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Version</div>
+                            <div id="aboutPluginVersion" style="font-size: 1.3em; font-weight: bold;">-</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 1em;">
+                        <div id="aboutPluginDescription" style="opacity: 0.8;">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Acknowledgements -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Acknowledgements</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <p style="margin-bottom: 1em; opacity: 0.8;">
+                        This plugin builds on the work of several open-source projects and Emby community plugins.
+                    </p>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <tbody>
+                            <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.2);">
+                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">Playback Reporting</td>
+                                <td style="padding: 0.75em 0.5em;">
+                                    The architecture pattern for this plugin (SQLite caching, embedded web UI, scheduled tasks) is based on
+                                    <a href="https://github.com/faush01/playback_reporting" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">playback_reporting</a> by faush01.
+                                </td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.2);">
+                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">ChapterApi</td>
+                                <td style="padding: 0.75em 0.5em;">
+                                    Emby's segment and chapter APIs were referenced from
+                                    <a href="https://github.com/faush01/ChapterApi" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">ChapterApi</a> by faush01.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">EmbyCredits</td>
+                                <td style="padding: 0.75em 0.5em;">
+                                    Credits detection features integrate with the
+                                    <a href="https://github.com/rlauuzo/EmbyCredits" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">EmbyCredits</a> plugin by rlauuzo.
+                                    Install EmbyCredits to enable "Detect Credits" buttons throughout the UI.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Links -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Links</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <div style="display: flex; flex-direction: column; gap: 0.75em;">
+                        <div>
+                            <a href="https://github.com/sydlexius/Emby_Segment_Reporting" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">
+                                GitHub Repository
+                            </a>
+                            <span style="opacity: 0.6;"> &mdash; Source code, issues, and releases</span>
+                        </div>
+                        <div>
+                            <a href="https://github.com/sydlexius/Emby_Segment_Reporting/issues" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">
+                                Report an Issue
+                            </a>
+                            <span style="opacity: 0.6;"> &mdash; Bug reports and feature requests</span>
+                        </div>
+                        <div>
+                            <a href="https://github.com/sydlexius/Emby_Segment_Reporting/releases" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">
+                                Releases
+                            </a>
+                            <span style="opacity: 0.6;"> &mdash; Download latest DLL</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- API Endpoints -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">API Endpoints</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <p style="margin-bottom: 1em; opacity: 0.8;">
+                        All endpoints require admin authentication. Base path: <code style="opacity: 0.9;">/emby/segment_reporting/</code>
+                    </p>
+                    <table id="apiEndpointsTable" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid rgba(128, 128, 128, 0.3);">
+                                <th style="text-align: left; padding: 0.5em;">Method</th>
+                                <th style="text-align: left; padding: 0.5em;">Endpoint</th>
+                                <th style="text-align: left; padding: 0.5em;">Description</th>
+                            </tr>
+                        </thead>
+                        <tbody id="apiEndpointsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- License -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">License</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+                    <p style="opacity: 0.8;">
+                        This plugin is licensed under the
+                        <a href="https://www.gnu.org/licenses/gpl-3.0.en.html" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">GNU General Public License v3.0</a>.
+                    </p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>

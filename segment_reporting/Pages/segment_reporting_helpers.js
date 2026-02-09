@@ -106,7 +106,7 @@ function segmentReportingNavigate(page, params) {
         }
     }
 
-    var knownPages = ['segment_dashboard', 'segment_library', 'segment_series', 'segment_settings', 'segment_custom_query'];
+    var knownPages = ['segment_dashboard', 'segment_library', 'segment_series', 'segment_settings', 'segment_custom_query', 'segment_about'];
     if (knownPages.indexOf(page) >= 0) {
         Dashboard.navigate(url);
         return;
