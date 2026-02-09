@@ -372,7 +372,25 @@ function segmentReportingEscHtml(s) {
 
 function segmentReportingGetThemeColors(view) {
     var accentColor = segmentReportingDetectAccentColor(view);
-    var palette = segmentReportingGenerateChartPalette(accentColor);
+    var palette;
+    var prefs = segmentReportingPreferencesCache;
+
+    if (prefs && prefs.chartPalette && prefs.chartPalette !== 'auto') {
+        if (prefs.chartPalette === 'custom') {
+            palette = {
+                name: 'Custom',
+                bothSegments: prefs.customColorBoth || '#003366',
+                introOnly: prefs.customColorIntro || '#87CEEB',
+                creditsOnly: prefs.customColorCredits || '#F5F5DC',
+                noSegments: prefs.customColorNone || '#d90429'
+            };
+        } else {
+            palette = segmentReportingGetPaletteByName(prefs.chartPalette);
+        }
+    } else {
+        palette = segmentReportingGenerateChartPalette(accentColor);
+    }
+
     var textColor = getComputedStyle(view).color || '#fff';
 
     return {
@@ -463,6 +481,61 @@ function segmentReportingCheckCreditsDetector() {
 function segmentReportingCreditsDetectorCall(endpoint, queryParams) {
     var url = ApiClient.getUrl('CreditsDetector/' + endpoint, queryParams || {});
     return ApiClient.ajax({ type: 'POST', url: url, dataType: 'json' });
+}
+
+var segmentReportingPreferencesCache = null;
+
+function segmentReportingLoadPreferences() {
+    if (segmentReportingPreferencesCache !== null) {
+        return Promise.resolve(segmentReportingPreferencesCache);
+    }
+    return segmentReportingApiCall('preferences', 'GET')
+        .then(function (prefs) {
+            segmentReportingPreferencesCache = prefs || {};
+            return segmentReportingPreferencesCache;
+        })
+        .catch(function () {
+            segmentReportingPreferencesCache = {};
+            return segmentReportingPreferencesCache;
+        });
+}
+
+function segmentReportingInvalidatePreferencesCache() {
+    segmentReportingPreferencesCache = null;
+}
+
+function segmentReportingGetPreference(key) {
+    if (segmentReportingPreferencesCache) {
+        return segmentReportingPreferencesCache[key] || null;
+    }
+    return null;
+}
+
+function segmentReportingApplyTableStyles(tableElement) {
+    if (!tableElement) return;
+    var prefs = segmentReportingPreferencesCache || {};
+    var showGridlines = prefs.tableGridlines === 'true';
+    var showStriped = prefs.tableStripedRows === 'true';
+
+    var cells = tableElement.querySelectorAll('th, td');
+    for (var i = 0; i < cells.length; i++) {
+        if (showGridlines) {
+            cells[i].style.borderBottom = '1px solid rgba(128, 128, 128, 0.25)';
+            cells[i].style.borderRight = '1px solid rgba(128, 128, 128, 0.15)';
+        } else {
+            cells[i].style.borderBottom = '';
+            cells[i].style.borderRight = '';
+        }
+    }
+
+    var rows = tableElement.querySelectorAll('tbody tr');
+    for (var j = 0; j < rows.length; j++) {
+        if (showStriped && j % 2 === 1) {
+            rows[j].style.backgroundColor = 'rgba(128, 128, 128, 0.08)';
+        } else if (!showStriped) {
+            rows[j].style.backgroundColor = '';
+        }
+    }
 }
 
 function segmentReportingWithButtonLoading(btn, workingText, promise) {
@@ -560,6 +633,10 @@ function getSegmentReportingHelpers() {
         withButtonLoading: segmentReportingWithButtonLoading,
         createSegmentChart: segmentReportingCreateSegmentChart,
         checkCreditsDetector: segmentReportingCheckCreditsDetector,
-        creditsDetectorCall: segmentReportingCreditsDetectorCall
+        creditsDetectorCall: segmentReportingCreditsDetectorCall,
+        loadPreferences: segmentReportingLoadPreferences,
+        invalidatePreferencesCache: segmentReportingInvalidatePreferencesCache,
+        getPreference: segmentReportingGetPreference,
+        applyTableStyles: segmentReportingApplyTableStyles
     };
 }

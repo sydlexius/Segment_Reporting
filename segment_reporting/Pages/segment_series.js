@@ -297,6 +297,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             table.appendChild(tbody);
 
             container.appendChild(table);
+
+            helpers.applyTableStyles(table);
         }
 
         function createEpisodeRow(ep, seasonId) {
@@ -1376,7 +1378,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             });
 
-            loadSeasons();
+            helpers.loadPreferences().then(function () {
+                loadSeasons();
+            });
         });
 
         helpers.registerChartCleanup(view, function () { return chart; }, function (v) { chart = v; });

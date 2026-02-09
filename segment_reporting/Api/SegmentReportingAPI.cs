@@ -200,6 +200,46 @@ namespace segment_reporting.Api
     {
     }
 
+    // http(s)://<host>:<port>/emby/segment_reporting/preferences
+    [Route("/segment_reporting/preferences", "GET", Summary = "Get all display preferences")]
+    [Authenticated(Roles = "admin")]
+    public class GetPreferences : IReturn<object>
+    {
+    }
+
+    // http(s)://<host>:<port>/emby/segment_reporting/preferences
+    [Route("/segment_reporting/preferences", "POST", Summary = "Save display preferences")]
+    [Authenticated(Roles = "admin")]
+    public class SavePreferences : IReturn<object>
+    {
+        [ApiMember(Name = "chartPalette", Description = "Palette name or 'auto'/'custom'", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string ChartPalette { get; set; }
+
+        [ApiMember(Name = "customColorBoth", Description = "Custom hex color for Both Segments", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string CustomColorBoth { get; set; }
+
+        [ApiMember(Name = "customColorIntro", Description = "Custom hex color for Intro Only", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string CustomColorIntro { get; set; }
+
+        [ApiMember(Name = "customColorCredits", Description = "Custom hex color for Credits Only", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string CustomColorCredits { get; set; }
+
+        [ApiMember(Name = "customColorNone", Description = "Custom hex color for No Segments", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string CustomColorNone { get; set; }
+
+        [ApiMember(Name = "tableGridlines", Description = "Show table gridlines", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string TableGridlines { get; set; }
+
+        [ApiMember(Name = "tableStripedRows", Description = "Show alternating row colors", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string TableStripedRows { get; set; }
+
+        [ApiMember(Name = "hideMovieLibraries", Description = "Hide Movie libraries from dashboard", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string HideMovieLibraries { get; set; }
+
+        [ApiMember(Name = "hideMixedLibraries", Description = "Hide Mixed libraries from dashboard", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string HideMixedLibraries { get; set; }
+    }
+
     public class SegmentReportingAPI : IService, IRequiresRequest
     {
         private readonly ILogger _logger;
@@ -793,6 +833,44 @@ namespace segment_reporting.Api
                 version = version.ToString(),
                 description = plugin.Description
             };
+        }
+
+        public object Get(GetPreferences request)
+        {
+            _logger.Info("GetPreferences");
+
+            SegmentRepository repo = GetRepository();
+            return repo.GetAllPreferences();
+        }
+
+        public object Post(SavePreferences request)
+        {
+            _logger.Info("SavePreferences");
+
+            SegmentRepository repo = GetRepository();
+
+            var entries = new Dictionary<string, string>
+            {
+                { "chartPalette", request.ChartPalette },
+                { "customColorBoth", request.CustomColorBoth },
+                { "customColorIntro", request.CustomColorIntro },
+                { "customColorCredits", request.CustomColorCredits },
+                { "customColorNone", request.CustomColorNone },
+                { "tableGridlines", request.TableGridlines },
+                { "tableStripedRows", request.TableStripedRows },
+                { "hideMovieLibraries", request.HideMovieLibraries },
+                { "hideMixedLibraries", request.HideMixedLibraries }
+            };
+
+            foreach (var entry in entries)
+            {
+                if (entry.Value != null)
+                {
+                    repo.SetPreference(entry.Key, entry.Value);
+                }
+            }
+
+            return new { success = true };
         }
 
         private void WriteSegmentToEmby(long internalId, string markerType, long? ticks)

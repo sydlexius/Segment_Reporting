@@ -31,6 +31,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.apiCallWithLoading('library_summary', 'GET')
                 .then(function (data) {
                     libraryData = data || [];
+
+                    // Filter hidden library types based on preferences
+                    var hideMovies = helpers.getPreference('hideMovieLibraries') === 'true';
+                    var hideMixed = helpers.getPreference('hideMixedLibraries') === 'true';
+                    if (hideMovies || hideMixed) {
+                        libraryData = libraryData.filter(function (lib) {
+                            if (hideMovies && lib.ContentType === 'movies') return false;
+                            if (hideMixed && lib.ContentType === 'mixed') return false;
+                            return true;
+                        });
+                    }
+
                     updateSummaryCards();
                     updateChart();
                     updateTable();
@@ -201,6 +213,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                 tbody.appendChild(row);
             });
+
+            helpers.applyTableStyles(view.querySelector('#libraryTable'));
         }
 
         /**
@@ -309,7 +323,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             });
 
-            loadLibrarySummary();
+            // Load preferences first so library filtering and theme colors work
+            helpers.loadPreferences().then(function () {
+                loadLibrarySummary();
+            });
             loadSyncStatus();
         });
 

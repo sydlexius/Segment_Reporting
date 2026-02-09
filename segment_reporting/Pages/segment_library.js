@@ -381,6 +381,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                 tbody.appendChild(row);
             });
+
+            helpers.applyTableStyles(view.querySelector('#seriesTable'));
         }
 
         // ── Movie Table ──
@@ -399,6 +401,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             filteredMovieData.forEach(function (movie) {
                 tbody.appendChild(createMovieRow(movie));
             });
+
+            helpers.applyTableStyles(view.querySelector('#movieTable'));
         }
 
         function createMovieRow(movie) {
@@ -750,7 +754,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             }
 
-            loadLibraryData();
+            helpers.loadPreferences().then(function () {
+                loadLibraryData();
+            });
         });
 
         helpers.registerChartCleanup(view, function () { return chart; }, function (v) { chart = v; });

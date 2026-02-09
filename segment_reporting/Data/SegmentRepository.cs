@@ -31,6 +31,7 @@ namespace segment_reporting.Data
             _dbPath = dbPath;
             _logger = logger;
             _connection = CreateConnection();
+            Initialize();
         }
 
         public static SegmentRepository GetInstance(string dbPath, ILogger logger)
@@ -105,6 +106,11 @@ namespace segment_reporting.Data
                     "LastFullSync DATETIME, " +
                     "ItemsScanned INT, " +
                     "SyncDuration INT)");
+
+                _connection.Execute(
+                    "CREATE TABLE IF NOT EXISTS UserPreferences (" +
+                    "[Key] TEXT PRIMARY KEY, " +
+                    "[Value] TEXT)");
 
                 CheckMigration();
 
@@ -458,7 +464,13 @@ namespace segment_reporting.Data
                     "SUM(HasIntro) as WithIntro, " +
                     "SUM(HasCredits) as WithCredits, " +
                     "SUM(CASE WHEN HasIntro = 1 AND HasCredits = 1 THEN 1 ELSE 0 END) as WithBoth, " +
-                    "SUM(CASE WHEN HasIntro = 0 AND HasCredits = 0 THEN 1 ELSE 0 END) as WithNeither " +
+                    "SUM(CASE WHEN HasIntro = 0 AND HasCredits = 0 THEN 1 ELSE 0 END) as WithNeither, " +
+                    "CASE " +
+                    "  WHEN SUM(CASE WHEN ItemType = 'Episode' THEN 1 ELSE 0 END) > 0 " +
+                    "   AND SUM(CASE WHEN ItemType = 'Movie' THEN 1 ELSE 0 END) > 0 THEN 'mixed' " +
+                    "  WHEN SUM(CASE WHEN ItemType = 'Movie' THEN 1 ELSE 0 END) > 0 THEN 'movies' " +
+                    "  ELSE 'series' " +
+                    "END as ContentType " +
                     "FROM MediaSegments " +
                     "GROUP BY LibraryId, LibraryName " +
                     "ORDER BY LibraryName"))
@@ -474,7 +486,8 @@ namespace segment_reporting.Data
                             WithIntro = ReadInt(row, 3),
                             WithCredits = ReadInt(row, 4),
                             WithBoth = ReadInt(row, 5),
-                            WithNeither = ReadInt(row, 6)
+                            WithNeither = ReadInt(row, 6),
+                            ContentType = ReadString(row, 7)
                         });
                     }
                 }
@@ -946,6 +959,58 @@ namespace segment_reporting.Data
             }
 
             return result;
+        }
+
+        #endregion
+
+        #region User Preferences
+
+        public Dictionary<string, string> GetAllPreferences()
+        {
+            var prefs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement("SELECT [Key], [Value] FROM UserPreferences"))
+                {
+                    while (stmt.MoveNext())
+                    {
+                        var row = stmt.Current;
+                        prefs[ReadString(row, 0)] = ReadString(row, 1);
+                    }
+                }
+            }
+            return prefs;
+        }
+
+        public string GetPreference(string key)
+        {
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "SELECT [Value] FROM UserPreferences WHERE [Key] = @Key"))
+                {
+                    TryBind(stmt, "@Key", key);
+                    if (stmt.MoveNext())
+                    {
+                        return ReadString(stmt.Current, 0);
+                    }
+                }
+            }
+            return null;
+        }
+
+        public void SetPreference(string key, string value)
+        {
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "INSERT OR REPLACE INTO UserPreferences ([Key], [Value]) VALUES (@Key, @Value)"))
+                {
+                    TryBind(stmt, "@Key", key);
+                    TryBind(stmt, "@Value", value);
+                    stmt.MoveNext();
+                }
+            }
         }
 
         #endregion

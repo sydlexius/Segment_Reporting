@@ -10,6 +10,103 @@
                 <h2 class="sectionTitle">Segment Reporting Settings</h2>
             </div>
 
+            <!-- Display Preferences Section -->
+            <div class="verticalSection">
+                <h3 class="sectionTitle">Display Preferences</h3>
+                <div style="background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; padding: 1.5em; margin-bottom: 2em;">
+
+                    <!-- Chart Theme -->
+                    <div style="margin-bottom: 1.5em;">
+                        <h4 style="margin: 0 0 0.8em 0; opacity: 0.85;">Chart Theme</h4>
+                        <div style="display: flex; align-items: center; gap: 1em; flex-wrap: wrap;">
+                            <label for="prefChartPalette" style="white-space: nowrap;">Color Palette:</label>
+                            <select id="prefChartPalette" class="emby-select-withcolor emby-select" style="width: 260px;">
+                                <option value="auto">Auto (match accent color)</option>
+                                <option value="Refreshing Ocean Breeze">Refreshing Ocean Breeze</option>
+                                <option value="Sunshine Blue Dream">Sunshine Blue Dream</option>
+                                <option value="Deep Sea Carnival">Deep Sea Carnival</option>
+                                <option value="Pastel Dreamland Adventure">Pastel Dreamland Adventure</option>
+                                <option value="Bold Hues">Bold Hues</option>
+                                <option value="custom">Custom Colors</option>
+                            </select>
+                        </div>
+
+                        <!-- Custom Colors (hidden by default) -->
+                        <div id="customColorsPanel" style="display: none; margin-top: 1em; padding: 1em; background-color: rgba(128, 128, 128, 0.08); border-radius: 4px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1em;">
+                                <div>
+                                    <label style="display: block; font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Both Segments</label>
+                                    <div style="display: flex; align-items: center; gap: 0.5em;">
+                                        <input id="colorBoth" type="color" value="#003366" style="width: 40px; height: 32px; border: none; cursor: pointer; background: transparent;" />
+                                        <input id="colorBothText" type="text" class="emby-input" value="#003366" maxlength="7" style="width: 100px;" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Intro Only</label>
+                                    <div style="display: flex; align-items: center; gap: 0.5em;">
+                                        <input id="colorIntro" type="color" value="#87CEEB" style="width: 40px; height: 32px; border: none; cursor: pointer; background: transparent;" />
+                                        <input id="colorIntroText" type="text" class="emby-input" value="#87CEEB" maxlength="7" style="width: 100px;" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">Credits Only</label>
+                                    <div style="display: flex; align-items: center; gap: 0.5em;">
+                                        <input id="colorCredits" type="color" value="#F5F5DC" style="width: 40px; height: 32px; border: none; cursor: pointer; background: transparent;" />
+                                        <input id="colorCreditsText" type="text" class="emby-input" value="#F5F5DC" maxlength="7" style="width: 100px;" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style="display: block; font-size: 0.9em; opacity: 0.7; margin-bottom: 0.3em;">No Segments</label>
+                                    <div style="display: flex; align-items: center; gap: 0.5em;">
+                                        <input id="colorNone" type="color" value="#d90429" style="width: 40px; height: 32px; border: none; cursor: pointer; background: transparent;" />
+                                        <input id="colorNoneText" type="text" class="emby-input" value="#d90429" maxlength="7" style="width: 100px;" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table Display -->
+                    <div style="margin-bottom: 1.5em;">
+                        <h4 style="margin: 0 0 0.8em 0; opacity: 0.85;">Table Display</h4>
+                        <div style="display: flex; flex-direction: column; gap: 0.6em;">
+                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
+                                <input id="prefGridlines" type="checkbox" />
+                                <span>Show gridlines on tables</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
+                                <input id="prefStripedRows" type="checkbox" />
+                                <span>Show alternating row colors</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Library Visibility -->
+                    <div style="margin-bottom: 1.5em;">
+                        <h4 style="margin: 0 0 0.8em 0; opacity: 0.85;">Library Visibility</h4>
+                        <p style="margin: 0 0 0.6em 0; font-size: 0.85em; opacity: 0.6;">
+                            Emby does not support intro/credit detection for Movie or Mixed libraries. You can hide them from the dashboard.
+                        </p>
+                        <div style="display: flex; flex-direction: column; gap: 0.6em;">
+                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
+                                <input id="prefHideMovies" type="checkbox" />
+                                <span>Hide Movie libraries from dashboard</span>
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
+                                <input id="prefHideMixed" type="checkbox" />
+                                <span>Hide Mixed libraries from dashboard</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Save Button -->
+                    <button id="btnSavePreferences" class="raised button-submit emby-button">
+                        <span>Save Settings</span>
+                    </button>
+
+                </div>
+            </div>
+
             <!-- Cache Stats Section -->
             <div class="verticalSection">
                 <h3 class="sectionTitle">Cache Statistics</h3>

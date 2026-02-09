@@ -38,7 +38,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             { method: 'GET',  path: 'cache_stats',          description: 'Cache row count, DB size, last sync info' },
             { method: 'POST', path: 'submit_custom_query',  description: 'Execute read-only SQL against the cache' },
             { method: 'GET',  path: 'canned_queries',       description: 'List of built-in queries' },
-            { method: 'GET',  path: 'plugin_info',          description: 'Plugin name, version, and description' }
+            { method: 'GET',  path: 'plugin_info',          description: 'Plugin name, version, and description' },
+            { method: 'GET',  path: 'preferences',          description: 'Get all display preferences' },
+            { method: 'POST', path: 'preferences',          description: 'Save display preferences' }
         ];
 
         function loadPluginInfo() {

@@ -1,5 +1,25 @@
 # Segment Reporting - Release Notes
 
+## v0.0.14.0 - Configurable Theming & UI Settings
+
+### Added
+
+- **Chart palette selection** (#36) - Choose from six chart color palettes (Auto, Refreshing Ocean Breeze, Sunshine Blue Dream, Deep Sea Carnival, Pastel Dreamland Adventure, Bold Hues) or define custom colors for each segment category.
+- **Table display options** (#36) - Toggle gridlines and alternating row colors across all tables.
+- **Library visibility controls** (#36) - Hide Movie and Mixed libraries from the dashboard, since Emby does not support intro/credit detection for those library types.
+- **Preferences API** (#36) - New `GET`/`POST` `/segment_reporting/preferences` endpoints for reading and saving display settings.
+
+### Improved
+
+- **Settings page redesigned** (#36) - The Settings page now includes a full "Display Preferences" section above the existing cache statistics and advanced controls.
+- **Preferences persist in SQLite** (#36) - All display settings are stored in a new `UserPreferences` table in the plugin's database, surviving server restarts.
+
+### Fixed
+
+- **Database tables now created on startup** - Schema initialization now runs when the repository is first instantiated, instead of waiting for the first scheduled sync task. This ensures new tables are available immediately after deploying a new version.
+
+---
+
 ## v0.0.13.0 - Better Display for Shows Without Season Folders
 
 ### Fixed

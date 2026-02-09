@@ -5,6 +5,85 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         var helpers = getSegmentReportingHelpers();
 
+        // --- Color picker sync ---
+
+        function setupColorSync(colorId, textId) {
+            var colorInput = view.querySelector('#' + colorId);
+            var textInput = view.querySelector('#' + textId);
+            colorInput.addEventListener('input', function () {
+                textInput.value = colorInput.value.toUpperCase();
+            });
+            textInput.addEventListener('input', function () {
+                var val = textInput.value.trim();
+                if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+                    colorInput.value = val;
+                }
+            });
+        }
+
+        // --- Populate form from preferences ---
+
+        function populateForm(prefs) {
+            var paletteSelect = view.querySelector('#prefChartPalette');
+            paletteSelect.value = prefs.chartPalette || 'auto';
+            toggleCustomPanel();
+
+            setColorPair('colorBoth', 'colorBothText', prefs.customColorBoth || '#003366');
+            setColorPair('colorIntro', 'colorIntroText', prefs.customColorIntro || '#87CEEB');
+            setColorPair('colorCredits', 'colorCreditsText', prefs.customColorCredits || '#F5F5DC');
+            setColorPair('colorNone', 'colorNoneText', prefs.customColorNone || '#d90429');
+
+            view.querySelector('#prefGridlines').checked = prefs.tableGridlines === 'true';
+            view.querySelector('#prefStripedRows').checked = prefs.tableStripedRows === 'true';
+            view.querySelector('#prefHideMovies').checked = prefs.hideMovieLibraries === 'true';
+            view.querySelector('#prefHideMixed').checked = prefs.hideMixedLibraries === 'true';
+        }
+
+        function setColorPair(colorId, textId, value) {
+            view.querySelector('#' + colorId).value = value;
+            view.querySelector('#' + textId).value = value.toUpperCase();
+        }
+
+        function toggleCustomPanel() {
+            var panel = view.querySelector('#customColorsPanel');
+            var selected = view.querySelector('#prefChartPalette').value;
+            panel.style.display = selected === 'custom' ? '' : 'none';
+        }
+
+        // --- Save preferences ---
+
+        function savePreferences() {
+            var data = JSON.stringify({
+                chartPalette: view.querySelector('#prefChartPalette').value,
+                customColorBoth: view.querySelector('#colorBothText').value.trim(),
+                customColorIntro: view.querySelector('#colorIntroText').value.trim(),
+                customColorCredits: view.querySelector('#colorCreditsText').value.trim(),
+                customColorNone: view.querySelector('#colorNoneText').value.trim(),
+                tableGridlines: view.querySelector('#prefGridlines').checked ? 'true' : 'false',
+                tableStripedRows: view.querySelector('#prefStripedRows').checked ? 'true' : 'false',
+                hideMovieLibraries: view.querySelector('#prefHideMovies').checked ? 'true' : 'false',
+                hideMixedLibraries: view.querySelector('#prefHideMixed').checked ? 'true' : 'false'
+            });
+
+            var btn = view.querySelector('#btnSavePreferences');
+            helpers.withButtonLoading(btn, 'Saving...',
+                helpers.apiCall('preferences', 'POST', data)
+                    .then(function (result) {
+                        if (result.success) {
+                            helpers.invalidatePreferencesCache();
+                            helpers.showSuccess('Settings saved successfully.');
+                        } else {
+                            helpers.showError(result.error || 'Failed to save settings.');
+                        }
+                    })
+                    .catch(function () {
+                        helpers.showError('Failed to save settings.');
+                    })
+            );
+        }
+
+        // --- Cache stats ---
+
         function loadCacheStats() {
             helpers.apiCall('cache_stats', 'GET').then(function (stats) {
                 view.querySelector('#statRowCount').textContent = stats.rowCount.toLocaleString();
@@ -48,13 +127,37 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             );
         }
 
+        // --- Event wiring ---
+
         view.addEventListener('viewshow', function () {
+            // Load preferences and populate form
+            helpers.invalidatePreferencesCache();
+            helpers.loadPreferences().then(function (prefs) {
+                populateForm(prefs);
+            });
+
             loadCacheStats();
+
+            // Color picker sync
+            setupColorSync('colorBoth', 'colorBothText');
+            setupColorSync('colorIntro', 'colorIntroText');
+            setupColorSync('colorCredits', 'colorCreditsText');
+            setupColorSync('colorNone', 'colorNoneText');
+
+            // Palette dropdown toggle
+            view.querySelector('#prefChartPalette').addEventListener('change', toggleCustomPanel);
+
+            // Save button
+            view.querySelector('#btnSavePreferences').addEventListener('click', savePreferences);
+
+            // Existing buttons
             view.querySelector('#btnForceRescan').addEventListener('click', onForceRescanClick);
             view.querySelector('#btnRefreshStats').addEventListener('click', loadCacheStats);
         });
 
         view.addEventListener('viewhide', function () {
+            view.querySelector('#prefChartPalette').removeEventListener('change', toggleCustomPanel);
+            view.querySelector('#btnSavePreferences').removeEventListener('click', savePreferences);
             view.querySelector('#btnForceRescan').removeEventListener('click', onForceRescanClick);
             view.querySelector('#btnRefreshStats').removeEventListener('click', loadCacheStats);
         });

@@ -1132,6 +1132,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             noResults.style.display = 'none';
             table.style.display = 'table';
 
+            helpers.applyTableStyles(table);
+
             var rowCountSpan = view.querySelector('#rowCount');
             rowCountSpan.textContent = results.length;
             view.querySelector('#resultCount').style.display = 'inline';
@@ -1235,6 +1237,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ===== EVENT WIRING =====
 
         view.addEventListener('viewshow', function (e) {
+            helpers.loadPreferences();
             loadQueries();
 
             var queriesDropdown = view.querySelector('#queriesDropdown');

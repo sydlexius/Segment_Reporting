@@ -34,6 +34,7 @@ namespace segment_reporting.Data
         public int WithCredits { get; set; }
         public int WithBoth { get; set; }
         public int WithNeither { get; set; }
+        public string ContentType { get; set; }
     }
 
     public class SeriesListItem
