@@ -14,13 +14,31 @@
             <div class="verticalSection">
                 <h3 class="sectionTitle">SQL Query</h3>
 
-                <!-- Canned Queries Dropdown -->
+                <!-- Queries Dropdown + Save -->
                 <div style="margin-bottom: 1em;">
-                    <label for="cannedQueriesDropdown" style="display: block; margin-bottom: 0.5em;">Quick Queries</label>
-                    <select id="cannedQueriesDropdown" style="width: 100%; padding: 0.5em; border-radius: 4px;">
-                        <option value="">-- Select a canned query --</option>
-                    </select>
+                    <label for="queriesDropdown" style="display: block; margin-bottom: 0.5em;">Saved Queries</label>
+                    <div style="display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap;">
+                        <select id="queriesDropdown" style="flex: 1; min-width: 200px; padding: 0.5em; border-radius: 4px;">
+                            <option value="">-- Select a query --</option>
+                        </select>
+                        <button id="btnSaveQuery" class="raised emby-button" style="white-space: nowrap;">
+                            <span>Save Current</span>
+                        </button>
+                        <button id="btnDeleteQuery" class="raised emby-button" style="white-space: nowrap; display: none;">
+                            <span>Delete</span>
+                        </button>
+                    </div>
                 </div>
+
+                <!-- Query Builder Toggle -->
+                <div style="margin-bottom: 1em;">
+                    <button id="btnToggleBuilder" class="raised emby-button">
+                        <span>Build Query</span>
+                    </button>
+                </div>
+
+                <!-- Query Builder Panel -->
+                <div id="queryBuilderPanel" style="display: none; padding: 1em; border: 1px solid rgba(128, 128, 128, 0.3); border-radius: 4px; margin-bottom: 1em; background: rgba(128, 128, 128, 0.05);"></div>
 
                 <!-- SQL Input -->
                 <div style="margin-bottom: 1em;">
