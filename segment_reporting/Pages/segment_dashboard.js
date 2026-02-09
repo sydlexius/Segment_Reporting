@@ -88,11 +88,27 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 totalWithNeither += lib.WithNeither || 0;
             });
 
+            // Apply theme-derived colors to summary cards
+            var themeColors = helpers.getThemeColors(view);
+            var palette = themeColors.chart;
+
             view.querySelector('#cardTotalItems').textContent = totalItems.toLocaleString();
-            view.querySelector('#cardIntroCoverage').textContent = helpers.percentage(totalWithIntro, totalItems);
-            view.querySelector('#cardCreditsCoverage').textContent = helpers.percentage(totalWithCredits, totalItems);
-            view.querySelector('#cardBothCoverage').textContent = helpers.percentage(totalWithBoth, totalItems);
-            view.querySelector('#cardNeitherCoverage').textContent = helpers.percentage(totalWithNeither, totalItems);
+
+            var cardIntro = view.querySelector('#cardIntroCoverage');
+            cardIntro.textContent = helpers.percentage(totalWithIntro, totalItems);
+            cardIntro.style.color = palette.introOnly;
+
+            var cardCredits = view.querySelector('#cardCreditsCoverage');
+            cardCredits.textContent = helpers.percentage(totalWithCredits, totalItems);
+            cardCredits.style.color = palette.creditsOnly;
+
+            var cardBoth = view.querySelector('#cardBothCoverage');
+            cardBoth.textContent = helpers.percentage(totalWithBoth, totalItems);
+            cardBoth.style.color = palette.bothSegments;
+
+            var cardNeither = view.querySelector('#cardNeitherCoverage');
+            cardNeither.textContent = helpers.percentage(totalWithNeither, totalItems);
+            cardNeither.style.color = palette.noSegments;
         }
 
         /**
