@@ -5,37 +5,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         var helpers = getSegmentReportingHelpers();
 
-        function formatBytes(bytes) {
-            if (!bytes || bytes === 0) {
-                return '0 B';
-            }
-            var units = ['B', 'KB', 'MB', 'GB'];
-            var i = 0;
-            var value = bytes;
-            while (value >= 1024 && i < units.length - 1) {
-                value /= 1024;
-                i++;
-            }
-            return value.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
-        }
-
-        function formatDuration(ms) {
-            if (!ms || ms === 0) {
-                return '-';
-            }
-            if (ms < 1000) {
-                return ms + 'ms';
-            }
-            return (ms / 1000).toFixed(1) + 's';
-        }
-
         function loadCacheStats() {
             helpers.apiCall('cache_stats', 'GET').then(function (stats) {
                 view.querySelector('#statRowCount').textContent = stats.rowCount.toLocaleString();
-                view.querySelector('#statDbSize').textContent = formatBytes(stats.dbFileSize);
+                view.querySelector('#statDbSize').textContent = helpers.formatBytes(stats.dbFileSize);
                 view.querySelector('#statLastSync').textContent = helpers.relativeTime(stats.lastFullSync);
                 view.querySelector('#statSyncDuration').textContent =
-                    formatDuration(stats.syncDuration) +
+                    helpers.formatDuration(stats.syncDuration) +
                     (stats.itemsScanned ? ' (' + stats.itemsScanned.toLocaleString() + ' items)' : '');
             }).catch(function () {
                 view.querySelector('#statRowCount').textContent = 'Error';

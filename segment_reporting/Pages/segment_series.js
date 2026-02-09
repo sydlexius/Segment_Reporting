@@ -32,27 +32,19 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ── Data Loading ──
 
         function loadSeasons() {
-            helpers.showLoading();
-
-            helpers.apiCall('season_list?seriesId=' + encodeURIComponent(seriesId), 'GET')
+            helpers.apiCallWithLoading('season_list?seriesId=' + encodeURIComponent(seriesId), 'GET')
                 .then(function (data) {
                     seasonData = data || [];
 
                     // Update title from first season's series name
                     if (seasonData.length > 0 && seasonData[0].SeasonName) {
-                        // We need the series name — fetch one episode to get it
                         updatePageTitleFromSeasons();
                     }
 
                     updateSeasonChart();
                     renderSeasonAccordion();
-                    helpers.hideLoading();
                 })
-                .catch(function (error) {
-                    console.error('Failed to load seasons:', error);
-                    helpers.showError('Failed to load season data.');
-                    helpers.hideLoading();
-                });
+                .catch(function () {});
         }
 
         function updatePageTitleFromSeasons() {
@@ -129,42 +121,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     chart.destroy();
                 }
 
-                var themeColors = helpers.getThemeColors(view);
-                var palette = themeColors.chart;
-
-                chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            { label: 'Both Segments', data: withBoth, backgroundColor: palette.bothSegments, borderColor: palette.bothSegments, borderWidth: 1 },
-                            { label: 'Intro Only', data: introOnly, backgroundColor: palette.introOnly, borderColor: palette.introOnly, borderWidth: 1 },
-                            { label: 'Credits Only', data: creditsOnly, backgroundColor: palette.creditsOnly, borderColor: palette.creditsOnly, borderWidth: 1 },
-                            { label: 'No Segments', data: withNeither, backgroundColor: palette.noSegments, borderColor: palette.noSegments, borderWidth: 1 }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: { position: 'bottom', labels: { color: themeColors.text } },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    footer: function (tooltipItems) {
-                                        var idx = tooltipItems[0].dataIndex;
-                                        return 'Total: ' + (seasonData[idx].TotalEpisodes || 0) + ' episodes';
-                                    }
-                                }
+                chart = helpers.createSegmentChart(Chart, ctx, labels,
+                    { withBoth: withBoth, introOnly: introOnly, creditsOnly: creditsOnly, withNeither: withNeither },
+                    view, {
+                        tooltipCallbacks: {
+                            footer: function (tooltipItems) {
+                                var idx = tooltipItems[0].dataIndex;
+                                return 'Total: ' + (seasonData[idx].TotalEpisodes || 0) + ' episodes';
                             }
-                        },
-                        scales: {
-                            x: { stacked: true, ticks: { color: themeColors.text }, grid: { color: themeColors.gridColor } },
-                            y: { stacked: true, ticks: { color: themeColors.text, beginAtZero: true }, grid: { color: themeColors.gridColor } }
                         }
                     }
-                });
+                );
             });
         }
 
@@ -204,8 +171,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         '<span class="seasonToggle" style="font-size: 1.2em;">&#9654;</span>' +
                     '</div>';
 
-                header.addEventListener('mouseenter', function () { this.style.backgroundColor = 'rgba(128,128,128,0.15)'; });
-                header.addEventListener('mouseleave', function () { this.style.backgroundColor = 'rgba(255,255,255,0.05)'; });
+                helpers.attachHoverEffect(header, 'rgba(128,128,128,0.15)', 'rgba(255,255,255,0.05)');
 
                 // Content area (hidden initially)
                 var contentDiv = document.createElement('div');
@@ -246,17 +212,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         // ── Episode Table ──
-
-        function renderTimestamp(ticks, itemId) {
-            var display = helpers.ticksToTime(ticks);
-            if (!ticks || ticks === 0) {
-                return display;
-            }
-            return '<a href="#" class="timestamp-link" data-ticks="' + ticks + '" data-item-id="' + itemId + '" ' +
-                   'title="Click to play at ' + display + '" ' +
-                   'style="color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; cursor: pointer;">' +
-                   display + '</a>';
-        }
 
         function renderEpisodeTable(episodes, container) {
             container.innerHTML = '';
@@ -330,9 +285,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 '<td style="' + centerStyle + 'width: 40px;"><input type="checkbox" class="row-select-cb"' + (isChecked ? ' checked' : '') + '></td>' +
                 '<td style="' + cellStyle + '">' + (ep.EpisodeNumber || '-') + '</td>' +
                 '<td style="' + cellStyle + '">' + helpers.escHtml(ep.ItemName || 'Unknown') + '</td>' +
-                '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + renderTimestamp(ep.IntroStartTicks, ep.ItemId) + '</td>' +
-                '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + renderTimestamp(ep.IntroEndTicks, ep.ItemId) + '</td>' +
-                '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + renderTimestamp(ep.CreditsStartTicks, ep.ItemId) + '</td>' +
+                '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + helpers.renderTimestamp(ep.IntroStartTicks, ep.ItemId) + '</td>' +
+                '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + helpers.renderTimestamp(ep.IntroEndTicks, ep.ItemId) + '</td>' +
+                '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + helpers.renderTimestamp(ep.CreditsStartTicks, ep.ItemId) + '</td>' +
                 '<td style="' + centerStyle + '">' + buildActionButtons(ep) + '</td>';
 
             // Row checkbox handler
@@ -548,7 +503,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             tickCells.forEach(function (cell) {
                 var marker = cell.getAttribute('data-marker');
                 var ticks = ep[marker + 'Ticks'];
-                cell.innerHTML = renderTimestamp(ticks, ep.ItemId);
+                cell.innerHTML = helpers.renderTimestamp(ticks, ep.ItemId);
             });
 
             // Restore action buttons
@@ -1153,18 +1108,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             loadSeasons();
         });
 
-        view.addEventListener('viewhide', function () {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
-
-        view.addEventListener('viewdestroy', function () {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
+        helpers.registerChartCleanup(view, function () { return chart; }, function (v) { chart = v; });
     };
 });

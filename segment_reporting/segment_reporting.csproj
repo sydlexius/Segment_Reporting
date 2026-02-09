@@ -24,6 +24,19 @@
     <EmbeddedResource Include="thumb.png" />
   </ItemGroup>
 
+  <!-- JS minification for Release builds (matches CI pipeline behavior) -->
+  <Target Name="NpmInstall" BeforeTargets="MinifyJS" Condition="'$(Configuration)' == 'Release' AND !Exists('$(MSBuildProjectDirectory)\node_modules\.package-lock.json')">
+    <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="MinifyJS" BeforeTargets="CoreCompile" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="npm run build:js" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <Target Name="RestoreJS" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
+    <Exec Command="npm run build:restore" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
   <Target Name="PostBuild" AfterTargets="PostBuildEvent" Condition="Exists('$(EMBY_PLUGINS_DIR)')">
     <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(EMBY_PLUGINS_DIR)" />
   </Target>

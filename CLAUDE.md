@@ -60,6 +60,8 @@ This plugin follows the architecture pattern established by [playback_reporting]
 
 GitHub Actions (`.github/workflows/build.yml`): build on push to main/develop and PRs. Tag push (`v*`) creates a GitHub Release with the compiled DLL. Release notes are extracted from `RELEASE_NOTES.md` automatically.
 
+Release builds automatically minify JS via MSBuild targets in the csproj (`NpmInstall` → `MinifyJS` → `RestoreJS`). This runs `npm ci` if needed, minifies JS in-place before compilation, then restores originals after the DLL is built. Requires Node.js on the build machine; `npm ci` is skipped if `node_modules` already exists.
+
 ## Releasing a New Version
 
 When asked to tag/release a version, follow these steps in order:

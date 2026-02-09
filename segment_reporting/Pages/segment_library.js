@@ -34,27 +34,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
          * @param {string} apiFilter - Optional filter to pass to API (missing_intro, missing_credits)
          */
         function loadSeriesList(apiFilter) {
-            helpers.showLoading();
-
             var endpoint = 'series_list?libraryId=' + encodeURIComponent(libraryId);
             if (apiFilter && (apiFilter === 'missing_intro' || apiFilter === 'missing_credits')) {
                 endpoint += '&filter=' + apiFilter;
             }
 
-            helpers.apiCall(endpoint, 'GET')
+            helpers.apiCallWithLoading(endpoint, 'GET')
                 .then(function (data) {
                     seriesData = data || [];
                     applyClientFilters();
                     updatePageTitle();
                     updateChart();
                     updateTable();
-                    helpers.hideLoading();
                 })
-                .catch(function (error) {
-                    console.error('Failed to load series list:', error);
-                    helpers.showError('Failed to load series data.');
-                    helpers.hideLoading();
-                });
+                .catch(function () {});
         }
 
         /**
@@ -245,89 +238,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     chart.destroy();
                 }
 
-                // Get theme colors based on Emby's accent color
-                var themeColors = helpers.getThemeColors(view);
-                var palette = themeColors.chart;
-
-                chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Both Segments',
-                                data: withBoth,
-                                backgroundColor: palette.bothSegments,
-                                borderColor: palette.bothSegments,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Intro Only',
-                                data: introOnly,
-                                backgroundColor: palette.introOnly,
-                                borderColor: palette.introOnly,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Credits Only',
-                                data: creditsOnly,
-                                backgroundColor: palette.creditsOnly,
-                                borderColor: palette.creditsOnly,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'No Segments',
-                                data: withNeither,
-                                backgroundColor: palette.noSegments,
-                                borderColor: palette.noSegments,
-                                borderWidth: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: themeColors.text
-                                }
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    footer: function (tooltipItems) {
-                                        var index = tooltipItems[0].dataIndex;
-                                        var item = filteredData[index];
-                                        var total = item.TotalEpisodes || 0;
-                                        return 'Total: ' + total + ' items';
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                stacked: true,
-                                ticks: {
-                                    color: themeColors.text,
-                                    maxRotation: 45,
-                                    minRotation: 0
-                                },
-                                grid: {
-                                    color: themeColors.gridColor
-                                }
-                            },
-                            y: {
-                                stacked: true,
-                                ticks: {
-                                    color: themeColors.text,
-                                    beginAtZero: true
-                                },
-                                grid: {
-                                    color: themeColors.gridColor
-                                }
+                chart = helpers.createSegmentChart(Chart, ctx, labels,
+                    { withBoth: withBoth, introOnly: introOnly, creditsOnly: creditsOnly, withNeither: withNeither },
+                    view, {
+                        xTickOptions: { maxRotation: 45, minRotation: 0 },
+                        tooltipCallbacks: {
+                            footer: function (tooltipItems) {
+                                var index = tooltipItems[0].dataIndex;
+                                var item = filteredData[index];
+                                return 'Total: ' + (item.TotalEpisodes || 0) + ' items';
                             }
                         },
                         onClick: function (event, elements) {
@@ -340,7 +259,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                             }
                         }
                     }
-                });
+                );
             });
         }
 
@@ -352,9 +271,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             tbody.innerHTML = '';
 
             if (filteredData.length === 0) {
-                var emptyRow = document.createElement('tr');
-                emptyRow.innerHTML = '<td colspan="7" style="text-align: center; padding: 2em;">No results found. Try adjusting your filters.</td>';
-                tbody.appendChild(emptyRow);
+                tbody.appendChild(helpers.createEmptyRow('No results found. Try adjusting your filters.', 7));
                 return;
             }
 
@@ -386,12 +303,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     helpers.navigate('segment_series', { seriesId: item.SeriesId });
                 });
 
-                row.addEventListener('mouseenter', function () {
-                    this.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
-                });
-                row.addEventListener('mouseleave', function () {
-                    this.style.backgroundColor = '';
-                });
+                helpers.attachHoverEffect(row);
 
                 tbody.appendChild(row);
             });
@@ -448,18 +360,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             loadSeriesList();
         });
 
-        view.addEventListener('viewhide', function (e) {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
-
-        view.addEventListener('viewdestroy', function (e) {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
+        helpers.registerChartCleanup(view, function () { return chart; }, function (v) { chart = v; });
     };
 });

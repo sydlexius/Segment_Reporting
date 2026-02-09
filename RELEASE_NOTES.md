@@ -1,5 +1,19 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.3 - Reduce Frontend Duplication
+
+### Improved
+
+- **Shared helper library expanded** (#25) - Extracted 9 reusable utilities from page modules into the shared helpers file, eliminating copy-pasted patterns across the frontend.
+- **Chart creation simplified** - All three chart pages (Dashboard, Library, Series) now use a single `createSegmentChart` factory instead of duplicating ~80 lines of Chart.js configuration each.
+- **Consistent hover effects** - Table row and accordion hover styling is now handled by a single `attachHoverEffect` helper.
+- **Automatic chart cleanup** - Chart lifecycle management (destroy on page hide/destroy) consolidated into `registerChartCleanup`.
+- **API loading wrapper** - New `apiCallWithLoading` helper handles the show/hide loading indicator pattern used by most API calls.
+- **Utility functions centralized** - `formatBytes`, `formatDuration`, `renderTimestamp`, `createEmptyRow`, and `withButtonLoading` moved from individual pages to the shared helpers.
+- **Automatic JS minification in local builds** - Release builds now automatically minify JS files via MSBuild targets, matching CI behavior. No more manual `npm run build:js` step needed.
+
+---
+
 ## v0.0.9.2 - Reduce DLL Size
 
 ### Improved

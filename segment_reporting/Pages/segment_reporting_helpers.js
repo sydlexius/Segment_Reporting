@@ -348,6 +348,120 @@ function segmentReportingGetThemeColors(view) {
     };
 }
 
+function segmentReportingFormatBytes(bytes) {
+    if (!bytes || bytes === 0) return '0 B';
+    var units = ['B', 'KB', 'MB', 'GB'];
+    var i = 0;
+    var value = bytes;
+    while (value >= 1024 && i < units.length - 1) {
+        value /= 1024;
+        i++;
+    }
+    return value.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+}
+
+function segmentReportingFormatDuration(ms) {
+    if (!ms || ms === 0) return '-';
+    if (ms < 1000) return ms + 'ms';
+    return (ms / 1000).toFixed(1) + 's';
+}
+
+function segmentReportingRenderTimestamp(ticks, itemId) {
+    var display = segmentReportingTicksToTime(ticks);
+    if (!ticks || ticks === 0) {
+        return display;
+    }
+    return '<a href="#" class="timestamp-link" data-ticks="' + ticks + '" data-item-id="' + segmentReportingEscHtml(itemId) + '" ' +
+           'title="Click to play at ' + display + '" ' +
+           'style="color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; cursor: pointer;">' +
+           display + '</a>';
+}
+
+function segmentReportingApiCallWithLoading(endpoint, method, data) {
+    segmentReportingShowLoading();
+    return segmentReportingApiCall(endpoint, method, data)
+        .then(function (result) { segmentReportingHideLoading(); return result; })
+        .catch(function (err) { segmentReportingShowError(err.message || 'Request failed'); segmentReportingHideLoading(); throw err; });
+}
+
+function segmentReportingAttachHoverEffect(element, hoverBg, normalBg) {
+    element.addEventListener('mouseenter', function () { this.style.backgroundColor = hoverBg || 'rgba(128,128,128,0.15)'; });
+    element.addEventListener('mouseleave', function () { this.style.backgroundColor = normalBg || ''; });
+}
+
+function segmentReportingCreateEmptyRow(message, colspan) {
+    var row = document.createElement('tr');
+    row.innerHTML = '<td colspan="' + colspan + '" style="text-align:center;padding:2em;">' + segmentReportingEscHtml(message) + '</td>';
+    return row;
+}
+
+function segmentReportingRegisterChartCleanup(view, getChart, setChart) {
+    ['viewhide', 'viewdestroy'].forEach(function (evt) {
+        view.addEventListener(evt, function () {
+            var c = getChart();
+            if (c) { c.destroy(); setChart(null); }
+        });
+    });
+}
+
+function segmentReportingWithButtonLoading(btn, workingText, promise) {
+    var span = btn.querySelector('span');
+    var original = span.textContent;
+    btn.disabled = true;
+    span.textContent = workingText;
+    return promise.then(function (result) {
+        btn.disabled = false;
+        span.textContent = original;
+        return result;
+    }).catch(function (err) {
+        btn.disabled = false;
+        span.textContent = original;
+        throw err;
+    });
+}
+
+function segmentReportingCreateSegmentChart(Chart, ctx, labels, segmentData, view, options) {
+    options = options || {};
+    var themeColors = segmentReportingGetThemeColors(view);
+    var palette = themeColors.chart;
+    var xTicks = { color: themeColors.text };
+    if (options.xTickOptions) {
+        var xKeys = Object.keys(options.xTickOptions);
+        for (var xi = 0; xi < xKeys.length; xi++) {
+            xTicks[xKeys[xi]] = options.xTickOptions[xKeys[xi]];
+        }
+    }
+    return new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'Both Segments', data: segmentData.withBoth, backgroundColor: palette.bothSegments, borderColor: palette.bothSegments, borderWidth: 1 },
+                { label: 'Intro Only', data: segmentData.introOnly, backgroundColor: palette.introOnly, borderColor: palette.introOnly, borderWidth: 1 },
+                { label: 'Credits Only', data: segmentData.creditsOnly, backgroundColor: palette.creditsOnly, borderColor: palette.creditsOnly, borderWidth: 1 },
+                { label: 'No Segments', data: segmentData.withNeither, backgroundColor: palette.noSegments, borderColor: palette.noSegments, borderWidth: 1 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: themeColors.text } },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: options.tooltipCallbacks || {}
+                }
+            },
+            scales: {
+                x: { stacked: true, ticks: xTicks, grid: { color: themeColors.gridColor } },
+                y: { stacked: true, ticks: { color: themeColors.text, beginAtZero: true }, grid: { color: themeColors.gridColor } }
+            },
+            onClick: options.onClick || undefined
+        }
+    });
+}
+
 function getSegmentReportingHelpers() {
     return {
         ticksToTime: segmentReportingTicksToTime,
@@ -372,6 +486,15 @@ function getSegmentReportingHelpers() {
         hslToRgb: segmentReportingHslToRgb,
         hslToHexString: segmentReportingHslToHexString,
         generateChartPalette: segmentReportingGenerateChartPalette,
-        getThemeColors: segmentReportingGetThemeColors
+        getThemeColors: segmentReportingGetThemeColors,
+        formatBytes: segmentReportingFormatBytes,
+        formatDuration: segmentReportingFormatDuration,
+        renderTimestamp: segmentReportingRenderTimestamp,
+        apiCallWithLoading: segmentReportingApiCallWithLoading,
+        attachHoverEffect: segmentReportingAttachHoverEffect,
+        createEmptyRow: segmentReportingCreateEmptyRow,
+        registerChartCleanup: segmentReportingRegisterChartCleanup,
+        withButtonLoading: segmentReportingWithButtonLoading,
+        createSegmentChart: segmentReportingCreateSegmentChart
     };
 }

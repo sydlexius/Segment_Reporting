@@ -28,21 +28,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
          * Load library summary data from API
          */
         function loadLibrarySummary() {
-            helpers.showLoading();
-
-            helpers.apiCall('library_summary', 'GET')
+            helpers.apiCallWithLoading('library_summary', 'GET')
                 .then(function (data) {
                     libraryData = data || [];
                     updateSummaryCards();
                     updateChart();
                     updateTable();
-                    helpers.hideLoading();
                 })
-                .catch(function (error) {
-                    console.error('Failed to load library summary:', error);
-                    helpers.showError('Failed to load library summary data.');
-                    helpers.hideLoading();
-                });
+                .catch(function () {});
         }
 
         /**
@@ -143,87 +136,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     chart.destroy();
                 }
 
-                // Get theme colors based on Emby's accent color
-                var themeColors = helpers.getThemeColors(view);
-                var palette = themeColors.chart;
-
-                chart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Both Segments',
-                                data: withBoth,
-                                backgroundColor: palette.bothSegments,
-                                borderColor: palette.bothSegments,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Intro Only',
-                                data: introOnly,
-                                backgroundColor: palette.introOnly,
-                                borderColor: palette.introOnly,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'Credits Only',
-                                data: creditsOnly,
-                                backgroundColor: palette.creditsOnly,
-                                borderColor: palette.creditsOnly,
-                                borderWidth: 1
-                            },
-                            {
-                                label: 'No Segments',
-                                data: withNeither,
-                                backgroundColor: palette.noSegments,
-                                borderColor: palette.noSegments,
-                                borderWidth: 1
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: true,
-                        plugins: {
-                            legend: {
-                                position: 'bottom',
-                                labels: {
-                                    color: themeColors.text
-                                }
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                callbacks: {
-                                    footer: function (tooltipItems) {
-                                        var index = tooltipItems[0].dataIndex;
-                                        var lib = libraryData[index];
-                                        var total = lib.TotalItems || 0;
-                                        return 'Total: ' + total + ' items';
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                stacked: true,
-                                ticks: {
-                                    color: themeColors.text
-                                },
-                                grid: {
-                                    color: themeColors.gridColor
-                                }
-                            },
-                            y: {
-                                stacked: true,
-                                ticks: {
-                                    color: themeColors.text,
-                                    beginAtZero: true
-                                },
-                                grid: {
-                                    color: themeColors.gridColor
-                                }
+                chart = helpers.createSegmentChart(Chart, ctx, labels,
+                    { withBoth: withBoth, introOnly: introOnly, creditsOnly: creditsOnly, withNeither: withNeither },
+                    view, {
+                        tooltipCallbacks: {
+                            footer: function (tooltipItems) {
+                                var index = tooltipItems[0].dataIndex;
+                                var lib = libraryData[index];
+                                return 'Total: ' + (lib.TotalItems || 0) + ' items';
                             }
                         },
                         onClick: function (event, elements) {
@@ -236,7 +156,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                             }
                         }
                     }
-                });
+                );
             });
         }
 
@@ -248,9 +168,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             tbody.innerHTML = '';
 
             if (libraryData.length === 0) {
-                var emptyRow = document.createElement('tr');
-                emptyRow.innerHTML = '<td colspan="7" style="text-align: center; padding: 2em;">No library data available. Click "Sync Now" to populate the cache.</td>';
-                tbody.appendChild(emptyRow);
+                tbody.appendChild(helpers.createEmptyRow('No library data available. Click "Sync Now" to populate the cache.', 7));
                 return;
             }
 
@@ -279,12 +197,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     helpers.navigate('segment_library', { libraryId: lib.LibraryId });
                 });
 
-                row.addEventListener('mouseenter', function () {
-                    this.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
-                });
-                row.addEventListener('mouseleave', function () {
-                    this.style.backgroundColor = '';
-                });
+                helpers.attachHoverEffect(row);
 
                 tbody.appendChild(row);
             });
@@ -359,18 +272,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             loadSyncStatus();
         });
 
-        view.addEventListener('viewhide', function (e) {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
-
-        view.addEventListener('viewdestroy', function (e) {
-            if (chart) {
-                chart.destroy();
-                chart = null;
-            }
-        });
+        helpers.registerChartCleanup(view, function () { return chart; }, function (v) { chart = v; });
     };
 });
