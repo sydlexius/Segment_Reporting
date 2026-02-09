@@ -34,6 +34,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var movieSortAscending = true;
         var editingRow = null;
         var listenersAttached = false;
+        var libraryName = null;
 
         // ── Data Loading ──
 
@@ -63,15 +64,26 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function updatePageTitle() {
-            var title = 'Library';
-            if (seriesData.length > 0 && seriesData[0].LibraryName) {
-                title = 'Library: ' + seriesData[0].LibraryName;
-            } else if (movieData.length > 0 && movieData[0].LibraryName) {
-                title = 'Library: ' + movieData[0].LibraryName;
-            } else if (libraryId) {
-                title = 'Library: ' + libraryId;
+            // Resolve friendly name: URL param first, then API data
+            if (!libraryName) {
+                if (seriesData.length > 0 && seriesData[0].LibraryName) {
+                    libraryName = seriesData[0].LibraryName;
+                } else if (movieData.length > 0 && movieData[0].LibraryName) {
+                    libraryName = movieData[0].LibraryName;
+                }
             }
-            view.querySelector('#pageTitle').textContent = title;
+
+            var displayName = libraryName || libraryId || 'Library';
+            view.querySelector('#pageTitle').textContent = displayName;
+
+            // Render breadcrumbs
+            var bc = view.querySelector('#breadcrumbContainer');
+            if (bc) {
+                helpers.renderBreadcrumbs(bc, [
+                    { label: 'Dashboard', page: 'segment_dashboard', params: {} },
+                    { label: displayName }
+                ]);
+            }
         }
 
         function updateSectionVisibility() {
@@ -307,7 +319,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                                 if (contentType !== 'movies') {
                                     var item = filteredSeriesData[index];
                                     if (item && item.SeriesId) {
-                                        helpers.navigate('segment_series', { seriesId: item.SeriesId });
+                                        helpers.navigate('segment_series', { seriesId: item.SeriesId, libraryId: libraryId, libraryName: libraryName });
                                     }
                                 }
                             }
@@ -374,7 +386,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<td><strong>' + creditsPct + '</strong></td>';
 
                 row.addEventListener('click', function () {
-                    helpers.navigate('segment_series', { seriesId: item.SeriesId });
+                    helpers.navigate('segment_series', { seriesId: item.SeriesId, libraryId: libraryId, libraryName: libraryName });
                 });
 
                 helpers.attachHoverEffect(row);
@@ -705,16 +717,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
         }
 
-        // ── Navigation ──
-
-        function handleBackClick() {
-            helpers.navigate('segment_dashboard', {});
-        }
-
         // ── View Lifecycle ──
 
         view.addEventListener('viewshow', function (e) {
             libraryId = helpers.getQueryParam('libraryId');
+            libraryName = helpers.getQueryParam('libraryName');
 
             if (!libraryId) {
                 helpers.showError('No library ID provided. Please navigate from the dashboard.');
@@ -723,11 +730,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             if (!listenersAttached) {
                 listenersAttached = true;
-
-                var btnBack = view.querySelector('#btnBackToDashboard');
-                if (btnBack) {
-                    btnBack.addEventListener('click', handleBackClick);
-                }
 
                 var filterDropdown = view.querySelector('#filterDropdown');
                 if (filterDropdown) {

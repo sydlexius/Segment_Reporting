@@ -21,6 +21,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var helpers = getSegmentReportingHelpers();
         var seriesId = null;
         var libraryId = null;
+        var libraryName = null;
+        var seriesName = null;
         var seasonData = [];
         var loadedSeasons = {};  // seasonId -> episode array (lazy-load cache)
         var chart = null;
@@ -37,15 +39,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 .then(function (data) {
                     seasonData = data || [];
 
-                    // Update title and libraryId from season list response
+                    // Update title, libraryId, and breadcrumbs from season list response
                     if (seasonData.length > 0) {
                         if (seasonData[0].SeriesName) {
-                            view.querySelector('#pageTitle').textContent = seasonData[0].SeriesName;
+                            seriesName = seasonData[0].SeriesName;
+                            view.querySelector('#pageTitle').textContent = seriesName;
                         }
-                        if (seasonData[0].LibraryId) {
+                        if (!libraryId && seasonData[0].LibraryId) {
                             libraryId = seasonData[0].LibraryId;
                         }
                     }
+
+                    renderBreadcrumbs();
 
                     updateSeasonChart();
                     renderSeasonAccordion();
@@ -1332,18 +1337,33 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             return null;
         }
 
-        function handleBackClick() {
+        function renderBreadcrumbs() {
+            var bc = view.querySelector('#breadcrumbContainer');
+            if (!bc) return;
+
+            var crumbs = [
+                { label: 'Dashboard', page: 'segment_dashboard', params: {} }
+            ];
+
             if (libraryId) {
-                helpers.navigate('segment_library', { libraryId: libraryId });
-            } else {
-                helpers.navigate('segment_dashboard', {});
+                crumbs.push({
+                    label: libraryName || 'Library',
+                    page: 'segment_library',
+                    params: { libraryId: libraryId, libraryName: libraryName }
+                });
             }
+
+            crumbs.push({ label: seriesName || 'Series' });
+
+            helpers.renderBreadcrumbs(bc, crumbs);
         }
 
         // ── View Lifecycle ──
 
         view.addEventListener('viewshow', function () {
             seriesId = helpers.getQueryParam('seriesId');
+            libraryId = helpers.getQueryParam('libraryId');
+            libraryName = helpers.getQueryParam('libraryName');
 
             if (!seriesId) {
                 helpers.showError('No series ID provided. Please navigate from the library page.');
@@ -1352,11 +1372,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             if (!listenersAttached) {
                 listenersAttached = true;
-
-                var btnBack = view.querySelector('#btnBackToLibrary');
-                if (btnBack) {
-                    btnBack.addEventListener('click', handleBackClick);
-                }
 
                 var btnClearSource = view.querySelector('#btnClearBulkSource');
                 if (btnClearSource) {

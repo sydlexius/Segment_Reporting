@@ -163,7 +163,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                                 var index = elements[0].index;
                                 var lib = libraryData[index];
                                 if (lib && lib.LibraryId) {
-                                    helpers.navigate('segment_library', { libraryId: lib.LibraryId });
+                                    helpers.navigate('segment_library', { libraryId: lib.LibraryId, libraryName: lib.LibraryName });
                                 }
                             }
                         }
@@ -206,7 +206,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<td><strong>' + coveragePct + '</strong></td>';
 
                 row.addEventListener('click', function () {
-                    helpers.navigate('segment_library', { libraryId: lib.LibraryId });
+                    helpers.navigate('segment_library', { libraryId: lib.LibraryId, libraryName: lib.LibraryName });
                 });
 
                 helpers.attachHoverEffect(row);

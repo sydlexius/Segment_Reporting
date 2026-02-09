@@ -511,6 +511,48 @@ function segmentReportingGetPreference(key) {
     return null;
 }
 
+function segmentReportingRenderBreadcrumbs(container, crumbs) {
+    // crumbs: array of { label, page, params } objects
+    // Last crumb is the current page (rendered as plain text), others are clickable links
+    container.innerHTML = '';
+    container.style.cssText = 'margin-bottom: 1em; font-size: 0.95em; display: flex; align-items: center; flex-wrap: wrap; gap: 0.25em;';
+
+    for (var i = 0; i < crumbs.length; i++) {
+        var crumb = crumbs[i];
+        var isLast = (i === crumbs.length - 1);
+
+        if (i > 0) {
+            var sep = document.createElement('span');
+            sep.textContent = '\u203A';
+            sep.style.cssText = 'opacity: 0.5; margin: 0 0.35em; font-size: 1.1em;';
+            container.appendChild(sep);
+        }
+
+        if (isLast) {
+            var span = document.createElement('span');
+            span.textContent = crumb.label;
+            span.style.cssText = 'opacity: 0.7;';
+            container.appendChild(span);
+        } else {
+            var link = document.createElement('a');
+            link.textContent = crumb.label;
+            link.href = '#';
+            link.style.cssText = 'color: inherit; text-decoration: none; border-bottom: 1px dotted currentColor; cursor: pointer;';
+            link.setAttribute('data-page', crumb.page);
+            link.setAttribute('data-params', JSON.stringify(crumb.params || {}));
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                var page = this.getAttribute('data-page');
+                var params = JSON.parse(this.getAttribute('data-params'));
+                segmentReportingNavigate(page, params);
+            });
+            link.addEventListener('mouseenter', function () { this.style.opacity = '0.7'; });
+            link.addEventListener('mouseleave', function () { this.style.opacity = '1'; });
+            container.appendChild(link);
+        }
+    }
+}
+
 function segmentReportingApplyTableStyles(tableElement) {
     if (!tableElement) return;
     var prefs = segmentReportingPreferencesCache || {};
@@ -637,6 +679,7 @@ function getSegmentReportingHelpers() {
         loadPreferences: segmentReportingLoadPreferences,
         invalidatePreferencesCache: segmentReportingInvalidatePreferencesCache,
         getPreference: segmentReportingGetPreference,
-        applyTableStyles: segmentReportingApplyTableStyles
+        applyTableStyles: segmentReportingApplyTableStyles,
+        renderBreadcrumbs: segmentReportingRenderBreadcrumbs
     };
 }

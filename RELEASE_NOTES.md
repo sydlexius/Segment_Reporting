@@ -1,4 +1,27 @@
+<!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
+
+## v0.0.16.0 - Breadcrumb Navigation
+
+### Added
+
+- **Breadcrumb navigation on drill-down pages** (#40) - The Library and Series pages now show a clickable breadcrumb trail (e.g. `Dashboard › TV Shows › Breaking Bad`) instead of "Back to …" buttons, making it easier to navigate between reporting levels.
+- Friendly library and series names are displayed in the breadcrumbs. Names are passed through the URL for instant rendering, with a fallback to API data when landing on a page directly (e.g. from a bookmark).
+
+---
+
+## v0.0.15.0 - Database-Backed Saved Queries
+
+### Added
+
+- **Saved custom queries** (#22) - Custom SQL queries can now be saved with a name and recalled later from a dropdown. Saved queries are stored in a new `SavedQueries` table in the plugin's SQLite database, surviving server restarts.
+- **New API endpoints** (#22) - `GET /segment_reporting/saved_queries` lists all saved queries, `POST /segment_reporting/saved_queries` creates or updates a query, and `DELETE /segment_reporting/saved_queries/{Id}` removes one.
+
+### Fixed
+
+- **Custom query execution** (#22) - The custom query page now correctly executes user-entered SQL and displays results, fixing a regression where queries would silently fail.
+
+---
 
 ## v0.0.14.0 - Configurable Theming & UI Settings
 
