@@ -1,5 +1,15 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.7 - Movie Library Browsing
+
+### Added
+
+- **Movie library support** (#29) - Movie libraries now display a flat table with inline segment timestamps (Intro Start, Intro End, Credits Start) instead of the series drill-down view. Mixed libraries show both series and movies.
+- **Inline editing for movies** (#29) - Edit, save, and delete segment markers directly from the movie table row, with the same workflow used for TV episodes.
+- **Library content type detection** (#29) - The library page automatically detects whether a library contains series, movies, or both, and shows the appropriate layout.
+
+---
+
 ## v0.0.9.6 - Bulk Operation Limits and Unnecessary API Call Removal
 
 ### Improved

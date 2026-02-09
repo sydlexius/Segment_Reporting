@@ -530,6 +530,69 @@ namespace segment_reporting.Data
             return results;
         }
 
+        public string GetLibraryContentType(string libraryId)
+        {
+            bool hasEpisodes = false;
+            bool hasMovies = false;
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "SELECT DISTINCT ItemType FROM MediaSegments WHERE LibraryId = @LibraryId"))
+                {
+                    TryBind(stmt, "@LibraryId", libraryId);
+                    while (stmt.MoveNext())
+                    {
+                        string itemType = ReadString(stmt.Current, 0);
+                        if (string.Equals(itemType, "Episode", StringComparison.OrdinalIgnoreCase))
+                            hasEpisodes = true;
+                        else if (string.Equals(itemType, "Movie", StringComparison.OrdinalIgnoreCase))
+                            hasMovies = true;
+                    }
+                }
+            }
+
+            if (hasEpisodes && hasMovies)
+                return "mixed";
+            if (hasMovies)
+                return "movies";
+            return "series";
+        }
+
+        public List<SegmentInfo> GetMovieList(string libraryId, string search, string[] filters)
+        {
+            var results = new List<SegmentInfo>();
+            var whereClauses = new List<string> { "LibraryId = @LibraryId", "ItemType = 'Movie'" };
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                whereClauses.Add("ItemName LIKE @Search");
+            }
+
+            ApplySegmentFilters(whereClauses, filters);
+
+            var sql = "SELECT * FROM MediaSegments " +
+                      "WHERE " + string.Join(" AND ", whereClauses) + " " +
+                      "ORDER BY ItemName";
+
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(sql))
+                {
+                    TryBind(stmt, "@LibraryId", libraryId);
+                    if (!string.IsNullOrWhiteSpace(search))
+                    {
+                        TryBind(stmt, "@Search", "%" + search + "%");
+                    }
+
+                    while (stmt.MoveNext())
+                    {
+                        results.Add(ReadSegmentInfo(stmt.Current));
+                    }
+                }
+            }
+            return results;
+        }
+
         public List<SeasonListItem> GetSeasonList(string seriesId)
         {
             var results = new List<SeasonListItem>();

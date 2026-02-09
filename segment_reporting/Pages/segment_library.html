@@ -34,20 +34,24 @@
 
             <!-- Chart Section -->
             <div class="verticalSection">
-                <h3 class="sectionTitle">Coverage by Series/Movie</h3>
+                <h3 id="chartTitle" class="sectionTitle">Coverage by Series/Movie</h3>
                 <div style="background-color: rgba(255, 255, 255, 0.05); padding: 1.5em; border-radius: 4px; margin-bottom: 2em;">
                     <canvas id="seriesChart" style="max-height: 400px;"></canvas>
                 </div>
             </div>
 
-            <!-- Results Table -->
-            <div class="verticalSection">
-                <h3 class="sectionTitle">Details</h3>
+            <!-- Series Results Table -->
+            <div id="seriesSection" class="verticalSection">
+                <h3 class="sectionTitle">Series</h3>
                 <style>
                     .tblSeries th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
                     .tblSeries th[data-sort]:hover { color: #2196F3; }
                     .tblSeries th .sort-arrow { margin-left: 4px; font-size: 0.8em; opacity: 0.4; }
                     .tblSeries th.sort-active .sort-arrow { opacity: 1; }
+                    .tblMovies th[data-sort] { cursor: pointer; user-select: none; white-space: nowrap; }
+                    .tblMovies th[data-sort]:hover { color: #2196F3; }
+                    .tblMovies th .sort-arrow { margin-left: 4px; font-size: 0.8em; opacity: 0.4; }
+                    .tblMovies th.sort-active .sort-arrow { opacity: 1; }
                 </style>
                 <div class="paperList">
                     <table id="seriesTable" class="tblSeries" style="width: 100%;">
@@ -65,9 +69,29 @@
                         <tbody id="seriesTableBody">
                             <tr>
                                 <td colspan="7" style="text-align: center; padding: 2em;">
-                                    Loading series data...
+                                    Loading data...
                                 </td>
                             </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Movie Results Table -->
+            <div id="movieSection" class="verticalSection" style="display: none;">
+                <h3 class="sectionTitle">Movies</h3>
+                <div class="paperList">
+                    <table id="movieTable" class="tblMovies" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th data-sort="name">Name <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="introStart">Intro Start <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="introEnd">Intro End <span class="sort-arrow">&#9650;</span></th>
+                                <th data-sort="creditsStart">Credits Start <span class="sort-arrow">&#9650;</span></th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="movieTableBody">
                         </tbody>
                     </table>
                 </div>

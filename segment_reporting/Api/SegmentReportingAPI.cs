@@ -275,10 +275,21 @@ namespace segment_reporting.Api
             SegmentRepository repo = GetRepository();
 
             string[] filters = SplitAndTrim(request.Filter);
+            string contentType = repo.GetLibraryContentType(request.LibraryId);
 
-            List<SeriesListItem> seriesList = repo.GetSeriesList(request.LibraryId, request.Search, filters);
+            List<SeriesListItem> seriesList = null;
+            List<SegmentInfo> movieList = null;
 
-            return seriesList;
+            if (contentType != "movies")
+            {
+                seriesList = repo.GetSeriesList(request.LibraryId, request.Search, filters);
+            }
+            if (contentType != "series")
+            {
+                movieList = repo.GetMovieList(request.LibraryId, request.Search, filters);
+            }
+
+            return new { contentType = contentType, series = seriesList, movies = movieList };
         }
 
         public object Get(GetSeasonList request)
