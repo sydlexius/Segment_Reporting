@@ -204,6 +204,27 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         /**
+         * Handle Detect All Credits button click (EmbyCredits integration)
+         */
+        function handleDetectAllCredits() {
+            if (!confirm('This will trigger EmbyCredits to detect credits for all episodes in the library. This runs in the background and may take a while. Continue?')) {
+                return;
+            }
+
+            var btn = view.querySelector('#btnDetectAllCredits');
+            helpers.withButtonLoading(btn, 'Detecting...',
+                helpers.creditsDetectorCall('TriggerDetection')
+                    .then(function () {
+                        helpers.showSuccess('Credits detection has been queued for all episodes. Results will appear after the next sync.');
+                    })
+                    .catch(function (error) {
+                        console.error('Credits detection failed:', error);
+                        helpers.showError('Credits detection failed. Is EmbyCredits running?');
+                    })
+            );
+        }
+
+        /**
          * Handle Sync Now button click
          */
         function handleSyncNow() {
@@ -253,6 +274,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     btnSyncNow.addEventListener('click', handleSyncNow);
                 }
 
+                var btnDetectAll = view.querySelector('#btnDetectAllCredits');
+                if (btnDetectAll) {
+                    btnDetectAll.addEventListener('click', handleDetectAllCredits);
+                }
+
                 var btnCustomQuery = view.querySelector('#btnCustomQuery');
                 if (btnCustomQuery) {
                     btnCustomQuery.addEventListener('click', function () {
@@ -267,6 +293,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     });
                 }
             }
+
+            // Check for EmbyCredits plugin and show/hide detect button
+            helpers.checkCreditsDetector().then(function (available) {
+                var btnDetect = view.querySelector('#btnDetectAllCredits');
+                if (btnDetect) {
+                    btnDetect.style.display = available ? '' : 'none';
+                }
+            });
 
             loadLibrarySummary();
             loadSyncStatus();

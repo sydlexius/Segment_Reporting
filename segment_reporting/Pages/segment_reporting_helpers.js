@@ -441,6 +441,30 @@ function segmentReportingRegisterChartCleanup(view, getChart, setChart) {
     });
 }
 
+var segmentReportingCreditsDetectorCache = null;
+
+function segmentReportingCheckCreditsDetector() {
+    if (segmentReportingCreditsDetectorCache !== null) {
+        return Promise.resolve(segmentReportingCreditsDetectorCache);
+    }
+
+    var url = ApiClient.getUrl('CreditsDetector/GetAllSeries');
+    return ApiClient.ajax({ type: 'GET', url: url, dataType: 'json' })
+        .then(function () {
+            segmentReportingCreditsDetectorCache = true;
+            return true;
+        })
+        .catch(function () {
+            segmentReportingCreditsDetectorCache = false;
+            return false;
+        });
+}
+
+function segmentReportingCreditsDetectorCall(endpoint, queryParams) {
+    var url = ApiClient.getUrl('CreditsDetector/' + endpoint, queryParams || {});
+    return ApiClient.ajax({ type: 'POST', url: url, dataType: 'json' });
+}
+
 function segmentReportingWithButtonLoading(btn, workingText, promise) {
     var span = btn.querySelector('span');
     var original = span.textContent;
@@ -534,6 +558,8 @@ function getSegmentReportingHelpers() {
         createEmptyRow: segmentReportingCreateEmptyRow,
         registerChartCleanup: segmentReportingRegisterChartCleanup,
         withButtonLoading: segmentReportingWithButtonLoading,
-        createSegmentChart: segmentReportingCreateSegmentChart
+        createSegmentChart: segmentReportingCreateSegmentChart,
+        checkCreditsDetector: segmentReportingCheckCreditsDetector,
+        creditsDetectorCall: segmentReportingCreditsDetectorCall
     };
 }

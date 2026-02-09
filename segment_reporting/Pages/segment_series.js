@@ -28,6 +28,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var editingRow = null;  // currently editing row element (only one at a time)
         var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
         var listenersAttached = false;
+        var creditsDetectorAvailable = false;
 
         // ── Data Loading ──
 
@@ -187,8 +188,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<div style="display: flex; align-items: center; gap: 1em;">' +
                         '<strong>Intros: ' + introPct + '</strong>' +
                         '<strong>Credits: ' + creditsPct + '</strong>' +
+                        (creditsDetectorAvailable
+                            ? '<button class="raised emby-button btn-season-detect" title="Detect credits for all episodes in this season" style="padding: 0.2em 0.6em; font-size: 0.8em;"><span>Detect</span></button>'
+                            : '') +
                         '<span class="seasonToggle" style="font-size: 1.2em;">&#9654;</span>' +
                     '</div>';
+
+                // Season-level detect button handler
+                var btnSeasonDetect = header.querySelector('.btn-season-detect');
+                if (btnSeasonDetect) {
+                    btnSeasonDetect.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        detectCreditsForSeason(season.SeasonId, btnSeasonDetect);
+                    });
+                }
 
                 helpers.attachHoverEffect(header, 'rgba(128,128,128,0.15)', 'rgba(255,255,255,0.05)');
 
@@ -349,10 +362,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function buildActionButtons(ep) {
-            return '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>' +
+            var html = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>' +
                    '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>' +
                    '<button class="raised emby-button btn-copy" title="Mark as bulk copy source" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Copy</button>' +
                    '<button class="raised emby-button btn-end-credits" title="Set CreditsStart to end of episode" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">End</button>';
+            if (creditsDetectorAvailable) {
+                html += '<button class="raised emby-button btn-detect-credits" title="Detect credits for this episode using EmbyCredits" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Detect</button>';
+            }
+            return html;
         }
 
         function attachRowActions(row, ep) {
@@ -386,6 +403,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 btnEndCredits.addEventListener('click', function (e) {
                     e.stopPropagation();
                     setCreditsToEnd(row, ep);
+                });
+            }
+
+            var btnDetect = row.querySelector('.btn-detect-credits');
+            if (btnDetect) {
+                btnDetect.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    detectCreditsForEpisode(row, ep);
                 });
             }
         }
@@ -757,10 +782,21 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 executeBulkSetCreditsEnd(seasonId, episodes, container);
             });
 
+            // Detect Credits button (only visible when EmbyCredits is available)
+            var btnDetectCredits = document.createElement('button');
+            btnDetectCredits.className = 'raised emby-button btn-bulk-detect-credits';
+            btnDetectCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;' + (creditsDetectorAvailable ? '' : ' display: none;');
+            btnDetectCredits.textContent = 'Detect All Credits';
+            btnDetectCredits.title = 'Detect credits for episodes using EmbyCredits';
+            btnDetectCredits.addEventListener('click', function () {
+                executeBulkDetectCredits(seasonId, episodes, container);
+            });
+
             rightSide.appendChild(btnApply);
             rightSide.appendChild(btnDeleteIntro);
             rightSide.appendChild(btnDeleteCredits);
             rightSide.appendChild(btnCreditsEnd);
+            rightSide.appendChild(btnDetectCredits);
 
             row.appendChild(leftSide);
             row.appendChild(rightSide);
@@ -826,6 +862,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var btnDeleteIntro = bulkRow.querySelector('.btn-bulk-delete-intro');
             var btnDeleteCredits = bulkRow.querySelector('.btn-bulk-delete-credits');
             var btnCreditsEnd = bulkRow.querySelector('.btn-bulk-credits-end');
+            var btnDetect = bulkRow.querySelector('.btn-bulk-detect-credits');
 
             if (selectedCount > 0) {
                 selectionInfo.textContent = selectedCount + ' of ' + episodes.length + ' selected';
@@ -836,6 +873,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete Intros (' + selectedCount + ')';
                 if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete Credits (' + selectedCount + ')';
                 if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set Credits to End (' + selectedCount + ')';
+                if (btnDetect) btnDetect.textContent = 'Detect Credits (' + selectedCount + ')';
             } else {
                 selectionInfo.textContent = episodes.length + ' episodes';
                 if (btnApply) {
@@ -845,6 +883,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete All Intros';
                 if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete All Credits';
                 if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set All Credits to End';
+                if (btnDetect) btnDetect.textContent = 'Detect All Credits';
             }
         }
 
@@ -1056,6 +1095,84 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
         }
 
+        function executeBulkDetectCredits(seasonId, episodes, container) {
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            var targetEpisodes;
+
+            if (selectedCount > 0) {
+                targetEpisodes = episodes.filter(function (ep) {
+                    return selectedItems[seasonId][ep.ItemId];
+                });
+            } else {
+                targetEpisodes = episodes.slice();
+            }
+
+            if (targetEpisodes.length === 0) {
+                helpers.showError('No episodes to detect credits for.');
+                return;
+            }
+
+            // Check for episodes that already have credits
+            var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
+            var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
+
+            if (withCredits.length > 0 && withoutCredits.length > 0) {
+                var skipExisting = confirm(
+                    withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
+                    'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
+                    'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
+                );
+                if (skipExisting) {
+                    targetEpisodes = withoutCredits;
+                }
+            } else if (withCredits.length > 0 && withoutCredits.length === 0) {
+                if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
+                    return;
+                }
+            }
+
+            if (targetEpisodes.length === 0) {
+                helpers.showError('No episodes to detect credits for.');
+                return;
+            }
+
+            if (!confirm('Detect credits for ' + targetEpisodes.length + ' episode(s) using EmbyCredits? This runs in the background and may take a while.')) {
+                return;
+            }
+
+            helpers.showLoading();
+
+            var succeeded = 0;
+            var failed = 0;
+            var errors = [];
+
+            var chain = Promise.resolve();
+            targetEpisodes.forEach(function (ep) {
+                chain = chain.then(function () {
+                    return helpers.creditsDetectorCall('ProcessEpisode', { ItemId: ep.ItemId })
+                        .then(function () { succeeded++; })
+                        .catch(function (err) {
+                            failed++;
+                            errors.push((ep.ItemName || ep.ItemId) + ': ' + (err.message || 'failed'));
+                        });
+                });
+            });
+
+            chain.then(function () {
+                helpers.hideLoading();
+                var resultMsg = 'Credits detection queued: ' + succeeded + ' succeeded';
+                if (failed > 0) {
+                    resultMsg += ', ' + failed + ' failed';
+                    if (errors.length > 0) {
+                        resultMsg += '\n\nErrors:\n' + errors.join('\n');
+                    }
+                    helpers.showError(resultMsg);
+                } else {
+                    helpers.showSuccess(resultMsg + '. Results will appear after the next sync.');
+                }
+            });
+        }
+
         function refreshSeasonEpisodes(seasonId, container) {
             // Clear cache and selection, then reload
             delete loadedSeasons[seasonId];
@@ -1073,6 +1190,129 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 .catch(function () {
                     // Non-critical
                 });
+        }
+
+        // ── EmbyCredits Integration ──
+
+        function detectCreditsForSeries() {
+            if (!seriesId) return;
+
+            var btn = view.querySelector('#btnDetectCreditsSeries');
+            helpers.withButtonLoading(btn, 'Detecting...',
+                helpers.creditsDetectorCall('ProcessSeries', { SeriesId: seriesId })
+                    .then(function () {
+                        helpers.showSuccess('Credits detection queued for this series. Results will appear after the next sync.');
+                    })
+                    .catch(function (error) {
+                        console.error('Credits detection failed:', error);
+                        helpers.showError('Credits detection failed. Is EmbyCredits running?');
+                    })
+            );
+        }
+
+        function detectCreditsForSeason(seasonId, btn) {
+            var epEndpoint = 'episode_list?seasonId=' + encodeURIComponent(seasonId) +
+                '&seriesId=' + encodeURIComponent(seriesId);
+
+            // Load episodes if not cached, then run bulk detect
+            var episodesPromise = loadedSeasons[seasonId]
+                ? Promise.resolve(loadedSeasons[seasonId])
+                : helpers.apiCall(epEndpoint, 'GET').then(function (episodes) {
+                    episodes = (episodes || []).sort(function (a, b) {
+                        return (a.EpisodeNumber || 0) - (b.EpisodeNumber || 0);
+                    });
+                    loadedSeasons[seasonId] = episodes;
+                    return episodes;
+                });
+
+            helpers.withButtonLoading(btn, '...',
+                episodesPromise.then(function (episodes) {
+                    if (!episodes || episodes.length === 0) {
+                        helpers.showError('No episodes found for this season.');
+                        return;
+                    }
+
+                    var targetEpisodes = episodes.slice();
+                    var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
+                    var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
+
+                    if (withCredits.length > 0 && withoutCredits.length > 0) {
+                        var skipExisting = confirm(
+                            withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
+                            'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
+                            'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
+                        );
+                        if (skipExisting) {
+                            targetEpisodes = withoutCredits;
+                        }
+                    } else if (withCredits.length > 0 && withoutCredits.length === 0) {
+                        if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
+                            return;
+                        }
+                    }
+
+                    if (targetEpisodes.length === 0) {
+                        helpers.showError('No episodes to detect credits for.');
+                        return;
+                    }
+
+                    if (!confirm('Detect credits for ' + targetEpisodes.length + ' episode(s) using EmbyCredits? This runs in the background and may take a while.')) {
+                        return;
+                    }
+
+                    helpers.showLoading();
+
+                    var succeeded = 0;
+                    var failed = 0;
+                    var errors = [];
+
+                    var chain = Promise.resolve();
+                    targetEpisodes.forEach(function (ep) {
+                        chain = chain.then(function () {
+                            return helpers.creditsDetectorCall('ProcessEpisode', { ItemId: ep.ItemId })
+                                .then(function () { succeeded++; })
+                                .catch(function (err) {
+                                    failed++;
+                                    errors.push((ep.ItemName || ep.ItemId) + ': ' + (err.message || 'failed'));
+                                });
+                        });
+                    });
+
+                    return chain.then(function () {
+                        helpers.hideLoading();
+                        var resultMsg = 'Credits detection queued: ' + succeeded + ' succeeded';
+                        if (failed > 0) {
+                            resultMsg += ', ' + failed + ' failed';
+                            if (errors.length > 0) {
+                                resultMsg += '\n\nErrors:\n' + errors.join('\n');
+                            }
+                            helpers.showError(resultMsg);
+                        } else {
+                            helpers.showSuccess(resultMsg + '. Results will appear after the next sync.');
+                        }
+                    });
+                })
+                .catch(function (error) {
+                    console.error('Failed to load episodes for detection:', error);
+                    helpers.showError('Failed to load episodes for this season.');
+                })
+            );
+        }
+
+        function detectCreditsForEpisode(row, ep) {
+            var btn = row.querySelector('.btn-detect-credits');
+            if (!btn) return;
+
+            helpers.withButtonLoading(btn, '...',
+                helpers.creditsDetectorCall('ProcessEpisode', { ItemId: ep.ItemId })
+                    .then(function () {
+                        helpers.showSuccess('Credits detection queued for "' + (ep.ItemName || 'this episode') + '". Results will appear after the next sync.');
+                    })
+                    .catch(function (error) {
+                        console.error('Credits detection failed:', error);
+                        helpers.showError('Credits detection failed for this episode.');
+                    })
+            );
         }
 
         // ── Helpers ──
@@ -1120,7 +1360,21 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (btnClearSource) {
                     btnClearSource.addEventListener('click', clearBulkSource);
                 }
+
+                var btnDetectSeries = view.querySelector('#btnDetectCreditsSeries');
+                if (btnDetectSeries) {
+                    btnDetectSeries.addEventListener('click', detectCreditsForSeries);
+                }
             }
+
+            // Check for EmbyCredits plugin and show/hide detect button
+            helpers.checkCreditsDetector().then(function (available) {
+                creditsDetectorAvailable = available;
+                var btnDetect = view.querySelector('#btnDetectCreditsSeries');
+                if (btnDetect) {
+                    btnDetect.style.display = available ? '' : 'none';
+                }
+            });
 
             loadSeasons();
         });

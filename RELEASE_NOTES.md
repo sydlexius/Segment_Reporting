@@ -1,5 +1,20 @@
 # Segment Reporting - Release Notes
 
+## v0.0.11.0 - EmbyCredits Plugin Integration
+
+### Added
+
+- **EmbyCredits integration** (#35) - If the EmbyCredits plugin is installed, new "Detect Credits" buttons appear throughout the UI to trigger credits detection directly from Segment Reporting.
+  - **Dashboard** - "Detect All Credits" button queues detection for every episode in the library.
+  - **Series page header** - "Detect Credits" button processes the entire series at once.
+  - **Season accordion header** - Per-season "Detect" button processes all episodes in that season.
+  - **Season bulk action row** - "Detect All Credits" button respects episode selection and includes skip/overwrite prompts.
+  - **Episode row** - Per-episode "Detect" button triggers detection for a single episode.
+- **Skip-existing prompt** (#35) - Bulk detect operations check which episodes already have credits and ask whether to skip them or re-detect, avoiding unnecessary processing.
+- **Auto-detection** (#35) - EmbyCredits availability is detected automatically on page load. All detect buttons are hidden when the plugin is not installed, keeping the UI clean for users without it.
+
+---
+
 ## v0.0.10.0 - Browser Back Button and Unassigned Season Fix
 
 ### Fixed
