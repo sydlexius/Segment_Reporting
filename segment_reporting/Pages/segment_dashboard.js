@@ -266,7 +266,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var coveragePct = helpers.percentage(withIntro + withCredits - withBoth, totalItems);
 
                 row.innerHTML =
-                    '<td>' + (lib.LibraryName || 'Unknown') + '</td>' +
+                    '<td>' + helpers.escHtml(lib.LibraryName || 'Unknown') + '</td>' +
                     '<td>' + totalItems.toLocaleString() + '</td>' +
                     '<td>' + withIntro.toLocaleString() + '</td>' +
                     '<td>' + withCredits.toLocaleString() + '</td>' +

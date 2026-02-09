@@ -328,6 +328,11 @@ function segmentReportingGenerateChartPalette(accentHex) {
     };
 }
 
+function segmentReportingEscHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function segmentReportingGetThemeColors(view) {
     var accentColor = segmentReportingDetectAccentColor(view);
     var palette = segmentReportingGenerateChartPalette(accentColor);
@@ -358,6 +363,7 @@ function getSegmentReportingHelpers() {
         hideLoading: segmentReportingHideLoading,
         showError: segmentReportingShowError,
         showSuccess: segmentReportingShowSuccess,
+        escHtml: segmentReportingEscHtml,
         launchPlayback: segmentReportingLaunchPlayback,
         detectAccentColor: segmentReportingDetectAccentColor,
         rgbToHex: segmentReportingRgbToHex,

@@ -127,10 +127,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             return BUILDER_OPS[type] || BUILDER_OPS.text;
         }
 
-        function escHtml(s) {
-            if (!s) return '';
-            return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        }
+        var escHtml = helpers.escHtml;
 
         function mkCondition() {
             return { id: _nextId++, type: 'condition', field: BUILDER_FIELDS[0].name, operator: '=', value: '', value2: '' };

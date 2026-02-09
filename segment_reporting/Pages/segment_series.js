@@ -328,7 +328,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             row.innerHTML =
                 '<td style="' + centerStyle + 'width: 40px;"><input type="checkbox" class="row-select-cb"' + (isChecked ? ' checked' : '') + '></td>' +
                 '<td style="' + cellStyle + '">' + (ep.EpisodeNumber || '-') + '</td>' +
-                '<td style="' + cellStyle + '">' + (ep.ItemName || 'Unknown') + '</td>' +
+                '<td style="' + cellStyle + '">' + helpers.escHtml(ep.ItemName || 'Unknown') + '</td>' +
                 '<td class="tick-cell" data-marker="IntroStart" style="' + centerStyle + '">' + renderTimestamp(ep.IntroStartTicks, ep.ItemId) + '</td>' +
                 '<td class="tick-cell" data-marker="IntroEnd" style="' + centerStyle + '">' + renderTimestamp(ep.IntroEndTicks, ep.ItemId) + '</td>' +
                 '<td class="tick-cell" data-marker="CreditsStart" style="' + centerStyle + '">' + renderTimestamp(ep.CreditsStartTicks, ep.ItemId) + '</td>' +

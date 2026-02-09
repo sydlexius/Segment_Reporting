@@ -373,7 +373,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var creditsPct = helpers.percentage(withCredits, totalItems);
 
                 row.innerHTML =
-                    '<td>' + (item.SeriesName || 'Unknown') + '</td>' +
+                    '<td>' + helpers.escHtml(item.SeriesName || 'Unknown') + '</td>' +
                     '<td>' + totalItems.toLocaleString() + '</td>' +
                     '<td>' + withIntro.toLocaleString() + '</td>' +
                     '<td>' + withCredits.toLocaleString() + '</td>' +

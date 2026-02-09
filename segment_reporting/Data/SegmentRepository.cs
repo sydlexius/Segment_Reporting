@@ -58,6 +58,12 @@ namespace segment_reporting.Data
             return db;
         }
 
+        private IDatabaseConnection OpenReadOnlyConnection()
+        {
+            var flags = ConnectionFlags.ReadOnly | ConnectionFlags.PrivateCache | ConnectionFlags.FullMutex;
+            return SQLite3.Open(_dbPath, flags, null, true);
+        }
+
         #region Schema
 
         public void Initialize()
@@ -898,37 +904,35 @@ namespace segment_reporting.Data
                 Rows = new List<List<string>>()
             };
 
-            lock (_dbLock)
+            try
             {
-                try
+                using (var roConn = OpenReadOnlyConnection())
+                using (var stmt = roConn.PrepareStatement(sql))
                 {
-                    using (var stmt = _connection.PrepareStatement(sql))
+                    var colCount = stmt.Columns.Count;
+
+                    for (int i = 0; i < colCount; i++)
                     {
-                        var colCount = stmt.Columns.Count;
-
-                        for (int i = 0; i < colCount; i++)
-                        {
-                            result.Columns.Add(stmt.Columns[i].Name);
-                        }
-
-                        while (stmt.MoveNext())
-                        {
-                            var row = stmt.Current;
-                            var rowData = new List<string>();
-                            for (int i = 0; i < colCount; i++)
-                            {
-                                rowData.Add(row.IsDBNull(i) ? null : row.GetString(i));
-                            }
-                            result.Rows.Add(rowData);
-                        }
+                        result.Columns.Add(stmt.Columns[i].Name);
                     }
 
-                    result.Message = result.Rows.Count + " row(s) returned";
+                    while (stmt.MoveNext())
+                    {
+                        var row = stmt.Current;
+                        var rowData = new List<string>();
+                        for (int i = 0; i < colCount; i++)
+                        {
+                            rowData.Add(row.IsDBNull(i) ? null : row.GetString(i));
+                        }
+                        result.Rows.Add(rowData);
+                    }
                 }
-                catch (Exception ex)
-                {
-                    result.Message = "Error: " + ex.Message;
-                }
+
+                result.Message = result.Rows.Count + " row(s) returned";
+            }
+            catch (Exception ex)
+            {
+                result.Message = "Error: " + ex.Message;
             }
 
             return result;
