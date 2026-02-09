@@ -65,12 +65,6 @@ namespace segment_reporting.Data
             return db;
         }
 
-        private IDatabaseConnection OpenReadOnlyConnection()
-        {
-            var flags = ConnectionFlags.ReadOnly | ConnectionFlags.PrivateCache | ConnectionFlags.FullMutex;
-            return SQLite3.Open(_dbPath, flags, null, true);
-        }
-
         #region Schema
 
         public void Initialize()
@@ -111,6 +105,13 @@ namespace segment_reporting.Data
                     "CREATE TABLE IF NOT EXISTS UserPreferences (" +
                     "[Key] TEXT PRIMARY KEY, " +
                     "[Value] TEXT)");
+
+                _connection.Execute(
+                    "CREATE TABLE IF NOT EXISTS SavedQueries (" +
+                    "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "QueryName TEXT NOT NULL, " +
+                    "QuerySql TEXT NOT NULL, " +
+                    "CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP)");
 
                 CheckMigration();
 
@@ -929,25 +930,27 @@ namespace segment_reporting.Data
 
             try
             {
-                using (var roConn = OpenReadOnlyConnection())
-                using (var stmt = roConn.PrepareStatement(sql))
+                lock (_dbLock)
                 {
-                    var colCount = stmt.Columns.Count;
-
-                    for (int i = 0; i < colCount; i++)
+                    using (var stmt = _connection.PrepareStatement(sql))
                     {
-                        result.Columns.Add(stmt.Columns[i].Name);
-                    }
+                        var colCount = stmt.Columns.Count;
 
-                    while (stmt.MoveNext())
-                    {
-                        var row = stmt.Current;
-                        var rowData = new List<string>();
                         for (int i = 0; i < colCount; i++)
                         {
-                            rowData.Add(row.IsDBNull(i) ? null : row.GetString(i));
+                            result.Columns.Add(stmt.Columns[i].Name);
                         }
-                        result.Rows.Add(rowData);
+
+                        while (stmt.MoveNext())
+                        {
+                            var row = stmt.Current;
+                            var rowData = new List<string>();
+                            for (int i = 0; i < colCount; i++)
+                            {
+                                rowData.Add(row.IsDBNull(i) ? null : row.GetString(i));
+                            }
+                            result.Rows.Add(rowData);
+                        }
                     }
                 }
 
@@ -955,6 +958,7 @@ namespace segment_reporting.Data
             }
             catch (Exception ex)
             {
+                _logger.ErrorException("RunCustomQuery failed for: " + sql, ex);
                 result.Message = "Error: " + ex.Message;
             }
 
@@ -1008,6 +1012,86 @@ namespace segment_reporting.Data
                 {
                     TryBind(stmt, "@Key", key);
                     TryBind(stmt, "@Value", value);
+                    stmt.MoveNext();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Saved Queries
+
+        public List<Dictionary<string, object>> GetSavedQueries()
+        {
+            var results = new List<Dictionary<string, object>>();
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "SELECT Id, QueryName, QuerySql, CreatedDate FROM SavedQueries ORDER BY QueryName"))
+                {
+                    while (stmt.MoveNext())
+                    {
+                        var row = stmt.Current;
+                        results.Add(new Dictionary<string, object>
+                        {
+                            { "id", ReadInt(row, 0) },
+                            { "name", ReadString(row, 1) },
+                            { "sql", ReadString(row, 2) },
+                            { "createdDate", ReadString(row, 3) }
+                        });
+                    }
+                }
+            }
+            return results;
+        }
+
+        public long AddSavedQuery(string name, string sql)
+        {
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "INSERT INTO SavedQueries (QueryName, QuerySql) VALUES (@Name, @Sql)"))
+                {
+                    TryBind(stmt, "@Name", name);
+                    TryBind(stmt, "@Sql", sql);
+                    stmt.MoveNext();
+                }
+
+                using (var stmt = _connection.PrepareStatement("SELECT last_insert_rowid()"))
+                {
+                    if (stmt.MoveNext())
+                    {
+                        return stmt.Current.GetInt64(0);
+                    }
+                }
+
+                return 0;
+            }
+        }
+
+        public void UpdateSavedQuery(long id, string name, string sql)
+        {
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "UPDATE SavedQueries SET QueryName = @Name, QuerySql = @Sql WHERE Id = @Id"))
+                {
+                    TryBind(stmt, "@Id", id);
+                    TryBind(stmt, "@Name", name);
+                    TryBind(stmt, "@Sql", sql);
+                    stmt.MoveNext();
+                }
+            }
+        }
+
+        public void DeleteSavedQuery(long id)
+        {
+            lock (_dbLock)
+            {
+                using (var stmt = _connection.PrepareStatement(
+                    "DELETE FROM SavedQueries WHERE Id = @Id"))
+                {
+                    TryBind(stmt, "@Id", id);
                     stmt.MoveNext();
                 }
             }

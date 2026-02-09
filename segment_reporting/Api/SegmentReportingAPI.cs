@@ -240,6 +240,37 @@ namespace segment_reporting.Api
         public string HideMixedLibraries { get; set; }
     }
 
+    // http(s)://<host>:<port>/emby/segment_reporting/saved_queries
+    [Route("/segment_reporting/saved_queries", "GET", Summary = "Get all saved queries")]
+    [Authenticated(Roles = "admin")]
+    public class GetSavedQueries : IReturn<object>
+    {
+    }
+
+    // http(s)://<host>:<port>/emby/segment_reporting/saved_queries
+    [Route("/segment_reporting/saved_queries", "POST", Summary = "Save a custom query")]
+    [Authenticated(Roles = "admin")]
+    public class AddSavedQuery : IReturn<object>
+    {
+        [ApiMember(Name = "name", Description = "Query name", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string Name { get; set; }
+
+        [ApiMember(Name = "sql", Description = "SQL query text", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string Sql { get; set; }
+
+        [ApiMember(Name = "id", Description = "Existing query ID to update (optional)", IsRequired = false, DataType = "long", ParameterType = "query", Verb = "POST")]
+        public long? Id { get; set; }
+    }
+
+    // http(s)://<host>:<port>/emby/segment_reporting/saved_queries/{Id}
+    [Route("/segment_reporting/saved_queries/{Id}", "DELETE", Summary = "Delete a saved query")]
+    [Authenticated(Roles = "admin")]
+    public class DeleteSavedQuery : IReturn<object>
+    {
+        [ApiMember(Name = "Id", Description = "Query ID to delete", IsRequired = true, DataType = "long", ParameterType = "path", Verb = "DELETE")]
+        public long Id { get; set; }
+    }
+
     public class SegmentReportingAPI : IService, IRequiresRequest
     {
         private readonly ILogger _logger;
@@ -870,6 +901,36 @@ namespace segment_reporting.Api
                 }
             }
 
+            return new { success = true };
+        }
+
+        public object Get(GetSavedQueries request)
+        {
+            _logger.Info("GetSavedQueries");
+            SegmentRepository repo = GetRepository();
+            return repo.GetSavedQueries();
+        }
+
+        public object Post(AddSavedQuery request)
+        {
+            _logger.Info("AddSavedQuery: {0}", request.Name);
+            SegmentRepository repo = GetRepository();
+
+            if (request.Id.HasValue && request.Id.Value > 0)
+            {
+                repo.UpdateSavedQuery(request.Id.Value, request.Name, request.Sql);
+                return new { success = true, id = request.Id.Value };
+            }
+
+            long newId = repo.AddSavedQuery(request.Name, request.Sql);
+            return new { success = true, id = newId };
+        }
+
+        public object Delete(DeleteSavedQuery request)
+        {
+            _logger.Info("DeleteSavedQuery: {0}", request.Id);
+            SegmentRepository repo = GetRepository();
+            repo.DeleteSavedQuery(request.Id);
             return new { success = true };
         }
 

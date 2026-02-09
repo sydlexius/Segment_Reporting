@@ -843,27 +843,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         // ===== QUERIES: Unified Dropdown (Built-in + Saved) =====
 
-        var SAVED_QUERIES_KEY = 'segment_reporting_saved_queries';
         var builtInQueries = [];
-
-        function getSavedQueries() {
-            try {
-                var userId = ApiClient.getCurrentUserId();
-                var data = localStorage.getItem(SAVED_QUERIES_KEY + '_' + userId);
-                return data ? JSON.parse(data) : [];
-            } catch (e) {
-                return [];
-            }
-        }
-
-        function setSavedQueries(queries) {
-            try {
-                var userId = ApiClient.getCurrentUserId();
-                localStorage.setItem(SAVED_QUERIES_KEY + '_' + userId, JSON.stringify(queries));
-            } catch (e) {
-                console.error('Failed to save queries:', e);
-            }
-        }
+        var savedQueries = [];
 
         function rebuildDropdown() {
             var dropdown = view.querySelector('#queriesDropdown');
@@ -888,16 +869,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 dropdown.appendChild(builtInGroup);
             }
 
-            // Saved queries
-            var saved = getSavedQueries();
-            if (saved.length > 0) {
+            // Saved queries (from database)
+            if (savedQueries.length > 0) {
                 var savedGroup = document.createElement('optgroup');
                 savedGroup.label = 'My Saved Queries';
-                saved.forEach(function (q, idx) {
+                savedQueries.forEach(function (q) {
                     var opt = document.createElement('option');
                     opt.value = q.sql || '';
                     opt.textContent = q.name || 'Unnamed Query';
-                    opt.setAttribute('data-saved-index', String(idx));
+                    opt.setAttribute('data-saved-id', String(q.id));
                     savedGroup.appendChild(opt);
                 });
                 dropdown.appendChild(savedGroup);
@@ -905,15 +885,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function loadQueries() {
-            helpers.apiCall('canned_queries', 'GET')
-                .then(function (data) {
-                    builtInQueries = (data && Array.isArray(data)) ? data : [];
-                    rebuildDropdown();
-                })
-                .catch(function (error) {
-                    console.error('Failed to load built-in queries:', error);
-                    rebuildDropdown();
-                });
+            // Load built-in and saved queries in parallel
+            var builtInPromise = helpers.apiCall('canned_queries', 'GET').catch(function () { return []; });
+            var savedPromise = helpers.apiCall('saved_queries', 'GET').catch(function () { return []; });
+
+            Promise.all([builtInPromise, savedPromise]).then(function (results) {
+                builtInQueries = (results[0] && Array.isArray(results[0])) ? results[0] : [];
+                savedQueries = (results[1] && Array.isArray(results[1])) ? results[1] : [];
+                rebuildDropdown();
+            });
         }
 
         function handleQuerySelect(event) {
@@ -924,7 +904,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             // Show/hide delete button (only for saved queries)
             var btnDelete = view.querySelector('#btnDeleteQuery');
             if (btnDelete) {
-                var isSaved = selectedOption && selectedOption.hasAttribute('data-saved-index');
+                var isSaved = selectedOption && selectedOption.hasAttribute('data-saved-id');
                 btnDelete.style.display = isSaved ? 'inline-block' : 'none';
             }
 
@@ -949,52 +929,46 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             if (!name || !name.trim()) return;
             name = name.trim();
 
-            var saved = getSavedQueries();
-
-            // Check for duplicate name
-            var existingIdx = -1;
-            for (var i = 0; i < saved.length; i++) {
-                if (saved[i].name === name) { existingIdx = i; break; }
+            // Check for duplicate name among saved queries
+            var existingQuery = null;
+            for (var i = 0; i < savedQueries.length; i++) {
+                if (savedQueries[i].name === name) { existingQuery = savedQueries[i]; break; }
             }
 
-            if (existingIdx >= 0) {
+            if (existingQuery) {
                 if (!confirm('A saved query named "' + name + '" already exists. Overwrite it?')) return;
-                saved[existingIdx].sql = sql;
-            } else {
-                saved.push({ name: name, sql: sql });
             }
 
-            setSavedQueries(saved);
-            rebuildDropdown();
-
-            // Select the newly saved query
-            var dropdown = view.querySelector('#queriesDropdown');
-            for (var j = 0; j < dropdown.options.length; j++) {
-                if (dropdown.options[j].value === sql && dropdown.options[j].hasAttribute('data-saved-index')) {
-                    dropdown.selectedIndex = j;
-                    break;
-                }
-            }
-            view.querySelector('#btnDeleteQuery').style.display = 'inline-block';
+            var payload = JSON.stringify({ name: name, sql: sql, id: existingQuery ? existingQuery.id : null });
+            helpers.apiCall('saved_queries', 'POST', payload)
+                .then(function () {
+                    loadQueries();
+                })
+                .catch(function (error) {
+                    console.error('Failed to save query:', error);
+                    helpers.showError('Failed to save query.');
+                });
         }
 
         function deleteSelectedQuery() {
             var dropdown = view.querySelector('#queriesDropdown');
             var selectedOption = dropdown.options[dropdown.selectedIndex];
-            if (!selectedOption || !selectedOption.hasAttribute('data-saved-index')) return;
+            if (!selectedOption || !selectedOption.hasAttribute('data-saved-id')) return;
 
-            var idx = parseInt(selectedOption.getAttribute('data-saved-index'), 10);
-            var saved = getSavedQueries();
-            if (idx < 0 || idx >= saved.length) return;
-
-            var name = saved[idx].name;
+            var queryId = selectedOption.getAttribute('data-saved-id');
+            var name = selectedOption.textContent;
             if (!confirm('Delete saved query "' + name + '"?')) return;
 
-            saved.splice(idx, 1);
-            setSavedQueries(saved);
-            dropdown.selectedIndex = 0;
-            view.querySelector('#btnDeleteQuery').style.display = 'none';
-            rebuildDropdown();
+            helpers.apiCall('saved_queries/' + queryId, 'DELETE')
+                .then(function () {
+                    dropdown.selectedIndex = 0;
+                    view.querySelector('#btnDeleteQuery').style.display = 'none';
+                    loadQueries();
+                })
+                .catch(function (error) {
+                    console.error('Failed to delete query:', error);
+                    helpers.showError('Failed to delete query.');
+                });
         }
 
         // ===== EXISTING: Query Execution =====
