@@ -123,7 +123,7 @@ namespace segment_reporting.Tasks
             progress.Report(90);
 
             _logger.Info("TaskSyncSegments: Upserting {0} segments", segments.Count);
-            repo.UpsertSegments(segments);
+            repo.UpsertSegments(segments, cancellationToken);
             progress.Report(95);
 
             repo.RemoveOrphanedRows(validItemIds);

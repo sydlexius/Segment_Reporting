@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Threading;
 using MediaBrowser.Model.Logging;
 using SQLitePCL.pretty;
 
 namespace segment_reporting.Data
 {
-    public class SegmentRepository
+    public class SegmentRepository : IDisposable
     {
         private static SegmentRepository _instance;
         private static readonly object _instanceLock = new object();
@@ -15,6 +16,7 @@ namespace segment_reporting.Data
         private readonly object _dbLock = new object();
         private readonly ILogger _logger;
         private readonly string _dbPath;
+        private bool _disposed;
 
         private static readonly string[] _dateFormats = new[]
         {
@@ -39,6 +41,10 @@ namespace segment_reporting.Data
                 {
                     _instance = new SegmentRepository(dbPath, logger);
                 }
+                else if (!string.Equals(_instance._dbPath, dbPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    logger.Warn("SegmentRepository: requested path {0} differs from existing {1}", dbPath, _instance._dbPath);
+                }
                 return _instance;
             }
         }
@@ -46,7 +52,7 @@ namespace segment_reporting.Data
         private IDatabaseConnection CreateConnection()
         {
             var flags = ConnectionFlags.Create | ConnectionFlags.ReadWrite |
-                        ConnectionFlags.PrivateCache | ConnectionFlags.NoMutex;
+                        ConnectionFlags.PrivateCache | ConnectionFlags.FullMutex;
 
             var db = SQLite3.Open(_dbPath, flags, null, true);
 
@@ -307,18 +313,28 @@ namespace segment_reporting.Data
             }
         }
 
-        public void UpsertSegments(List<SegmentInfo> segments)
+        public void UpsertSegments(List<SegmentInfo> segments, CancellationToken cancellationToken = default(CancellationToken))
         {
             lock (_dbLock)
             {
                 _connection.Execute("BEGIN TRANSACTION");
                 try
                 {
-                    foreach (var segment in segments)
+                    for (int i = 0; i < segments.Count; i++)
                     {
-                        UpsertSegmentInternal(segment);
+                        if (i % 500 == 0)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                        }
+                        UpsertSegmentInternal(segments[i]);
                     }
                     _connection.Execute("COMMIT");
+                }
+                catch (OperationCanceledException)
+                {
+                    _logger.Info("SegmentRepository: UpsertSegments cancelled, rolling back");
+                    _connection.Execute("ROLLBACK");
+                    throw;
                 }
                 catch (Exception ex)
                 {
@@ -331,53 +347,30 @@ namespace segment_reporting.Data
 
         private void UpsertSegmentInternal(SegmentInfo segment)
         {
-            bool exists = false;
             using (var stmt = _connection.PrepareStatement(
-                "SELECT COUNT(*) FROM MediaSegments WHERE ItemId = @ItemId"))
+                "INSERT INTO MediaSegments " +
+                "(ItemId, ItemName, ItemType, SeriesName, SeriesId, " +
+                "SeasonName, SeasonId, SeasonNumber, EpisodeNumber, " +
+                "LibraryName, LibraryId, IntroStartTicks, IntroEndTicks, " +
+                "CreditsStartTicks, HasIntro, HasCredits, LastSyncDate) " +
+                "VALUES " +
+                "(@ItemId, @ItemName, @ItemType, @SeriesName, @SeriesId, " +
+                "@SeasonName, @SeasonId, @SeasonNumber, @EpisodeNumber, " +
+                "@LibraryName, @LibraryId, @IntroStartTicks, @IntroEndTicks, " +
+                "@CreditsStartTicks, @HasIntro, @HasCredits, @LastSyncDate) " +
+                "ON CONFLICT(ItemId) DO UPDATE SET " +
+                "ItemName = excluded.ItemName, ItemType = excluded.ItemType, " +
+                "SeriesName = excluded.SeriesName, SeriesId = excluded.SeriesId, " +
+                "SeasonName = excluded.SeasonName, SeasonId = excluded.SeasonId, " +
+                "SeasonNumber = excluded.SeasonNumber, EpisodeNumber = excluded.EpisodeNumber, " +
+                "LibraryName = excluded.LibraryName, LibraryId = excluded.LibraryId, " +
+                "IntroStartTicks = excluded.IntroStartTicks, IntroEndTicks = excluded.IntroEndTicks, " +
+                "CreditsStartTicks = excluded.CreditsStartTicks, " +
+                "HasIntro = excluded.HasIntro, HasCredits = excluded.HasCredits, " +
+                "LastSyncDate = excluded.LastSyncDate"))
             {
-                TryBind(stmt, "@ItemId", segment.ItemId);
-                if (stmt.MoveNext())
-                {
-                    exists = stmt.Current.GetInt(0) > 0;
-                }
-            }
-
-            if (exists)
-            {
-                using (var stmt = _connection.PrepareStatement(
-                    "UPDATE MediaSegments SET " +
-                    "ItemName = @ItemName, ItemType = @ItemType, " +
-                    "SeriesName = @SeriesName, SeriesId = @SeriesId, " +
-                    "SeasonName = @SeasonName, SeasonId = @SeasonId, " +
-                    "SeasonNumber = @SeasonNumber, EpisodeNumber = @EpisodeNumber, " +
-                    "LibraryName = @LibraryName, LibraryId = @LibraryId, " +
-                    "IntroStartTicks = @IntroStartTicks, IntroEndTicks = @IntroEndTicks, " +
-                    "CreditsStartTicks = @CreditsStartTicks, " +
-                    "HasIntro = @HasIntro, HasCredits = @HasCredits, " +
-                    "LastSyncDate = @LastSyncDate " +
-                    "WHERE ItemId = @ItemId"))
-                {
-                    BindSegmentParams(stmt, segment);
-                    stmt.MoveNext();
-                }
-            }
-            else
-            {
-                using (var stmt = _connection.PrepareStatement(
-                    "INSERT INTO MediaSegments " +
-                    "(ItemId, ItemName, ItemType, SeriesName, SeriesId, " +
-                    "SeasonName, SeasonId, SeasonNumber, EpisodeNumber, " +
-                    "LibraryName, LibraryId, IntroStartTicks, IntroEndTicks, " +
-                    "CreditsStartTicks, HasIntro, HasCredits, LastSyncDate) " +
-                    "VALUES " +
-                    "(@ItemId, @ItemName, @ItemType, @SeriesName, @SeriesId, " +
-                    "@SeasonName, @SeasonId, @SeasonNumber, @EpisodeNumber, " +
-                    "@LibraryName, @LibraryId, @IntroStartTicks, @IntroEndTicks, " +
-                    "@CreditsStartTicks, @HasIntro, @HasCredits, @LastSyncDate)"))
-                {
-                    BindSegmentParams(stmt, segment);
-                    stmt.MoveNext();
-                }
+                BindSegmentParams(stmt, segment);
+                stmt.MoveNext();
             }
         }
 
@@ -871,5 +864,14 @@ namespace segment_reporting.Data
         }
 
         #endregion
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _connection?.Dispose();
+                _disposed = true;
+            }
+        }
     }
 }

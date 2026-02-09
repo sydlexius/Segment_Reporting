@@ -1,5 +1,20 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.5 - SQLite UPSERT and Connection Improvements
+
+### Improved
+
+- **Faster sync for large libraries** (#30) - Replaced the two-query SELECT-then-INSERT/UPDATE pattern with a single SQLite UPSERT (`INSERT ... ON CONFLICT DO UPDATE`), cutting round-trips per item in half during sync.
+- **Cancellable bulk upserts** (#30) - The sync task can now be cleanly cancelled mid-upsert. Large library syncs (50K+ items) check for cancellation periodically and roll back gracefully instead of blocking until completion.
+- **Safer SQLite threading** (#30) - Switched the write connection from `NoMutex` to `FullMutex`, letting SQLite handle thread safety internally alongside the existing application-level lock.
+
+### Fixed
+
+- **Connection leak on plugin reload** (#30) - `SegmentRepository` now implements `IDisposable` so the SQLite connection is properly released if the plugin is unloaded or reloaded.
+- **Silent path mismatch** (#30) - The singleton factory now logs a warning if a caller requests a different database path than the one already in use, instead of silently ignoring it.
+
+---
+
 ## v0.0.9.4 - Reduce Backend Duplication
 
 ### Improved
