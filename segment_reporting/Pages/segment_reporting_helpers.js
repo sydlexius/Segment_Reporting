@@ -94,11 +94,17 @@ function segmentReportingRelativeTime(dateStr) {
 }
 
 function segmentReportingNavigate(page, params) {
-    if (params && Object.keys(params).length > 0) {
-        sessionStorage.setItem('segment_reporting_nav_params', JSON.stringify(params));
-    }
-
     var url = 'configurationpage?name=' + page;
+
+    // Encode params directly in the URL so browser back/forward preserves them
+    if (params && Object.keys(params).length > 0) {
+        var keys = Object.keys(params);
+        for (var i = 0; i < keys.length; i++) {
+            if (params[keys[i]] != null) {
+                url += '&' + encodeURIComponent(keys[i]) + '=' + encodeURIComponent(params[keys[i]]);
+            }
+        }
+    }
 
     var knownPages = ['segment_dashboard', 'segment_library', 'segment_series', 'segment_settings', 'segment_custom_query'];
     if (knownPages.indexOf(page) >= 0) {
@@ -129,23 +135,23 @@ function segmentReportingNavigate(page, params) {
 }
 
 function segmentReportingGetQueryParam(name) {
-    var storedParams = sessionStorage.getItem('segment_reporting_nav_params');
-    if (storedParams) {
-        try {
-            var params = JSON.parse(storedParams);
-            if (params && params[name]) {
-                return params[name];
-            }
-        } catch (e) {
-            console.error('Failed to parse navigation params:', e);
-        }
+    // Check URL search params (standard routing)
+    var value = new URLSearchParams(window.location.search).get(name);
+    if (value) return value;
+
+    // Check hash-based routing (Emby may use #!/path?params format)
+    var hash = window.location.hash || '';
+    var qIdx = hash.indexOf('?');
+    if (qIdx >= 0) {
+        value = new URLSearchParams(hash.substring(qIdx)).get(name);
+        if (value) return value;
     }
 
-    var urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get(name);
+    return null;
 }
 
 function segmentReportingClearNavParams() {
+    // Clean up legacy sessionStorage (params now live in the URL)
     sessionStorage.removeItem('segment_reporting_nav_params');
 }
 
@@ -314,33 +320,49 @@ function segmentReportingDetectAccentColor(view) {
     return '#52b54b';
 }
 
-function segmentReportingGenerateChartPalette(accentHex) {
-    var palettes = [
-        { hue: 122, both: '#003366', intro: '#87CEEB', credits: '#F5F5DC', none: '#d90429' },
-        { hue: 207, both: '#003459', intro: '#f4a44e', credits: '#bfdbf7', none: '#d90429' },
-        { hue:   4, both: '#002a3a', intro: '#216f8d', credits: '#eaaa00', none: '#d90429' },
-        { hue: 322, both: '#cdb4db', intro: '#ffafcc', credits: '#a2d2ff', none: '#d90429' },
-        { hue: 271, both: '#9b26af', intro: '#3f51b5', credits: '#f44235', none: '#d90429' }
-    ];
+// Chart color palettes sourced from https://coolors.co
+var segmentReportingChartPalettes = [
+    { name: 'Refreshing Ocean Breeze',    accent: '#4CAF50', hue: 122, both: '#003366', intro: '#87CEEB', credits: '#F5F5DC', none: '#d90429' },
+    { name: 'Sunshine Blue Dream',         accent: '#2196F3', hue: 207, both: '#003459', intro: '#f4a44e', credits: '#bfdbf7', none: '#d90429' },
+    { name: 'Deep Sea Carnival',           accent: '#F44336', hue:   4, both: '#002a3a', intro: '#216f8d', credits: '#eaaa00', none: '#d90429' },
+    { name: 'Pastel Dreamland Adventure',  accent: '#F200A1', hue: 322, both: '#cdb4db', intro: '#ffafcc', credits: '#a2d2ff', none: '#d90429' },
+    { name: 'Bold Hues',                   accent: '#683AB7', hue: 271, both: '#f72585', intro: '#7209b7', credits: '#3a0ca3', none: '#d90429' }
+];
 
+function segmentReportingGetPaletteByName(name) {
+    var lower = name.toLowerCase();
+    for (var i = 0; i < segmentReportingChartPalettes.length; i++) {
+        if (segmentReportingChartPalettes[i].name.toLowerCase() === lower) {
+            return segmentReportingFormatPalette(segmentReportingChartPalettes[i]);
+        }
+    }
+    return segmentReportingFormatPalette(segmentReportingChartPalettes[0]);
+}
+
+function segmentReportingFormatPalette(entry) {
+    return {
+        name: entry.name,
+        bothSegments: entry.both,
+        introOnly: entry.intro,
+        creditsOnly: entry.credits,
+        noSegments: entry.none
+    };
+}
+
+function segmentReportingGenerateChartPalette(accentHex) {
     var rgb = segmentReportingHexToRgb(accentHex);
     var hsl = segmentReportingRgbToHsl(rgb.r, rgb.g, rgb.b);
     var h = hsl.h;
 
-    var best = palettes[0];
+    var best = segmentReportingChartPalettes[0];
     var bestDist = 360;
-    for (var i = 0; i < palettes.length; i++) {
-        var d = Math.abs(h - palettes[i].hue);
+    for (var i = 0; i < segmentReportingChartPalettes.length; i++) {
+        var d = Math.abs(h - segmentReportingChartPalettes[i].hue);
         if (d > 180) d = 360 - d;
-        if (d < bestDist) { bestDist = d; best = palettes[i]; }
+        if (d < bestDist) { bestDist = d; best = segmentReportingChartPalettes[i]; }
     }
 
-    return {
-        bothSegments: best.both,
-        introOnly: best.intro,
-        creditsOnly: best.credits,
-        noSegments: best.none
-    };
+    return segmentReportingFormatPalette(best);
 }
 
 function segmentReportingEscHtml(s) {
@@ -500,6 +522,8 @@ function getSegmentReportingHelpers() {
         rgbToHsl: segmentReportingRgbToHsl,
         hslToRgb: segmentReportingHslToRgb,
         hslToHexString: segmentReportingHslToHexString,
+        chartPalettes: segmentReportingChartPalettes,
+        getPaletteByName: segmentReportingGetPaletteByName,
         generateChartPalette: segmentReportingGenerateChartPalette,
         getThemeColors: segmentReportingGetThemeColors,
         formatBytes: segmentReportingFormatBytes,

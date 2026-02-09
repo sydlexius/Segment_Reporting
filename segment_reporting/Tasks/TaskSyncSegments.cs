@@ -205,11 +205,24 @@ namespace segment_reporting.Tasks
                 }
 
                 var season = episode.FindParent<Season>();
+                if (season == null)
+                {
+                    // Fallback: check direct parent (handles flat library structures)
+                    season = item.Parent as Season;
+                }
+
                 if (season != null)
                 {
                     segment.SeasonName = season.Name;
                     segment.SeasonId = season.InternalId.ToString();
                     segment.SeasonNumber = season.IndexNumber;
+                }
+                else
+                {
+                    // Last resort: use episode's own ParentIndexNumber for season number
+                    segment.SeasonNumber = episode.ParentIndexNumber;
+                    _logger.Debug("BuildSegmentInfo: No season parent for episode {0} ({1})",
+                        item.InternalId, item.Name);
                 }
 
                 segment.EpisodeNumber = episode.IndexNumber;

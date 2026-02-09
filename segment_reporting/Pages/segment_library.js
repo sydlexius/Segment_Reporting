@@ -717,8 +717,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
 
-            helpers.clearNavParams();
-
             if (!listenersAttached) {
                 listenersAttached = true;
 

@@ -1,5 +1,14 @@
 # Segment Reporting - Release Notes
 
+## v0.0.10.0 - Browser Back Button and Unassigned Season Fix
+
+### Fixed
+
+- **Browser back button now works** (#32) - Navigation parameters (library ID, series ID) are now encoded directly in the URL instead of browser session storage. Previously, hitting the back button would lose the page context and show "No library/series ID provided" errors.
+- **Episodes without a season now display correctly** (#33) - Episodes whose parent season can't be resolved by Emby (e.g. flat library structures) are now grouped under "Unassigned" instead of silently disappearing. The sync task tries additional fallbacks to resolve season metadata, and the API safely scopes null-season queries to prevent cross-series data leaks.
+
+---
+
 ## v0.0.9.9 - Separate Intro and Credit Percentages
 
 ### Improved

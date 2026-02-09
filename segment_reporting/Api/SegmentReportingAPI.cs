@@ -229,6 +229,12 @@ namespace segment_reporting.Api
             return SegmentRepository.GetInstance(GetDbPath(), _logger);
         }
 
+        private static bool IsJsNullString(string value)
+        {
+            return string.Equals(value, "null", StringComparison.OrdinalIgnoreCase) ||
+                   string.Equals(value, "undefined", StringComparison.OrdinalIgnoreCase);
+        }
+
         private static string[] SplitAndTrim(string input)
         {
             if (string.IsNullOrEmpty(input))
@@ -318,7 +324,18 @@ namespace segment_reporting.Api
 
             if (!string.IsNullOrEmpty(request.SeasonId))
             {
-                episodes = repo.GetEpisodeList(request.SeasonId);
+                // JS encodeURIComponent(null) sends literal "null" — treat as NULL SeasonId
+                string seasonId = IsJsNullString(request.SeasonId) ? null : request.SeasonId;
+                string seriesScope = IsJsNullString(request.SeriesId) ? null : request.SeriesId;
+
+                // Null-season queries MUST be scoped to a series to avoid cross-series results
+                if (seasonId == null && string.IsNullOrEmpty(seriesScope))
+                {
+                    _logger.Warn("GetEpisodeList: null seasonId without seriesId — returning empty");
+                    return new List<SegmentInfo>();
+                }
+
+                episodes = repo.GetEpisodeList(seasonId, seriesScope);
             }
             else if (!string.IsNullOrEmpty(request.SeriesId))
             {

@@ -60,7 +60,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             contentDiv.innerHTML = '<div style="text-align: center; padding: 1em;">Loading episodes...</div>';
 
-            helpers.apiCall('episode_list?seasonId=' + encodeURIComponent(seasonId), 'GET')
+            var epEndpoint = 'episode_list?seasonId=' + encodeURIComponent(seasonId) +
+                '&seriesId=' + encodeURIComponent(seriesId);
+
+            helpers.apiCall(epEndpoint, 'GET')
                 .then(function (episodes) {
                     episodes = episodes || [];
                     // Sort by episode number
@@ -85,7 +88,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var palette = themeColors.chart;
 
                 var labels = seasonData.map(function (s) {
-                    return s.SeasonName || ('Season ' + s.SeasonNumber);
+                    return s.SeasonName || (s.SeasonId ? ('Season ' + s.SeasonNumber) : 'Unassigned');
                 });
 
                 var introPct = seasonData.map(function (s) {
@@ -172,9 +175,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 // Season header (clickable)
                 var header = document.createElement('div');
                 header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75em 1em; background-color: rgba(255,255,255,0.05); border-radius: 4px; cursor: pointer; user-select: none;';
+                var seasonLabel = season.SeasonName || (season.SeasonId ? ('Season ' + season.SeasonNumber) : 'Unassigned');
+
                 header.innerHTML =
                     '<div style="display: flex; align-items: center; gap: 1em;">' +
-                        '<span style="font-size: 1.1em; font-weight: bold;">' + (season.SeasonName || ('Season ' + season.SeasonNumber)) + '</span>' +
+                        '<span style="font-size: 1.1em; font-weight: bold;">' + seasonLabel + '</span>' +
                         '<span style="opacity: 0.7;">' + totalEp + ' episodes</span>' +
                         '<span style="opacity: 0.7;">Intros: ' + introCount + '/' + totalEp + '</span>' +
                         '<span style="opacity: 0.7;">Credits: ' + creditsCount + '/' + totalEp + '</span>' +
@@ -1102,8 +1107,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 helpers.showError('No series ID provided. Please navigate from the library page.');
                 return;
             }
-
-            helpers.clearNavParams();
 
             if (!listenersAttached) {
                 listenersAttached = true;

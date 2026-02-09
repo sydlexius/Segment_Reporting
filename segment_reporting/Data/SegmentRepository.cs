@@ -629,17 +629,37 @@ namespace segment_reporting.Data
             return results;
         }
 
-        public List<SegmentInfo> GetEpisodeList(string seasonId)
+        public List<SegmentInfo> GetEpisodeList(string seasonId, string seriesId = null)
         {
             var results = new List<SegmentInfo>();
+            bool isNullSeason = string.IsNullOrEmpty(seasonId);
+
+            string sql;
+            if (isNullSeason)
+            {
+                // Episodes with no season parent — scope to series when available
+                sql = !string.IsNullOrEmpty(seriesId)
+                    ? "SELECT * FROM MediaSegments WHERE SeasonId IS NULL AND SeriesId = @SeriesId AND ItemType = 'Episode' ORDER BY EpisodeNumber"
+                    : "SELECT * FROM MediaSegments WHERE SeasonId IS NULL AND ItemType = 'Episode' ORDER BY EpisodeNumber";
+            }
+            else
+            {
+                sql = "SELECT * FROM MediaSegments WHERE SeasonId = @SeasonId ORDER BY EpisodeNumber";
+            }
+
             lock (_dbLock)
             {
-                using (var stmt = _connection.PrepareStatement(
-                    "SELECT * FROM MediaSegments " +
-                    "WHERE SeasonId = @SeasonId " +
-                    "ORDER BY EpisodeNumber"))
+                using (var stmt = _connection.PrepareStatement(sql))
                 {
-                    TryBind(stmt, "@SeasonId", seasonId);
+                    if (!isNullSeason)
+                    {
+                        TryBind(stmt, "@SeasonId", seasonId);
+                    }
+                    else if (!string.IsNullOrEmpty(seriesId))
+                    {
+                        TryBind(stmt, "@SeriesId", seriesId);
+                    }
+
                     while (stmt.MoveNext())
                     {
                         results.Add(ReadSegmentInfo(stmt.Current));
