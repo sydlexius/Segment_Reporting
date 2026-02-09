@@ -36,34 +36,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 .then(function (data) {
                     seasonData = data || [];
 
-                    // Update title from first season's series name
-                    if (seasonData.length > 0 && seasonData[0].SeasonName) {
-                        updatePageTitleFromSeasons();
+                    // Update title and libraryId from season list response
+                    if (seasonData.length > 0) {
+                        if (seasonData[0].SeriesName) {
+                            view.querySelector('#pageTitle').textContent = seasonData[0].SeriesName;
+                        }
+                        if (seasonData[0].LibraryId) {
+                            libraryId = seasonData[0].LibraryId;
+                        }
                     }
 
                     updateSeasonChart();
                     renderSeasonAccordion();
                 })
                 .catch(function () {});
-        }
-
-        function updatePageTitleFromSeasons() {
-            // Fetch a single episode to get the series name
-            helpers.apiCall('episode_list?seriesId=' + encodeURIComponent(seriesId), 'GET')
-                .then(function (episodes) {
-                    if (episodes && episodes.length > 0) {
-                        var seriesName = episodes[0].SeriesName || 'Unknown Series';
-                        view.querySelector('#pageTitle').textContent = seriesName;
-
-                        // Cache the libraryId for back navigation
-                        if (episodes[0].LibraryId) {
-                            libraryId = episodes[0].LibraryId;
-                        }
-                    }
-                })
-                .catch(function () {
-                    // Non-critical, keep default title
-                });
         }
 
         function loadEpisodes(seasonId, contentDiv) {

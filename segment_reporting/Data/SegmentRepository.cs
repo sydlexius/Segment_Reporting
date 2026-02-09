@@ -536,13 +536,13 @@ namespace segment_reporting.Data
             lock (_dbLock)
             {
                 using (var stmt = _connection.PrepareStatement(
-                    "SELECT SeasonId, SeasonName, SeasonNumber, " +
+                    "SELECT SeasonId, SeasonName, SeasonNumber, SeriesName, LibraryId, " +
                     "COUNT(*) as TotalEpisodes, " +
                     "SUM(HasIntro) as WithIntro, " +
                     "SUM(HasCredits) as WithCredits " +
                     "FROM MediaSegments " +
                     "WHERE SeriesId = @SeriesId " +
-                    "GROUP BY SeasonId, SeasonName, SeasonNumber " +
+                    "GROUP BY SeasonId, SeasonName, SeasonNumber, SeriesName, LibraryId " +
                     "ORDER BY SeasonNumber"))
                 {
                     TryBind(stmt, "@SeriesId", seriesId);
@@ -554,9 +554,11 @@ namespace segment_reporting.Data
                             SeasonId = ReadString(row, 0),
                             SeasonName = ReadString(row, 1),
                             SeasonNumber = ReadInt(row, 2),
-                            TotalEpisodes = ReadInt(row, 3),
-                            WithIntro = ReadInt(row, 4),
-                            WithCredits = ReadInt(row, 5)
+                            SeriesName = ReadString(row, 3),
+                            LibraryId = ReadString(row, 4),
+                            TotalEpisodes = ReadInt(row, 5),
+                            WithIntro = ReadInt(row, 6),
+                            WithCredits = ReadInt(row, 7)
                         });
                     }
                 }

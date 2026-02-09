@@ -1,5 +1,15 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.6 - Bulk Operation Limits and Unnecessary API Call Removal
+
+### Improved
+
+- **Bulk operation safety limit** (#31) - Bulk apply, bulk delete, and bulk set-credits-to-end now reject requests with more than 500 items, preventing accidental overload of the API thread.
+- **Faster filter switching** (#31) - Switching between "Complete", "No Segments", and "All" filters on the library page no longer makes a redundant server round-trip; existing data is re-filtered instantly on the client.
+- **Lighter series page load** (#31) - The series page no longer fetches the entire episode list just to read the series name. The season list API now includes the series name and library ID directly, eliminating a potentially expensive extra call for long-running shows.
+
+---
+
 ## v0.0.9.5 - SQLite UPSERT and Connection Improvements
 
 ### Improved

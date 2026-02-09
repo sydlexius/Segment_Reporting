@@ -50,6 +50,8 @@ namespace segment_reporting.Data
         public string SeasonId { get; set; }
         public string SeasonName { get; set; }
         public int SeasonNumber { get; set; }
+        public string SeriesName { get; set; }
+        public string LibraryId { get; set; }
         public int TotalEpisodes { get; set; }
         public int WithIntro { get; set; }
         public int WithCredits { get; set; }

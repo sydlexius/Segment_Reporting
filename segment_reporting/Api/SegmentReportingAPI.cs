@@ -202,6 +202,7 @@ namespace segment_reporting.Api
         private readonly ITaskManager _taskManager;
 
         private const string DbFileName = "segment_reporting.db";
+        private const int MaxBulkItems = 500;
 
         public SegmentReportingAPI(ILogManager logger,
             IServerConfigurationManager config,
@@ -426,6 +427,11 @@ namespace segment_reporting.Api
             var targetIds = SplitAndTrim(request.TargetItemIds);
             var markerTypes = SplitAndTrim(request.MarkerTypes);
 
+            if (targetIds.Length > MaxBulkItems)
+            {
+                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
+            }
+
             var validationError = ValidateMarkerTypes(markerTypes);
             if (validationError != null)
                 return validationError;
@@ -489,6 +495,11 @@ namespace segment_reporting.Api
             var itemIds = SplitAndTrim(request.ItemIds);
             var markerTypes = SplitAndTrim(request.MarkerTypes);
 
+            if (itemIds.Length > MaxBulkItems)
+            {
+                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
+            }
+
             var validationError = ValidateMarkerTypes(markerTypes);
             if (validationError != null)
                 return validationError;
@@ -534,6 +545,11 @@ namespace segment_reporting.Api
             }
 
             var itemIds = SplitAndTrim(request.ItemIds);
+
+            if (itemIds.Length > MaxBulkItems)
+            {
+                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
+            }
 
             SegmentRepository repo = GetRepository();
 

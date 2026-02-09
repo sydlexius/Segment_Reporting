@@ -109,8 +109,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             if (newFilter === 'missing_intro' || newFilter === 'missing_credits') {
                 loadSeriesList(newFilter);
             } else {
-                // Client-side filters: complete, no_segments, all
-                loadSeriesList(null); // Reload without API filter
+                // Client-side filters: no API call needed, re-filter existing data
+                applyClientFilters();
+                updateChart();
+                updateTable();
             }
         }
 
