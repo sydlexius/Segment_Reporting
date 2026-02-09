@@ -81,43 +81,69 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         function updateSeasonChart() {
             require([Dashboard.getConfigurationResourceUrl('segment_reporting_chart.min.js')], function (Chart) {
                 var ctx = view.querySelector('#seasonChart').getContext('2d');
+                var themeColors = helpers.getThemeColors(view);
+                var palette = themeColors.chart;
 
                 var labels = seasonData.map(function (s) {
                     return s.SeasonName || ('Season ' + s.SeasonNumber);
                 });
 
-                var totalEpisodes = seasonData.map(function (s) { return s.TotalEpisodes || 0; });
-                var withIntro = seasonData.map(function (s) { return s.WithIntro || 0; });
-                var withCredits = seasonData.map(function (s) { return s.WithCredits || 0; });
-
-                var withBoth = seasonData.map(function (s, i) {
-                    return Math.min(withIntro[i], withCredits[i]);
+                var introPct = seasonData.map(function (s) {
+                    var total = s.TotalEpisodes || 0;
+                    return total > 0 ? parseFloat(((s.WithIntro || 0) / total * 100).toFixed(1)) : 0;
                 });
-                var introOnly = seasonData.map(function (s, i) {
-                    return withIntro[i] - withBoth[i];
-                });
-                var creditsOnly = seasonData.map(function (s, i) {
-                    return withCredits[i] - withBoth[i];
-                });
-                var withNeither = seasonData.map(function (s, i) {
-                    return totalEpisodes[i] - withIntro[i] - withCredits[i] + withBoth[i];
+                var creditsPct = seasonData.map(function (s) {
+                    var total = s.TotalEpisodes || 0;
+                    return total > 0 ? parseFloat(((s.WithCredits || 0) / total * 100).toFixed(1)) : 0;
                 });
 
                 if (chart) {
                     chart.destroy();
                 }
 
-                chart = helpers.createSegmentChart(Chart, ctx, labels,
-                    { withBoth: withBoth, introOnly: introOnly, creditsOnly: creditsOnly, withNeither: withNeither },
-                    view, {
-                        tooltipCallbacks: {
-                            footer: function (tooltipItems) {
-                                var idx = tooltipItems[0].dataIndex;
-                                return 'Total: ' + (seasonData[idx].TotalEpisodes || 0) + ' episodes';
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Intro Coverage', data: introPct, backgroundColor: palette.introOnly, borderColor: palette.introOnly, borderWidth: 1 },
+                            { label: 'Credit Coverage', data: creditsPct, backgroundColor: palette.creditsOnly, borderColor: palette.creditsOnly, borderWidth: 1 }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { color: themeColors.text } },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                callbacks: {
+                                    label: function (context) {
+                                        return context.dataset.label + ': ' + context.parsed.y + '%';
+                                    },
+                                    footer: function (tooltipItems) {
+                                        var idx = tooltipItems[0].dataIndex;
+                                        var s = seasonData[idx];
+                                        return 'Intros: ' + (s.WithIntro || 0) + '/' + (s.TotalEpisodes || 0) +
+                                               '  Credits: ' + (s.WithCredits || 0) + '/' + (s.TotalEpisodes || 0);
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { ticks: { color: themeColors.text }, grid: { color: themeColors.gridColor } },
+                            y: {
+                                min: 0, max: 100,
+                                ticks: {
+                                    color: themeColors.text,
+                                    callback: function (value) { return value + '%'; }
+                                },
+                                grid: { color: themeColors.gridColor }
                             }
                         }
                     }
-                );
+                });
             });
         }
 
@@ -140,7 +166,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var totalEp = season.TotalEpisodes || 0;
                 var introCount = season.WithIntro || 0;
                 var creditsCount = season.WithCredits || 0;
-                var coveragePct = helpers.percentage(Math.min(introCount, creditsCount), totalEp);
+                var introPct = helpers.percentage(introCount, totalEp);
+                var creditsPct = helpers.percentage(creditsCount, totalEp);
 
                 // Season header (clickable)
                 var header = document.createElement('div');
@@ -153,7 +180,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         '<span style="opacity: 0.7;">Credits: ' + creditsCount + '/' + totalEp + '</span>' +
                     '</div>' +
                     '<div style="display: flex; align-items: center; gap: 1em;">' +
-                        '<strong>' + coveragePct + '</strong>' +
+                        '<strong>Intros: ' + introPct + '</strong>' +
+                        '<strong>Credits: ' + creditsPct + '</strong>' +
                         '<span class="seasonToggle" style="font-size: 1.2em;">&#9654;</span>' +
                     '</div>';
 

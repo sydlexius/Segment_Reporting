@@ -1,5 +1,15 @@
 # Segment Reporting - Release Notes
 
+## v0.0.9.9 - Separate Intro and Credit Percentages
+
+### Improved
+
+- **Separate intro/credit percentages on series page** (#34) - The series drill-down now shows independent "Intros: XX%" and "Credits: XX%" in each season header, replacing the single combined percentage that always showed 0% when only one segment type was detected.
+- **Grouped coverage chart** (#34) - The season chart now displays intro and credit coverage as side-by-side percentage bars (0–100%) instead of a stacked episode count chart, making per-segment-type coverage immediately visible.
+- **Consistent table header alignment** - Table headers on the dashboard and library pages now left-align to match their data cells, fixing visual misalignment caused by the browser's default center-alignment of `<th>` elements.
+
+---
+
 ## v0.0.9.8 - Curated Chart Color Palettes
 
 ### Improved
