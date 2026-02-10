@@ -469,6 +469,19 @@ namespace segment_reporting.Data
             }
         }
 
+        private static void ApplySegmentHavingFilters(List<string> clauses, string[] filters)
+        {
+            if (filters == null)
+                return;
+            foreach (var f in filters)
+            {
+                if (string.Equals(f, "missing_intro", StringComparison.OrdinalIgnoreCase))
+                    clauses.Add("SUM(HasIntro) < COUNT(*)");
+                else if (string.Equals(f, "missing_credits", StringComparison.OrdinalIgnoreCase))
+                    clauses.Add("SUM(HasCredits) < COUNT(*)");
+            }
+        }
+
         #region Reporting Queries
 
         public List<LibrarySummaryItem> GetLibrarySummary()
@@ -524,7 +537,8 @@ namespace segment_reporting.Data
                 whereClauses.Add("SeriesName LIKE @Search");
             }
 
-            ApplySegmentFilters(whereClauses, filters);
+            var havingClauses = new List<string>();
+            ApplySegmentHavingFilters(havingClauses, filters);
 
             var sql = "SELECT SeriesId, SeriesName, " +
                       "COUNT(*) as TotalEpisodes, " +
@@ -533,6 +547,7 @@ namespace segment_reporting.Data
                       "FROM MediaSegments " +
                       "WHERE " + string.Join(" AND ", whereClauses) + " " +
                       "GROUP BY SeriesId, SeriesName " +
+                      (havingClauses.Count > 0 ? "HAVING " + string.Join(" AND ", havingClauses) + " " : string.Empty) +
                       "ORDER BY SeriesName";
 
             lock (_dbLock)

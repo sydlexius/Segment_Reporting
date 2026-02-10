@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.2.1 - Fix Missing Intros/Credits Filter for Series
+
+### Fixed
+
+- **"Missing Intros" and "Missing Credits" filters now show the full series** — Previously, filtering by missing intros or credits on the Library page only counted episodes that lacked the marker, producing incorrect totals and coverage percentages. Now any series with at least one episode missing intros (or credits) is included in the results with accurate stats for the entire series.
+
+---
+
 ## v1.0.2.0 - Detect Credits on Custom Query Page
 
 ### Added
