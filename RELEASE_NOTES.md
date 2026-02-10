@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.3 - Fix Duplicate Version Tag in JS Filenames
+
+### Fixed
+
+- **Dashboard pages failing to load** (#48) - Release builds could produce JS filenames with a doubled version tag (e.g. `segment_dashboard.v1_0_1_2.v1_0_1_2.js`) if a previous build was interrupted before its restore step completed. The build script now strips any stale version tags before patching, making the process safe to re-run regardless of prior state.
+
+---
+
 ## v1.0.1.2 - Emby Forums Link
 
 ### Added

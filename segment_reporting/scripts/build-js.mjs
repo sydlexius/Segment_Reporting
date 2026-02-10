@@ -69,9 +69,37 @@ function cacheTag(version) {
 }
 
 /**
+ * Strip any existing version tags (e.g. ".v1_0_1_2") from JS and HTML files.
+ * This ensures patching is idempotent — safe even if a previous build's restore failed.
+ */
+function stripCacheBust() {
+    for (const file of CUSTOM_JS_FILES) {
+        const filePath = path.join(pagesDir, file);
+        let content = fs.readFileSync(filePath, 'utf8');
+        content = content.replace(
+            /getConfigurationResourceUrl\('([^']+?)\.v\d+_\d+_\d+_\d+\.js'\)/g,
+            `getConfigurationResourceUrl('$1.js')`
+        );
+        fs.writeFileSync(filePath, content);
+    }
+
+    for (const file of HTML_FILES) {
+        const filePath = path.join(pagesDir, file);
+        let content = fs.readFileSync(filePath, 'utf8');
+        content = content.replace(
+            /data-controller="__plugin\/([^"]+?)\.v\d+_\d+_\d+_\d+\.js"/g,
+            `data-controller="__plugin/$1.js"`
+        );
+        fs.writeFileSync(filePath, content);
+    }
+}
+
+/**
  * Patch JS and HTML files in-place to add version tags for cache busting.
  * - JS: getConfigurationResourceUrl('file.js') → getConfigurationResourceUrl('file.{tag}.js')
  * - HTML: data-controller="__plugin/file.js" → data-controller="__plugin/file.{tag}.js"
+ *
+ * Always call stripCacheBust() first to remove stale tags from a previous failed build.
  */
 function patchCacheBust(tag) {
     // Patch JS files: version all getConfigurationResourceUrl calls
@@ -133,6 +161,10 @@ async function buildChart() {
  */
 async function minifyJS() {
     fs.mkdirSync(backupDir, { recursive: true });
+
+    // Strip any stale version tags left by a previous failed build before backing up,
+    // so backups always contain clean, unversioned source files.
+    stripCacheBust();
 
     // Back up JS files
     for (const file of CUSTOM_JS_FILES) {
