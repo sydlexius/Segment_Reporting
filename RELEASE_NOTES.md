@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.6 - Reduce Lock Contention During Sync
+
+### Improved
+
+- **Sync no longer freezes the web UI** (#50) — The sync task previously held the database lock for the entire upsert and orphan-removal operations, blocking all API reads (library summary, series list, episode list, custom queries) until the transaction finished. Both operations now process data in chunks of 500, releasing the lock between chunks so API reads can interleave freely.
+- **Orphan removal is now cancellable** (#50) — `RemoveOrphanedRows` now accepts a cancellation token, so cancelling the sync task mid-run also stops the orphan cleanup step cleanly.
+- **Smoother progress reporting during sync** (#50) — The sync task now reports granular progress during the upsert phase instead of jumping from 90% to 95% in one step.
+
+---
+
 ## v1.0.1.5 - Code Cleanup
 
 ### Removed

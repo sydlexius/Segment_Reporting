@@ -319,35 +319,51 @@ namespace segment_reporting.Data
 
         #region Upsert
 
-        public void UpsertSegments(List<SegmentInfo> segments, CancellationToken cancellationToken = default(CancellationToken))
+        private const int DefaultChunkSize = 500;
+
+        public void UpsertSegments(List<SegmentInfo> segments, CancellationToken cancellationToken = default(CancellationToken),
+            IProgress<double> progress = null, int chunkSize = DefaultChunkSize)
         {
-            lock (_dbLock)
+            if (segments.Count == 0)
+                return;
+
+            int total = segments.Count;
+
+            for (int offset = 0; offset < total; offset += chunkSize)
             {
-                ThrowIfDisposed();
-                _connection.Execute("BEGIN TRANSACTION");
-                try
+                cancellationToken.ThrowIfCancellationRequested();
+
+                int end = Math.Min(offset + chunkSize, total);
+
+                lock (_dbLock)
                 {
-                    for (int i = 0; i < segments.Count; i++)
+                    ThrowIfDisposed();
+                    _connection.Execute("BEGIN TRANSACTION");
+                    try
                     {
-                        if (i % 500 == 0)
+                        for (int i = offset; i < end; i++)
                         {
-                            cancellationToken.ThrowIfCancellationRequested();
+                            UpsertSegmentInternal(segments[i]);
                         }
-                        UpsertSegmentInternal(segments[i]);
+                        _connection.Execute("COMMIT");
                     }
-                    _connection.Execute("COMMIT");
+                    catch (OperationCanceledException)
+                    {
+                        _logger.Info("SegmentRepository: UpsertSegments cancelled at chunk offset {0}, rolling back", offset);
+                        _connection.Execute("ROLLBACK");
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.ErrorException("SegmentRepository: UpsertSegments failed at chunk offset " + offset + ", rolling back", ex);
+                        _connection.Execute("ROLLBACK");
+                        throw;
+                    }
                 }
-                catch (OperationCanceledException)
+
+                if (progress != null)
                 {
-                    _logger.Info("SegmentRepository: UpsertSegments cancelled, rolling back");
-                    _connection.Execute("ROLLBACK");
-                    throw;
-                }
-                catch (Exception ex)
-                {
-                    _logger.ErrorException("SegmentRepository: UpsertSegments failed, rolling back", ex);
-                    _connection.Execute("ROLLBACK");
-                    throw;
+                    progress.Report((double)end / total * 100);
                 }
             }
         }
@@ -770,7 +786,8 @@ namespace segment_reporting.Data
             }
         }
 
-        public void RemoveOrphanedRows(List<string> validItemIds)
+        public void RemoveOrphanedRows(List<string> validItemIds, CancellationToken cancellationToken = default(CancellationToken),
+            int chunkSize = DefaultChunkSize)
         {
             if (validItemIds == null || validItemIds.Count == 0)
             {
@@ -782,31 +799,55 @@ namespace segment_reporting.Data
                 ThrowIfDisposed();
                 _connection.Execute("CREATE TEMP TABLE IF NOT EXISTS _valid_items (ItemId TEXT PRIMARY KEY)");
                 _connection.Execute("DELETE FROM _valid_items");
+            }
 
-                _connection.Execute("BEGIN TRANSACTION");
-                try
+            int total = validItemIds.Count;
+
+            for (int offset = 0; offset < total; offset += chunkSize)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                int end = Math.Min(offset + chunkSize, total);
+
+                lock (_dbLock)
                 {
-                    using (var stmt = _connection.PrepareStatement(
-                        "INSERT OR IGNORE INTO _valid_items VALUES (@id)"))
+                    ThrowIfDisposed();
+                    _connection.Execute("BEGIN TRANSACTION");
+                    try
                     {
-                        foreach (var id in validItemIds)
+                        using (var stmt = _connection.PrepareStatement(
+                            "INSERT OR IGNORE INTO _valid_items VALUES (@id)"))
                         {
-                            stmt.Reset();
-                            stmt.ClearBindings();
-                            TryBind(stmt, "@id", id);
-                            stmt.MoveNext();
+                            for (int i = offset; i < end; i++)
+                            {
+                                stmt.Reset();
+                                stmt.ClearBindings();
+                                TryBind(stmt, "@id", validItemIds[i]);
+                                stmt.MoveNext();
+                            }
                         }
+                        _connection.Execute("COMMIT");
                     }
-                    _connection.Execute("COMMIT");
+                    catch (OperationCanceledException)
+                    {
+                        _logger.Info("SegmentRepository: RemoveOrphanedRows cancelled at chunk offset {0}, rolling back", offset);
+                        _connection.Execute("ROLLBACK");
+                        DropValidItemsTable();
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.ErrorException("SegmentRepository: RemoveOrphanedRows insert failed at chunk offset " + offset, ex);
+                        _connection.Execute("ROLLBACK");
+                        DropValidItemsTable();
+                        throw;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    _logger.ErrorException("SegmentRepository: RemoveOrphanedRows insert failed", ex);
-                    _connection.Execute("ROLLBACK");
-                    _connection.Execute("DROP TABLE IF EXISTS _valid_items");
-                    throw;
-                }
+            }
 
+            lock (_dbLock)
+            {
+                ThrowIfDisposed();
                 var deleted = 0;
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT COUNT(*) FROM MediaSegments WHERE ItemId NOT IN (SELECT ItemId FROM _valid_items)"))
@@ -825,6 +866,21 @@ namespace segment_reporting.Data
                 }
 
                 _connection.Execute("DROP TABLE IF EXISTS _valid_items");
+            }
+        }
+
+        private void DropValidItemsTable()
+        {
+            lock (_dbLock)
+            {
+                try
+                {
+                    _connection.Execute("DROP TABLE IF EXISTS _valid_items");
+                }
+                catch (Exception ex)
+                {
+                    _logger.ErrorException("SegmentRepository: Failed to drop _valid_items temp table", ex);
+                }
             }
         }
 
