@@ -1495,108 +1495,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             var actionsCell = tr.querySelector('.actions-cell');
             if (actionsCell) {
-                var html = '';
-                if (currentCapabilities && currentCapabilities.canEdit) {
-                    html += '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
-                }
-                if (currentCapabilities && currentCapabilities.canDelete) {
-                    html += '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>';
-                }
-                actionsCell.innerHTML = html;
+                actionsCell.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
             }
 
             editingRow = null;
             setActionButtonsDisabled(false);
-        }
-
-        // ===== DELETE MARKERS =====
-
-        function showDeleteMenu(tr, buttonEl) {
-            // Close any existing menu
-            var existing = view.querySelector('.delete-menu');
-            if (existing) existing.remove();
-
-            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
-            var rowData = currentResults[rowIndex];
-            if (!rowData || !currentCapabilities) return;
-
-            var menu = document.createElement('div');
-            menu.className = 'delete-menu';
-            menu.style.cssText = 'position: absolute; background: #333; border: 1px solid #555; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
-
-            var available = [];
-            if (currentCapabilities.editableColumns.length > 0) {
-                // Tick columns present — only offer markers that have non-zero values
-                currentCapabilities.editableColumns.forEach(function (col) {
-                    var ticks = rowData[col];
-                    if (ticks && ticks > 0) {
-                        available.push({ column: col, marker: columnToMarker(col), ticks: ticks });
-                    }
-                });
-            } else {
-                // No tick columns in result set — offer all marker types
-                TICK_COLUMNS.forEach(function (col) {
-                    available.push({ column: col, marker: columnToMarker(col), ticks: null });
-                });
-            }
-
-            if (available.length === 0) {
-                helpers.showError('No segments to delete on this item.');
-                return;
-            }
-
-            available.forEach(function (t) {
-                var item = document.createElement('div');
-                item.style.cssText = 'padding: 0.4em 1em; cursor: pointer;';
-                item.textContent = t.marker;
-                item.addEventListener('mouseenter', function () { this.style.backgroundColor = 'rgba(255,255,255,0.1)'; });
-                item.addEventListener('mouseleave', function () { this.style.backgroundColor = ''; });
-                item.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    menu.remove();
-                    confirmDeleteSegment(tr, rowData, t);
-                });
-                menu.appendChild(item);
-            });
-
-            buttonEl.style.position = 'relative';
-            buttonEl.parentNode.style.position = 'relative';
-            buttonEl.parentNode.appendChild(menu);
-
-            var closeHandler = function (e) {
-                if (!menu.contains(e.target)) {
-                    menu.remove();
-                    document.removeEventListener('click', closeHandler);
-                }
-            };
-            setTimeout(function () {
-                document.addEventListener('click', closeHandler);
-            }, 0);
-        }
-
-        function confirmDeleteSegment(tr, rowData, segmentInfo) {
-            var itemName = rowData['ItemName'] || rowData['ItemId'] || 'this item';
-            var msg = 'Delete ' + segmentInfo.marker + ' segment from "' + itemName + '"?';
-            if (!confirm(msg)) return;
-
-            helpers.showLoading();
-            helpers.apiCall('delete_segment', 'POST', JSON.stringify({
-                ItemId: rowData['ItemId'],
-                MarkerType: segmentInfo.marker
-            }))
-            .then(function () {
-                helpers.hideLoading();
-                helpers.showSuccess(segmentInfo.marker + ' deleted successfully.');
-                // Update local data
-                rowData[segmentInfo.column] = 0;
-                // Re-render the row cells
-                restoreRow(tr, rowData);
-            })
-            .catch(function (error) {
-                helpers.hideLoading();
-                console.error('Failed to delete segment:', error);
-                helpers.showError('Failed to delete segment.');
-            });
         }
 
         // ===== BULK ACTIONS =====
@@ -1611,11 +1514,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
         }
 
-        function updateBulkActionBar(hasActions) {
+        function updateBulkActionBar(hasCheckboxes) {
             var bar = view.querySelector('#bulkActionBar');
             if (!bar) return;
 
-            if (!hasActions || !currentCapabilities || !currentCapabilities.canDelete) {
+            if (!hasCheckboxes || !currentCapabilities || !currentCapabilities.canDelete) {
                 bar.style.display = 'none';
                 return;
             }
@@ -1738,7 +1641,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             selectedRows = {};
             var columns = Object.keys(results[0]);
             currentCapabilities = detectCapabilities(columns);
-            var hasActions = currentCapabilities.canEdit || currentCapabilities.canDelete;
+            var hasCheckboxes = currentCapabilities.canDelete;
+            var hasActionsCol = currentCapabilities.canEdit;
             var thead = view.querySelector('#resultsTableHead');
             var tbody = view.querySelector('#resultsTableBody');
             var table = view.querySelector('#resultsTable');
@@ -1753,8 +1657,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var pageBg = getComputedStyle(view.closest('.page') || view).backgroundColor || '#1c1c1e';
             var headerBg = 'rgba(128, 128, 128, 0.15)';
 
-            // Checkbox column for row selection (when actions are available)
-            if (hasActions) {
+            // Checkbox column for row selection (when bulk delete is available)
+            if (hasCheckboxes) {
                 var thCheck = document.createElement('th');
                 thCheck.className = 'col-sticky-left';
                 thCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.3); width: 40px; background: ' + pageBg + ';';
@@ -1770,7 +1674,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 th.style.borderBottom = '1px solid rgba(128, 128, 128, 0.3)';
                 headerRow.appendChild(th);
             });
-            if (hasActions) {
+            if (hasActionsCol) {
                 var thActions = document.createElement('th');
                 thActions.className = 'col-sticky-right';
                 thActions.textContent = 'Actions';
@@ -1790,7 +1694,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var rowBg = idx % 2 === 1 ? 'rgba(128, 128, 128, 0.05)' : pageBg;
 
                 // Row checkbox
-                if (hasActions) {
+                if (hasCheckboxes) {
                     var tdCheck = document.createElement('td');
                     tdCheck.className = 'col-sticky-left';
                     tdCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.1); width: 40px; background: ' + rowBg + ';';
@@ -1823,18 +1727,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     tr.appendChild(td);
                 });
 
-                if (hasActions) {
+                if (hasActionsCol) {
                     var actionsTd = document.createElement('td');
                     actionsTd.className = 'actions-cell col-sticky-right';
                     actionsTd.style.cssText = 'padding: 0.5em; border-bottom: 1px solid rgba(128, 128, 128, 0.1); text-align: center; white-space: nowrap; background: ' + rowBg + ';';
-
-                    if (currentCapabilities.canEdit) {
-                        actionsTd.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
-                    }
-                    if (currentCapabilities.canDelete) {
-                        actionsTd.innerHTML += '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>';
-                    }
-
+                    actionsTd.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
                     tr.appendChild(actionsTd);
                 }
 
@@ -1847,16 +1744,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.applyTableStyles(table);
 
             // Show/hide bulk action bar
-            updateBulkActionBar(hasActions);
+            updateBulkActionBar(hasCheckboxes);
 
             // Show capabilities indicator
             var indicator = view.querySelector('#editingIndicator');
             if (indicator) {
                 if (currentCapabilities.canEdit) {
-                    indicator.textContent = 'Edit & delete enabled \u2014 ItemId and timestamp columns detected';
+                    indicator.textContent = 'Edit & bulk delete enabled \u2014 ItemId and timestamp columns detected';
                     indicator.style.display = 'inline';
                 } else if (currentCapabilities.canDelete) {
-                    indicator.textContent = 'Delete enabled \u2014 ItemId column detected';
+                    indicator.textContent = 'Bulk delete enabled \u2014 ItemId column detected';
                     indicator.style.display = 'inline';
                 } else {
                     indicator.style.display = 'none';
@@ -2055,15 +1952,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         return;
                     }
 
-                    // Delete button
-                    if (target.classList.contains('btn-delete')) {
-                        e.stopPropagation();
-                        var deleteTr = target.closest('tr');
-                        if (deleteTr && !deleteTr.classList.contains('editing')) {
-                            showDeleteMenu(deleteTr, target);
-                        }
-                        return;
-                    }
                 });
             }
 
