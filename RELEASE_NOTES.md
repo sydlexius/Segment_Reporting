@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.2 - Emby Forums Link
+
+### Added
+
+- **Emby Forums link on About page** — The About page now links to the [Emby Forums discussion thread](https://emby.media/community/index.php?/topic/146268-segment-reporting-plugin/) for questions, feedback, and community discussion.
+
+---
+
 ## v1.0.1.1 - Drill-Down Filtering and Bulk Actions at Every Level
 
 ### Added
