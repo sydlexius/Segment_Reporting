@@ -34,6 +34,7 @@ The plugin integrates with Emby's built-in Scheduled Tasks system:
 - **TaskCleanSegmentDb** — Default: Weekly on Sunday at 3:00 AM (database maintenance)
 
 From the plugin Settings page, you can:
+
 - Adjust the sync schedule
 - Configure display preferences (time format, chart colors)
 - Force a full rescan of the segment cache (advanced)
@@ -79,10 +80,6 @@ Segment Reporting maintains a lightweight SQLite cache (`segment_reporting.db`) 
 
 The cache supports both TV episodes and movies across mixed libraries, with denormalized tables designed for custom SQL queries.
 
-## API Reference
-
-All API endpoints are under `/segment_reporting/` and require admin authentication. See the [design document](docs/plans/2026-02-06-segment-reporting-design.md) for detailed endpoint specifications.
-
 ## License
 
 This project is licensed under **GNU General Public License v3.0** (GPL-3.0). See [LICENSE](LICENSE) for details.
@@ -108,7 +105,7 @@ Both projects are licensed under GPL-3.0 and have been instrumental in understan
 
 ## Documentation
 
-For detailed architecture, data models, API specifications, and implementation details, see the [design document](docs/plans/2026-02-06-segment-reporting-design.md).
+For detailed architecture, data models, API specifications, and implementation details, see the [Developer Guide](docs/DEVELOPER.md).
 
 ## Support
 
