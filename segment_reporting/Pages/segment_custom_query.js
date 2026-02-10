@@ -22,6 +22,31 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var helpers = getSegmentReportingHelpers();
         var currentResults = [];
         var currentColumns = [];
+        var currentCapabilities = null;
+        var editingRow = null;
+
+        // ===== COLUMN AUTO-DETECTION =====
+
+        var TICK_COLUMNS = ['IntroStartTicks', 'IntroEndTicks', 'CreditsStartTicks'];
+
+        function detectCapabilities(columns) {
+            var hasItemId = columns.indexOf('ItemId') >= 0;
+            var editableColumns = [];
+            for (var i = 0; i < columns.length; i++) {
+                if (TICK_COLUMNS.indexOf(columns[i]) >= 0) {
+                    editableColumns.push(columns[i]);
+                }
+            }
+            var canEdit = hasItemId && editableColumns.length > 0;
+            var canDelete = canEdit;
+            var canPlayback = hasItemId && editableColumns.length > 0;
+            return {
+                canEdit: canEdit,
+                canDelete: canDelete,
+                canPlayback: canPlayback,
+                editableColumns: editableColumns
+            };
+        }
 
         // ===== QUERY BUILDER: Field & Operator Definitions =====
 
@@ -1046,6 +1071,251 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
         }
 
+        // ===== INLINE EDITING =====
+
+        function columnToMarker(colName) {
+            // IntroStartTicks -> IntroStart
+            return colName.replace(/Ticks$/, '');
+        }
+
+        function setActionButtonsDisabled(disabled) {
+            var btns = ['#btnExecute', '#btnClear', '#btnExportCsv', '#btnToggleBuilder'];
+            btns.forEach(function (sel) {
+                var btn = view.querySelector(sel);
+                if (btn) btn.disabled = disabled;
+            });
+        }
+
+        function startRowEdit(tr) {
+            if (editingRow && editingRow !== tr) {
+                cancelRowEdit(editingRow);
+            }
+
+            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
+            var rowData = currentResults[rowIndex];
+            if (!rowData) return;
+
+            editingRow = tr;
+            tr.classList.add('editing');
+            tr.style.backgroundColor = 'rgba(255, 235, 59, 0.1)';
+
+            var tickCells = tr.querySelectorAll('.tick-cell');
+            tickCells.forEach(function (cell) {
+                var col = cell.getAttribute('data-column');
+                var currentTicks = rowData[col];
+                var currentDisplay = helpers.ticksToTime(currentTicks);
+
+                cell.setAttribute('data-original-ticks', currentTicks || '');
+
+                var input = document.createElement('input');
+                input.type = 'text';
+                input.value = currentTicks ? currentDisplay : '';
+                input.placeholder = '00:00:00.000';
+                input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
+                input.setAttribute('data-column', col);
+
+                cell.innerHTML = '';
+                cell.appendChild(input);
+            });
+
+            var actionsCell = tr.querySelector('.actions-cell');
+            if (actionsCell) {
+                actionsCell.innerHTML =
+                    '<button class="raised emby-button btn-save" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em; background-color: #4CAF50;">Save</button>' +
+                    '<button class="raised button-cancel emby-button btn-cancel" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Cancel</button>';
+            }
+
+            setActionButtonsDisabled(true);
+        }
+
+        function saveRowEdit(tr) {
+            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
+            var rowData = currentResults[rowIndex];
+            if (!rowData) return;
+
+            var inputs = tr.querySelectorAll('.tick-cell input');
+            var updates = [];
+
+            for (var i = 0; i < inputs.length; i++) {
+                var input = inputs[i];
+                var col = input.getAttribute('data-column');
+                var cell = input.parentElement;
+                var originalTicks = parseInt(cell.getAttribute('data-original-ticks'), 10) || 0;
+                var newValue = input.value.trim();
+
+                if (!newValue) {
+                    // Clearing a value is a delete (handled by M4), skip here
+                    continue;
+                }
+
+                var newTicks = helpers.timeToTicks(newValue);
+                if (newTicks === 0 && newValue !== '00:00:00.000') {
+                    helpers.showError('Invalid time format for ' + col + '. Use HH:MM:SS.fff');
+                    return;
+                }
+
+                if (newTicks !== originalTicks) {
+                    updates.push({ column: col, marker: columnToMarker(col), ticks: newTicks });
+                }
+            }
+
+            if (updates.length === 0) {
+                cancelRowEdit(tr);
+                return;
+            }
+
+            helpers.showLoading();
+
+            var chain = Promise.resolve();
+            updates.forEach(function (update) {
+                chain = chain.then(function () {
+                    return helpers.apiCall('update_segment', 'POST', JSON.stringify({
+                        ItemId: rowData['ItemId'],
+                        MarkerType: update.marker,
+                        Ticks: update.ticks
+                    }));
+                });
+            });
+
+            chain
+                .then(function () {
+                    helpers.hideLoading();
+                    helpers.showSuccess('Segments updated successfully.');
+                    // Update local data so the table reflects the new values
+                    updates.forEach(function (update) {
+                        rowData[update.column] = update.ticks;
+                    });
+                    restoreRow(tr, rowData);
+                })
+                .catch(function (error) {
+                    helpers.hideLoading();
+                    console.error('Failed to save segments:', error);
+                    helpers.showError('Failed to save segment changes.');
+                });
+        }
+
+        function cancelRowEdit(tr) {
+            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
+            var rowData = currentResults[rowIndex];
+
+            tr.classList.remove('editing');
+            tr.style.backgroundColor = (rowIndex % 2 === 1) ? 'rgba(128, 128, 128, 0.05)' : '';
+
+            if (rowData) {
+                restoreRow(tr, rowData);
+            }
+        }
+
+        function restoreRow(tr, rowData) {
+            var tickCells = tr.querySelectorAll('.tick-cell');
+            tickCells.forEach(function (cell) {
+                var col = cell.getAttribute('data-column');
+                var ticks = rowData[col];
+                if (ticks && ticks > 0 && currentCapabilities && currentCapabilities.canPlayback) {
+                    cell.innerHTML = helpers.renderTimestamp(ticks, rowData['ItemId']);
+                } else {
+                    cell.textContent = helpers.ticksToTime(ticks);
+                }
+            });
+
+            var actionsCell = tr.querySelector('.actions-cell');
+            if (actionsCell) {
+                var html = '';
+                if (currentCapabilities && currentCapabilities.canEdit) {
+                    html += '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
+                }
+                if (currentCapabilities && currentCapabilities.canDelete) {
+                    html += '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>';
+                }
+                actionsCell.innerHTML = html;
+            }
+
+            editingRow = null;
+            setActionButtonsDisabled(false);
+        }
+
+        // ===== DELETE MARKERS =====
+
+        function showDeleteMenu(tr, buttonEl) {
+            // Close any existing menu
+            var existing = view.querySelector('.delete-menu');
+            if (existing) existing.remove();
+
+            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
+            var rowData = currentResults[rowIndex];
+            if (!rowData || !currentCapabilities) return;
+
+            var menu = document.createElement('div');
+            menu.className = 'delete-menu';
+            menu.style.cssText = 'position: absolute; background: #333; border: 1px solid #555; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+
+            var available = [];
+            currentCapabilities.editableColumns.forEach(function (col) {
+                var ticks = rowData[col];
+                if (ticks && ticks > 0) {
+                    available.push({ column: col, marker: columnToMarker(col), ticks: ticks });
+                }
+            });
+
+            if (available.length === 0) {
+                helpers.showError('No segments to delete on this item.');
+                return;
+            }
+
+            available.forEach(function (t) {
+                var item = document.createElement('div');
+                item.style.cssText = 'padding: 0.4em 1em; cursor: pointer;';
+                item.textContent = t.marker;
+                item.addEventListener('mouseenter', function () { this.style.backgroundColor = 'rgba(255,255,255,0.1)'; });
+                item.addEventListener('mouseleave', function () { this.style.backgroundColor = ''; });
+                item.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    confirmDeleteSegment(tr, rowData, t);
+                });
+                menu.appendChild(item);
+            });
+
+            buttonEl.style.position = 'relative';
+            buttonEl.parentNode.style.position = 'relative';
+            buttonEl.parentNode.appendChild(menu);
+
+            var closeHandler = function (e) {
+                if (!menu.contains(e.target)) {
+                    menu.remove();
+                    document.removeEventListener('click', closeHandler);
+                }
+            };
+            setTimeout(function () {
+                document.addEventListener('click', closeHandler);
+            }, 0);
+        }
+
+        function confirmDeleteSegment(tr, rowData, segmentInfo) {
+            var itemName = rowData['ItemName'] || rowData['ItemId'] || 'this item';
+            var msg = 'Delete ' + segmentInfo.marker + ' segment from "' + itemName + '"?';
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+            helpers.apiCall('delete_segment', 'POST', JSON.stringify({
+                ItemId: rowData['ItemId'],
+                MarkerType: segmentInfo.marker
+            }))
+            .then(function () {
+                helpers.hideLoading();
+                helpers.showSuccess(segmentInfo.marker + ' deleted successfully.');
+                // Update local data
+                rowData[segmentInfo.column] = 0;
+                // Re-render the row cells
+                restoreRow(tr, rowData);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Failed to delete segment:', error);
+                helpers.showError('Failed to delete segment.');
+            });
+        }
+
         // ===== EXISTING: Results Display =====
 
         /**
@@ -1058,6 +1328,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
 
             var columns = Object.keys(results[0]);
+            currentCapabilities = detectCapabilities(columns);
+            var hasActions = currentCapabilities.canEdit || currentCapabilities.canDelete;
             var thead = view.querySelector('#resultsTableHead');
             var tbody = view.querySelector('#resultsTableBody');
             var table = view.querySelector('#resultsTable');
@@ -1075,11 +1347,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 th.style.borderBottom = '1px solid rgba(128, 128, 128, 0.3)';
                 headerRow.appendChild(th);
             });
+            if (hasActions) {
+                var thActions = document.createElement('th');
+                thActions.textContent = 'Actions';
+                thActions.style.padding = '0.5em';
+                thActions.style.textAlign = 'center';
+                thActions.style.borderBottom = '1px solid rgba(128, 128, 128, 0.3)';
+                headerRow.appendChild(thActions);
+            }
             thead.appendChild(headerRow);
 
             tbody.innerHTML = '';
             results.forEach(function (row, idx) {
                 var tr = document.createElement('tr');
+                tr.setAttribute('data-row-index', idx);
                 if (idx % 2 === 1) {
                     tr.style.backgroundColor = 'rgba(128, 128, 128, 0.05)';
                 }
@@ -1087,7 +1368,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     var td = document.createElement('td');
                     var value = row[col];
 
-                    if (col.endsWith('Ticks') && typeof value === 'number') {
+                    if (col.endsWith('Ticks') && typeof value === 'number' && currentCapabilities.canPlayback && value > 0) {
+                        td.innerHTML = helpers.renderTimestamp(value, row['ItemId']);
+                    } else if (col.endsWith('Ticks') && typeof value === 'number') {
                         td.textContent = helpers.ticksToTime(value);
                     } else if (value === null || value === undefined) {
                         td.textContent = '';
@@ -1096,10 +1379,34 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         td.textContent = String(value);
                     }
 
+                    if (currentCapabilities.editableColumns.indexOf(col) >= 0) {
+                        td.classList.add('tick-cell');
+                        td.setAttribute('data-column', col);
+                    }
+
                     td.style.padding = '0.5em';
                     td.style.borderBottom = '1px solid rgba(128, 128, 128, 0.1)';
                     tr.appendChild(td);
                 });
+
+                if (hasActions) {
+                    var actionsTd = document.createElement('td');
+                    actionsTd.style.padding = '0.5em';
+                    actionsTd.style.borderBottom = '1px solid rgba(128, 128, 128, 0.1)';
+                    actionsTd.style.textAlign = 'center';
+                    actionsTd.style.whiteSpace = 'nowrap';
+                    actionsTd.className = 'actions-cell';
+
+                    if (currentCapabilities.canEdit) {
+                        actionsTd.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
+                    }
+                    if (currentCapabilities.canDelete) {
+                        actionsTd.innerHTML += '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>';
+                    }
+
+                    tr.appendChild(actionsTd);
+                }
+
                 tbody.appendChild(tr);
             });
 
@@ -1107,6 +1414,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             table.style.display = 'table';
 
             helpers.applyTableStyles(table);
+
+            // Show capabilities indicator
+            var indicator = view.querySelector('#editingIndicator');
+            if (indicator) {
+                if (hasActions) {
+                    indicator.textContent = 'Editing enabled \u2014 ItemId and timestamp columns detected';
+                    indicator.style.display = 'inline';
+                } else {
+                    indicator.style.display = 'none';
+                }
+            }
 
             var rowCountSpan = view.querySelector('#rowCount');
             rowCountSpan.textContent = results.length;
@@ -1153,6 +1471,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
          * Clear results
          */
         function clearResults() {
+            if (editingRow) {
+                editingRow = null;
+                setActionButtonsDisabled(false);
+            }
             view.querySelector('#sqlInput').value = '';
             view.querySelector('#queriesDropdown').selectedIndex = 0;
             view.querySelector('#btnDeleteQuery').style.display = 'none';
@@ -1161,8 +1483,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             view.querySelector('#noResults').textContent = 'No results to display. Execute a query to see results.';
             view.querySelector('#resultInfo').style.display = 'none';
             view.querySelector('#btnExportCsv').style.display = 'none';
+            var indicator = view.querySelector('#editingIndicator');
+            if (indicator) indicator.style.display = 'none';
             currentResults = [];
             currentColumns = [];
+            currentCapabilities = null;
         }
 
         /**
@@ -1244,6 +1569,60 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 btnExportCsv.addEventListener('click', exportToCsv);
             }
 
+            // Delegated click handler for results table (playback links + action buttons)
+            var resultsTableBody = view.querySelector('#resultsTableBody');
+            if (resultsTableBody) {
+                resultsTableBody.addEventListener('click', function (e) {
+                    var target = e.target;
+
+                    // Timestamp playback links
+                    var link = target.closest('.timestamp-link');
+                    if (link) {
+                        var tr = link.closest('tr');
+                        if (tr && tr.classList.contains('editing')) return;
+                        e.preventDefault();
+                        var ticks = parseInt(link.getAttribute('data-ticks'), 10);
+                        var itemId = link.getAttribute('data-item-id');
+                        helpers.launchPlayback(itemId, ticks);
+                        return;
+                    }
+
+                    // Edit button
+                    if (target.classList.contains('btn-edit')) {
+                        e.stopPropagation();
+                        var editTr = target.closest('tr');
+                        if (editTr) startRowEdit(editTr);
+                        return;
+                    }
+
+                    // Save button
+                    if (target.classList.contains('btn-save')) {
+                        e.stopPropagation();
+                        var saveTr = target.closest('tr');
+                        if (saveTr) saveRowEdit(saveTr);
+                        return;
+                    }
+
+                    // Cancel button
+                    if (target.classList.contains('btn-cancel')) {
+                        e.stopPropagation();
+                        var cancelTr = target.closest('tr');
+                        if (cancelTr) cancelRowEdit(cancelTr);
+                        return;
+                    }
+
+                    // Delete button
+                    if (target.classList.contains('btn-delete')) {
+                        e.stopPropagation();
+                        var deleteTr = target.closest('tr');
+                        if (deleteTr && !deleteTr.classList.contains('editing')) {
+                            showDeleteMenu(deleteTr, target);
+                        }
+                        return;
+                    }
+                });
+            }
+
             // Query builder
             var btnToggleBuilder = view.querySelector('#btnToggleBuilder');
             if (btnToggleBuilder) {
@@ -1261,6 +1640,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         view.addEventListener('viewdestroy', function (e) {
             currentResults = [];
             currentColumns = [];
+            currentCapabilities = null;
+            editingRow = null;
             builderState.items = [];
             _nextId = 1;
         });

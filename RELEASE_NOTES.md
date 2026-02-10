@@ -1,6 +1,21 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.0.0-RC1 - Interactive Custom Query Results
+
+### Added
+
+- **Playback links in custom query results** (#42) - Timestamp columns in query results are now clickable links that launch playback at that position, just like the reports pages.
+- **Inline editing in custom query results** (#42) - Edit segment timestamps directly in the results table. Click "Edit" on any row, modify the tick values, and save. Changes write through to Emby and update the local cache.
+- **Delete markers from custom query results** (#42) - Delete individual segment markers from query results via a context menu that shows which markers are set for each item.
+- **Smart column auto-detection** (#42) - The custom query page automatically detects whether results contain `ItemId` and segment tick columns, and only shows interactive controls (edit, delete, playback) when the data supports it.
+
+### Fixed
+
+- **Horizontal scrollbar on wide query results** (#42) - The results table now scrolls horizontally when columns extend beyond the page width, instead of clipping content.
+
+---
+
 ## v1.0.0.0-RC0 - Pre-Production Release
 
 This is a pre-production release candidate. All planned features are implemented and working. Please report any issues before the final v1.0.0.0 release.
