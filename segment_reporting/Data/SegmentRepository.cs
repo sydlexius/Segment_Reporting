@@ -319,15 +319,6 @@ namespace segment_reporting.Data
 
         #region Upsert
 
-        public void UpsertSegment(SegmentInfo segment)
-        {
-            lock (_dbLock)
-            {
-                ThrowIfDisposed();
-                UpsertSegmentInternal(segment);
-            }
-        }
-
         public void UpsertSegments(List<SegmentInfo> segments, CancellationToken cancellationToken = default(CancellationToken))
         {
             lock (_dbLock)
@@ -392,13 +383,13 @@ namespace segment_reporting.Data
 
         public void UpdateSegmentTicks(string itemId, string markerType, long ticks)
         {
-            string column = MarkerTypes.GetColumnName(markerType);
-
             if (!MarkerTypes.Valid.Contains(markerType))
             {
                 _logger.Warn("SegmentRepository: Unknown marker type {0}", markerType);
                 return;
             }
+
+            string column = MarkerTypes.GetColumnName(markerType);
 
             lock (_dbLock)
             {
@@ -1011,24 +1002,6 @@ namespace segment_reporting.Data
                 }
             }
             return prefs;
-        }
-
-        public string GetPreference(string key)
-        {
-            lock (_dbLock)
-            {
-                ThrowIfDisposed();
-                using (var stmt = _connection.PrepareStatement(
-                    "SELECT [Value] FROM UserPreferences WHERE [Key] = @Key"))
-                {
-                    TryBind(stmt, "@Key", key);
-                    if (stmt.MoveNext())
-                    {
-                        return ReadString(stmt.Current, 0);
-                    }
-                }
-            }
-            return null;
         }
 
         public void SetPreference(string key, string value)

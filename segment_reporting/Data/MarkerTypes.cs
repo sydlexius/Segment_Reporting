@@ -21,7 +21,8 @@ namespace segment_reporting.Data
 
         public static bool IsIntroType(string markerType)
         {
-            return markerType == IntroStart || markerType == IntroEnd;
+            return string.Equals(markerType, IntroStart, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(markerType, IntroEnd, StringComparison.OrdinalIgnoreCase);
         }
     }
 }

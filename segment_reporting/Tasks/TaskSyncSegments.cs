@@ -66,7 +66,6 @@ namespace segment_reporting.Tasks
 
             string dbPath = Path.Combine(_appPaths.DataPath, "segment_reporting.db");
             var repo = SegmentRepository.GetInstance(dbPath, _logger);
-            repo.Initialize();
 
             var items = _libraryManager.GetItemList(new InternalItemsQuery
             {

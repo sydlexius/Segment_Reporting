@@ -1,6 +1,20 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.5 - Code Cleanup
+
+### Removed
+
+- **Dead code** (#51) — Removed unused `UpsertSegment` and `GetPreference` methods from the repository.
+
+### Fixed
+
+- **Case-insensitive marker type matching** (#51) — `IsIntroType` now uses case-insensitive comparison, consistent with the rest of the marker type validation.
+- **Validation ordering** (#51) — `UpdateSegmentTicks` now validates the marker type before computing the column name, matching the pattern used by `DeleteSegment`.
+- **Redundant initialization** (#51) — Removed unnecessary `Initialize()` calls in the sync and cleanup tasks that re-ran all schema creation statements on every execution.
+
+---
+
 ## v1.0.1.4 - Fix Singleton Disposal and Thread Safety
 
 ### Fixed
