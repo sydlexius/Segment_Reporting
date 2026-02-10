@@ -24,6 +24,27 @@
                 </div>
             </div>
 
+            <!-- Filter Controls -->
+            <div class="verticalSection" style="margin-bottom: 2em;">
+                <div style="display: flex; gap: 1em; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 0 0 auto;">
+                        <label for="episodeFilterDropdown" style="margin-right: 0.5em;">Filter:</label>
+                        <select id="episodeFilterDropdown" class="emby-select-withcolor emby-select" style="width: 200px;">
+                            <option value="all">All</option>
+                            <option value="complete">Complete (Both Segments)</option>
+                            <option value="missing_intro">Missing Intros</option>
+                            <option value="missing_credits">Missing Credits</option>
+                            <option value="has_intro">Has Intro</option>
+                            <option value="has_credits">Has Credits</option>
+                            <option value="no_segments">No Segments</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1 1 300px;">
+                        <input id="episodeSearchBox" type="text" class="emby-input" placeholder="Search by episode name..." style="width: 100%; max-width: 400px;" />
+                    </div>
+                </div>
+            </div>
+
             <!-- Bulk Source Indicator -->
             <div id="bulkSourceBanner" class="verticalSection" style="display: none; margin-bottom: 1.5em;">
                 <div style="background-color: rgba(33, 150, 243, 0.15); border: 1px solid #2196F3; border-radius: 4px; padding: 0.75em 1em; display: flex; align-items: center; justify-content: space-between;">

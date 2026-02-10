@@ -1589,36 +1589,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             });
 
-            var typeLabel = markerTypes.indexOf('CreditsStart') >= 0 ? 'credits' : 'intro';
-            var msg = 'Delete all ' + typeLabel + ' segments from ' + uniqueItemIds.length + ' item(s)?\n\nThis cannot be undone.';
-
-            if (!confirm(msg)) return;
-
-            helpers.showLoading();
-
-            helpers.apiCall('bulk_delete', 'POST', JSON.stringify({
-                ItemIds: uniqueItemIds.join(','),
-                MarkerTypes: markerTypes.join(',')
-            }))
-            .then(function (result) {
-                helpers.hideLoading();
-                var resultMsg = 'Bulk delete complete: ' + result.succeeded + ' succeeded';
-                if (result.failed > 0) {
-                    resultMsg += ', ' + result.failed + ' failed';
-                    if (result.errors && result.errors.length > 0) {
-                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
-                    }
-                    helpers.showError(resultMsg);
-                } else {
-                    helpers.showSuccess(resultMsg);
-                }
-                // Re-execute the query to refresh results
-                executeQuery();
-            })
-            .catch(function (error) {
-                helpers.hideLoading();
-                console.error('Bulk delete failed:', error);
-                helpers.showError('Bulk delete failed: ' + (error.message || 'Unknown error'));
+            helpers.bulkDelete(uniqueItemIds, markerTypes).then(function (result) {
+                if (result) executeQuery();
             });
         }
 

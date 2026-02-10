@@ -1,6 +1,21 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.1 - Drill-Down Filtering and Bulk Actions at Every Level
+
+### Added
+
+- **Filter dropdown on Series page** (#45) - The same filter controls from the Library page plus a search box are now available on the Series page, filtering episodes within each season accordion.
+- **"Has Intro" and "Has Credits" filters** (#45) - The filter dropdowns on the Library and Series pages now include positive filters to show only items that already have intro or credits segments, in addition to the existing "Missing" filters.
+- **Per-library "Detect Credits" on Dashboard** (#45) - Each library row on the Dashboard now has a "Detect" button (when EmbyCredits is installed) that finds all items missing credits in that library and queues detection for them.
+- **Per-series and per-movie "Detect Credits" on Library page** (#45) - Each series row on the Library page now has a "Detect" button that triggers EmbyCredits detection for the entire series. Movie rows also get a per-item "Detect" button.
+
+### Improved
+
+- **Shared bulk action helpers** (#45) - Extracted duplicated bulk delete, bulk set-credits-to-end, and bulk detect-credits logic from the Series and Custom Query pages into shared helper functions, reducing code duplication and ensuring consistent behavior across all pages.
+
+---
+
 ## v1.0.0.1 - Cache Busting for Plugin Updates
 
 ### Improved

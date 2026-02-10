@@ -31,6 +31,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
         var listenersAttached = false;
         var creditsDetectorAvailable = false;
+        var currentFilter = 'all';
+        var currentSearch = '';
+        var searchDebounceTimer = null;
 
         // ── Data Loading ──
 
@@ -83,6 +86,77 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     console.error('Failed to load episodes for season ' + seasonId + ':', error);
                     contentDiv.innerHTML = '<div style="text-align: center; padding: 1em; color: #F44336;">Failed to load episodes.</div>';
                 });
+        }
+
+        // ── Episode Filtering ──
+
+        function filterEpisodes(episodes) {
+            var filtered = episodes;
+
+            if (currentFilter === 'complete') {
+                filtered = filtered.filter(function (ep) {
+                    return ep.IntroStartTicks > 0 && ep.CreditsStartTicks > 0;
+                });
+            } else if (currentFilter === 'missing_intro') {
+                filtered = filtered.filter(function (ep) {
+                    return !ep.IntroStartTicks || ep.IntroStartTicks === 0 ||
+                           !ep.IntroEndTicks || ep.IntroEndTicks === 0;
+                });
+            } else if (currentFilter === 'missing_credits') {
+                filtered = filtered.filter(function (ep) {
+                    return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0;
+                });
+            } else if (currentFilter === 'has_intro') {
+                filtered = filtered.filter(function (ep) {
+                    return ep.IntroStartTicks > 0;
+                });
+            } else if (currentFilter === 'has_credits') {
+                filtered = filtered.filter(function (ep) {
+                    return ep.CreditsStartTicks > 0;
+                });
+            } else if (currentFilter === 'no_segments') {
+                filtered = filtered.filter(function (ep) {
+                    return (!ep.IntroStartTicks || ep.IntroStartTicks === 0) &&
+                           (!ep.IntroEndTicks || ep.IntroEndTicks === 0) &&
+                           (!ep.CreditsStartTicks || ep.CreditsStartTicks === 0);
+                });
+            }
+
+            if (currentSearch) {
+                var searchLower = currentSearch.toLowerCase();
+                filtered = filtered.filter(function (ep) {
+                    return (ep.ItemName || '').toLowerCase().indexOf(searchLower) >= 0;
+                });
+            }
+
+            return filtered;
+        }
+
+        function refilterAllSeasons() {
+            // Clear selections to avoid stale references to hidden rows
+            selectedItems = {};
+
+            var containers = view.querySelectorAll('[data-season-id]');
+            containers.forEach(function (contentDiv) {
+                if (contentDiv.style.display === 'none') return;
+                var seasonId = contentDiv.getAttribute('data-season-id');
+                if (loadedSeasons[seasonId]) {
+                    renderEpisodeTable(loadedSeasons[seasonId], contentDiv);
+                }
+            });
+        }
+
+        function handleFilterChange() {
+            currentFilter = view.querySelector('#episodeFilterDropdown').value;
+            refilterAllSeasons();
+        }
+
+        function handleSearch() {
+            clearTimeout(searchDebounceTimer);
+            searchDebounceTimer = setTimeout(function () {
+                currentSearch = view.querySelector('#episodeSearchBox').value.trim();
+                refilterAllSeasons();
+            }, 300);
         }
 
         // ── Season Chart ──
@@ -259,14 +333,25 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
 
+            // Apply active filter and search
+            var displayEpisodes = filterEpisodes(episodes);
+
             // Initialize selection tracking for this season
             if (!selectedItems[seasonId]) {
                 selectedItems[seasonId] = {};
             }
 
-            // Bulk action row
-            var bulkRow = createBulkActionRow(seasonId, episodes, container);
+            // Bulk action row (uses filtered episodes)
+            var bulkRow = createBulkActionRow(seasonId, displayEpisodes, container);
             container.appendChild(bulkRow);
+
+            if (displayEpisodes.length === 0) {
+                var emptyMsg = document.createElement('div');
+                emptyMsg.style.cssText = 'text-align: center; padding: 1em; opacity: 0.7;';
+                emptyMsg.textContent = 'No episodes match the current filter.';
+                container.appendChild(emptyMsg);
+                return;
+            }
 
             var table = document.createElement('table');
             table.style.cssText = 'width: 100%; border-collapse: collapse;';
@@ -285,17 +370,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<th style="' + thStyle + ' text-align: center;">Actions</th>' +
                 '</tr>';
 
-            // Select-all handler
+            // Select-all handler (operates on filtered episodes)
             var selectAllCb = thead.querySelector('.select-all-cb');
             selectAllCb.addEventListener('change', function () {
-                toggleSelectAll(seasonId, this.checked, episodes, container);
+                toggleSelectAll(seasonId, this.checked, displayEpisodes, container);
             });
 
             table.appendChild(thead);
 
-            // Body
+            // Body (filtered episodes)
             var tbody = document.createElement('tbody');
-            episodes.forEach(function (ep) {
+            displayEpisodes.forEach(function (ep) {
                 var row = createEpisodeRow(ep, seasonId);
                 tbody.appendChild(row);
             });
@@ -735,6 +820,39 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         // ── Bulk Operations ──
 
+        function getTargetEpisodes(seasonId, episodes) {
+            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
+            if (selectedCount > 0) {
+                return episodes.filter(function (ep) {
+                    return selectedItems[seasonId][ep.ItemId];
+                });
+            }
+            return episodes.slice();
+        }
+
+        function filterForDetection(targetEpisodes) {
+            var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
+            var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
+
+            if (withCredits.length > 0 && withoutCredits.length > 0) {
+                var skipExisting = confirm(
+                    withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
+                    'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
+                    'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
+                );
+                if (skipExisting) {
+                    return withoutCredits;
+                }
+                return targetEpisodes;
+            } else if (withCredits.length > 0 && withoutCredits.length === 0) {
+                if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
+                    return null;
+                }
+                return targetEpisodes;
+            }
+            return targetEpisodes;
+        }
+
         function createBulkActionRow(seasonId, episodes, container) {
             var row = document.createElement('div');
             row.className = 'bulk-action-row';
@@ -977,53 +1095,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function executeBulkDelete(seasonId, episodes, container, markerTypes) {
-            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
-            var targetEpisodes;
-
-            if (selectedCount > 0) {
-                targetEpisodes = episodes.filter(function (ep) {
-                    return selectedItems[seasonId][ep.ItemId];
-                });
-            } else {
-                targetEpisodes = episodes;
-            }
-
+            var targetEpisodes = getTargetEpisodes(seasonId, episodes);
             if (targetEpisodes.length === 0) {
                 helpers.showError('No episodes to delete from.');
                 return;
             }
-
-            var typeLabel = markerTypes.indexOf('CreditsStart') >= 0 ? 'credits' : 'intro';
-            var msg = 'Delete all ' + typeLabel + ' segments from ' + targetEpisodes.length + ' episode(s) in this season?\n\nThis cannot be undone.';
-
-            if (!confirm(msg)) return;
-
-            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
-
-            helpers.showLoading();
-
-            helpers.apiCall('bulk_delete', 'POST', JSON.stringify({
-                ItemIds: itemIds,
-                MarkerTypes: markerTypes.join(',')
-            }))
-            .then(function (result) {
-                helpers.hideLoading();
-                var resultMsg = 'Bulk delete complete: ' + result.succeeded + ' succeeded';
-                if (result.failed > 0) {
-                    resultMsg += ', ' + result.failed + ' failed';
-                    if (result.errors && result.errors.length > 0) {
-                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
-                    }
-                    helpers.showError(resultMsg);
-                } else {
-                    helpers.showSuccess(resultMsg);
-                }
-                refreshSeasonEpisodes(seasonId, container);
-            })
-            .catch(function (error) {
-                helpers.hideLoading();
-                console.error('Bulk delete failed:', error);
-                helpers.showError('Bulk delete failed: ' + (error.message || 'Unknown error'));
+            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; });
+            helpers.bulkDelete(itemIds, markerTypes).then(function (result) {
+                if (result) refreshSeasonEpisodes(seasonId, container);
             });
         }
 
@@ -1054,130 +1133,28 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function executeBulkSetCreditsEnd(seasonId, episodes, container) {
-            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
-            var targetEpisodes;
-
-            if (selectedCount > 0) {
-                targetEpisodes = episodes.filter(function (ep) {
-                    return selectedItems[seasonId][ep.ItemId];
-                });
-            } else {
-                targetEpisodes = episodes;
-            }
-
+            var targetEpisodes = getTargetEpisodes(seasonId, episodes);
             if (targetEpisodes.length === 0) {
                 helpers.showError('No episodes to update.');
                 return;
             }
-
-            var msg = 'Set CreditsStart to end of episode for ' + targetEpisodes.length + ' episode(s)?\n\nThis marks each episode as having credits at its runtime end.';
-            if (!confirm(msg)) return;
-
-            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
-
-            helpers.showLoading();
-
-            helpers.apiCall('bulk_set_credits_end', 'POST', JSON.stringify({
-                ItemIds: itemIds,
-                OffsetTicks: 0
-            }))
-            .then(function (result) {
-                helpers.hideLoading();
-                var resultMsg = 'Set credits to end: ' + result.succeeded + ' succeeded';
-                if (result.failed > 0) {
-                    resultMsg += ', ' + result.failed + ' failed';
-                    if (result.errors && result.errors.length > 0) {
-                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
-                    }
-                    helpers.showError(resultMsg);
-                } else {
-                    helpers.showSuccess(resultMsg);
-                }
-                refreshSeasonEpisodes(seasonId, container);
-            })
-            .catch(function (error) {
-                helpers.hideLoading();
-                console.error('Bulk set credits to end failed:', error);
-                helpers.showError('Bulk set credits to end failed: ' + (error.message || 'Unknown error'));
+            var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; });
+            helpers.bulkSetCreditsEnd(itemIds).then(function (result) {
+                if (result) refreshSeasonEpisodes(seasonId, container);
             });
         }
 
-        function executeBulkDetectCredits(seasonId, episodes, container) {
-            var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
-            var targetEpisodes;
-
-            if (selectedCount > 0) {
-                targetEpisodes = episodes.filter(function (ep) {
-                    return selectedItems[seasonId][ep.ItemId];
-                });
-            } else {
-                targetEpisodes = episodes.slice();
-            }
-
+        function executeBulkDetectCredits(seasonId, episodes) {
+            var targetEpisodes = getTargetEpisodes(seasonId, episodes);
             if (targetEpisodes.length === 0) {
                 helpers.showError('No episodes to detect credits for.');
                 return;
             }
 
-            // Check for episodes that already have credits
-            var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
-            var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
+            targetEpisodes = filterForDetection(targetEpisodes);
+            if (!targetEpisodes || targetEpisodes.length === 0) return;
 
-            if (withCredits.length > 0 && withoutCredits.length > 0) {
-                var skipExisting = confirm(
-                    withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
-                    'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
-                    'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
-                );
-                if (skipExisting) {
-                    targetEpisodes = withoutCredits;
-                }
-            } else if (withCredits.length > 0 && withoutCredits.length === 0) {
-                if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
-                    return;
-                }
-            }
-
-            if (targetEpisodes.length === 0) {
-                helpers.showError('No episodes to detect credits for.');
-                return;
-            }
-
-            if (!confirm('Detect credits for ' + targetEpisodes.length + ' episode(s) using EmbyCredits? This runs in the background and may take a while.')) {
-                return;
-            }
-
-            helpers.showLoading();
-
-            var succeeded = 0;
-            var failed = 0;
-            var errors = [];
-
-            var chain = Promise.resolve();
-            targetEpisodes.forEach(function (ep) {
-                chain = chain.then(function () {
-                    return helpers.creditsDetectorCall('ProcessEpisode', { ItemId: ep.ItemId })
-                        .then(function () { succeeded++; })
-                        .catch(function (err) {
-                            failed++;
-                            errors.push((ep.ItemName || ep.ItemId) + ': ' + (err.message || 'failed'));
-                        });
-                });
-            });
-
-            chain.then(function () {
-                helpers.hideLoading();
-                var resultMsg = 'Credits detection queued: ' + succeeded + ' succeeded';
-                if (failed > 0) {
-                    resultMsg += ', ' + failed + ' failed';
-                    if (errors.length > 0) {
-                        resultMsg += '\n\nErrors:\n' + errors.join('\n');
-                    }
-                    helpers.showError(resultMsg);
-                } else {
-                    helpers.showSuccess(resultMsg + '. Results will appear after the next sync.');
-                }
-            });
+            helpers.bulkDetectCredits(targetEpisodes);
         }
 
         function refreshSeasonEpisodes(seasonId, container) {
@@ -1239,65 +1216,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         return;
                     }
 
-                    var targetEpisodes = episodes.slice();
-                    var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
-                    var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
+                    var targetEpisodes = filterForDetection(episodes);
+                    if (!targetEpisodes || targetEpisodes.length === 0) return;
 
-                    if (withCredits.length > 0 && withoutCredits.length > 0) {
-                        var skipExisting = confirm(
-                            withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
-                            'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
-                            'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
-                        );
-                        if (skipExisting) {
-                            targetEpisodes = withoutCredits;
-                        }
-                    } else if (withCredits.length > 0 && withoutCredits.length === 0) {
-                        if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
-                            return;
-                        }
-                    }
-
-                    if (targetEpisodes.length === 0) {
-                        helpers.showError('No episodes to detect credits for.');
-                        return;
-                    }
-
-                    if (!confirm('Detect credits for ' + targetEpisodes.length + ' episode(s) using EmbyCredits? This runs in the background and may take a while.')) {
-                        return;
-                    }
-
-                    helpers.showLoading();
-
-                    var succeeded = 0;
-                    var failed = 0;
-                    var errors = [];
-
-                    var chain = Promise.resolve();
-                    targetEpisodes.forEach(function (ep) {
-                        chain = chain.then(function () {
-                            return helpers.creditsDetectorCall('ProcessEpisode', { ItemId: ep.ItemId })
-                                .then(function () { succeeded++; })
-                                .catch(function (err) {
-                                    failed++;
-                                    errors.push((ep.ItemName || ep.ItemId) + ': ' + (err.message || 'failed'));
-                                });
-                        });
-                    });
-
-                    return chain.then(function () {
-                        helpers.hideLoading();
-                        var resultMsg = 'Credits detection queued: ' + succeeded + ' succeeded';
-                        if (failed > 0) {
-                            resultMsg += ', ' + failed + ' failed';
-                            if (errors.length > 0) {
-                                resultMsg += '\n\nErrors:\n' + errors.join('\n');
-                            }
-                            helpers.showError(resultMsg);
-                        } else {
-                            helpers.showSuccess(resultMsg + '. Results will appear after the next sync.');
-                        }
-                    });
+                    return helpers.bulkDetectCredits(targetEpisodes);
                 })
                 .catch(function (error) {
                     console.error('Failed to load episodes for detection:', error);
@@ -1382,7 +1304,25 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (btnDetectSeries) {
                     btnDetectSeries.addEventListener('click', detectCreditsForSeries);
                 }
+
+                var filterDropdown = view.querySelector('#episodeFilterDropdown');
+                if (filterDropdown) {
+                    filterDropdown.addEventListener('change', handleFilterChange);
+                }
+
+                var searchBox = view.querySelector('#episodeSearchBox');
+                if (searchBox) {
+                    searchBox.addEventListener('input', handleSearch);
+                }
             }
+
+            // Reset filter state for fresh view
+            currentFilter = 'all';
+            currentSearch = '';
+            var filterEl = view.querySelector('#episodeFilterDropdown');
+            if (filterEl) filterEl.value = 'all';
+            var searchEl = view.querySelector('#episodeSearchBox');
+            if (searchEl) searchEl.value = '';
 
             // Check for EmbyCredits plugin and show/hide detect button
             helpers.checkCreditsDetector().then(function (available) {

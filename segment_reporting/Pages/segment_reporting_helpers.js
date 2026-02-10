@@ -638,6 +638,114 @@ function segmentReportingCreateSegmentChart(Chart, ctx, labels, segmentData, vie
     });
 }
 
+function segmentReportingShowBulkResult(prefix, result) {
+    if (!result) return;
+    var resultMsg = prefix + ': ' + result.succeeded + ' succeeded';
+    if (result.failed > 0) {
+        resultMsg += ', ' + result.failed + ' failed';
+        if (result.errors && result.errors.length > 0) {
+            resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
+        }
+        segmentReportingShowError(resultMsg);
+    } else {
+        segmentReportingShowSuccess(resultMsg);
+    }
+}
+
+function segmentReportingBulkDelete(itemIds, markerTypes) {
+    if (!itemIds || itemIds.length === 0) {
+        segmentReportingShowError('No items to delete from.');
+        return Promise.resolve(null);
+    }
+
+    var typeLabel = markerTypes.indexOf('CreditsStart') >= 0 ? 'credits' : 'intro';
+    var msg = 'Delete all ' + typeLabel + ' segments from ' + itemIds.length + ' item(s)?\n\nThis cannot be undone.';
+    if (!confirm(msg)) return Promise.resolve(null);
+
+    segmentReportingShowLoading();
+
+    return segmentReportingApiCall('bulk_delete', 'POST', JSON.stringify({
+        ItemIds: itemIds.join(','),
+        MarkerTypes: markerTypes.join(',')
+    }))
+    .then(function (result) {
+        segmentReportingHideLoading();
+        segmentReportingShowBulkResult('Bulk delete complete', result);
+        return result;
+    })
+    .catch(function (error) {
+        segmentReportingHideLoading();
+        console.error('Bulk delete failed:', error);
+        segmentReportingShowError('Bulk delete failed: ' + (error.message || 'Unknown error'));
+        return null;
+    });
+}
+
+function segmentReportingBulkSetCreditsEnd(itemIds, offsetTicks) {
+    if (!itemIds || itemIds.length === 0) {
+        segmentReportingShowError('No items to update.');
+        return Promise.resolve(null);
+    }
+
+    var msg = 'Set CreditsStart to end of episode for ' + itemIds.length + ' item(s)?\n\nThis marks each item as having credits at its runtime end.';
+    if (!confirm(msg)) return Promise.resolve(null);
+
+    segmentReportingShowLoading();
+
+    return segmentReportingApiCall('bulk_set_credits_end', 'POST', JSON.stringify({
+        ItemIds: itemIds.join(','),
+        OffsetTicks: offsetTicks || 0
+    }))
+    .then(function (result) {
+        segmentReportingHideLoading();
+        segmentReportingShowBulkResult('Set credits to end', result);
+        return result;
+    })
+    .catch(function (error) {
+        segmentReportingHideLoading();
+        console.error('Bulk set credits to end failed:', error);
+        segmentReportingShowError('Bulk set credits to end failed: ' + (error.message || 'Unknown error'));
+        return null;
+    });
+}
+
+function segmentReportingBulkDetectCredits(items) {
+    if (!items || items.length === 0) {
+        segmentReportingShowError('No items to detect credits for.');
+        return Promise.resolve(null);
+    }
+
+    var msg = 'Detect credits for ' + items.length + ' item(s) using EmbyCredits? This runs in the background and may take a while.';
+    if (!confirm(msg)) return Promise.resolve(null);
+
+    segmentReportingShowLoading();
+
+    var succeeded = 0;
+    var failed = 0;
+    var errors = [];
+
+    var chain = Promise.resolve();
+    items.forEach(function (item) {
+        var itemId = typeof item === 'string' ? item : item.ItemId;
+        var itemName = typeof item === 'string' ? item : (item.ItemName || item.ItemId);
+        chain = chain.then(function () {
+            return segmentReportingCreditsDetectorCall('ProcessEpisode', { ItemId: itemId })
+                .then(function () { succeeded++; })
+                .catch(function (err) {
+                    failed++;
+                    errors.push(itemName + ': ' + (err.message || 'failed'));
+                });
+        });
+    });
+
+    return chain.then(function () {
+        segmentReportingHideLoading();
+        var result = { succeeded: succeeded, failed: failed, errors: errors };
+        segmentReportingShowBulkResult('Credits detection queued', result);
+        return result;
+    });
+}
+
 function getSegmentReportingHelpers() {
     return {
         ticksToTime: segmentReportingTicksToTime,
@@ -680,6 +788,10 @@ function getSegmentReportingHelpers() {
         invalidatePreferencesCache: segmentReportingInvalidatePreferencesCache,
         getPreference: segmentReportingGetPreference,
         applyTableStyles: segmentReportingApplyTableStyles,
-        renderBreadcrumbs: segmentReportingRenderBreadcrumbs
+        renderBreadcrumbs: segmentReportingRenderBreadcrumbs,
+        showBulkResult: segmentReportingShowBulkResult,
+        bulkDelete: segmentReportingBulkDelete,
+        bulkSetCreditsEnd: segmentReportingBulkSetCreditsEnd,
+        bulkDetectCredits: segmentReportingBulkDetectCredits
     };
 }

@@ -23,6 +23,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var libraryData = [];
         var chart = null;
         var listenersAttached = false;
+        var creditsDetectorAvailable = false;
 
         /**
          * Load library summary data from API
@@ -179,8 +180,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var tbody = view.querySelector('#libraryTableBody');
             tbody.innerHTML = '';
 
+            // Show/hide the Actions column based on EmbyCredits availability
+            var thActions = view.querySelector('#thLibraryActions');
+            if (thActions) {
+                thActions.style.display = creditsDetectorAvailable ? '' : 'none';
+            }
+
             if (libraryData.length === 0) {
-                tbody.appendChild(helpers.createEmptyRow('No library data available. Click "Sync Now" to populate the cache.', 7));
+                tbody.appendChild(helpers.createEmptyRow('No library data available. Click "Sync Now" to populate the cache.', creditsDetectorAvailable ? 8 : 7));
                 return;
             }
 
@@ -196,7 +203,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var withNeither = lib.WithNeither || 0;
                 var coveragePct = helpers.percentage(withIntro + withCredits - withBoth, totalItems);
 
-                row.innerHTML =
+                var html =
                     '<td>' + helpers.escHtml(lib.LibraryName || 'Unknown') + '</td>' +
                     '<td>' + totalItems.toLocaleString() + '</td>' +
                     '<td>' + withIntro.toLocaleString() + '</td>' +
@@ -205,9 +212,27 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<td>' + withNeither.toLocaleString() + '</td>' +
                     '<td><strong>' + coveragePct + '</strong></td>';
 
-                row.addEventListener('click', function () {
+                if (creditsDetectorAvailable) {
+                    html += '<td style="text-align: center;"><button class="raised emby-button btn-detect-library" style="padding: 0.3em 0.8em; font-size: 0.85em;">Detect</button></td>';
+                }
+
+                row.innerHTML = html;
+
+                row.addEventListener('click', function (e) {
+                    // Don't navigate if user clicked the Detect button
+                    if (e.target.closest('.btn-detect-library')) return;
                     helpers.navigate('segment_library', { libraryId: lib.LibraryId, libraryName: lib.LibraryName });
                 });
+
+                if (creditsDetectorAvailable) {
+                    var btnDetect = row.querySelector('.btn-detect-library');
+                    if (btnDetect) {
+                        btnDetect.addEventListener('click', function (e) {
+                            e.stopPropagation();
+                            detectCreditsForLibrary(lib, btnDetect);
+                        });
+                    }
+                }
 
                 helpers.attachHoverEffect(row);
 
@@ -234,6 +259,85 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     .catch(function (error) {
                         console.error('Credits detection failed:', error);
                         helpers.showError('Credits detection failed. Is EmbyCredits running?');
+                    })
+            );
+        }
+
+        /**
+         * Detect credits for a single library (series + movies missing credits)
+         */
+        function detectCreditsForLibrary(lib, btn) {
+            helpers.withButtonLoading(btn, '...',
+                helpers.apiCall('series_list?libraryId=' + encodeURIComponent(lib.LibraryId) + '&filter=missing_credits', 'GET')
+                    .then(function (data) {
+                        var seriesList = data.series || [];
+                        var movieList = data.movies || [];
+
+                        if (seriesList.length === 0 && movieList.length === 0) {
+                            helpers.showSuccess('No items missing credits in "' + (lib.LibraryName || 'this library') + '".');
+                            return;
+                        }
+
+                        var totalItems = seriesList.length + movieList.length;
+                        var itemLabel = seriesList.length > 0 && movieList.length > 0
+                            ? seriesList.length + ' series and ' + movieList.length + ' movies'
+                            : seriesList.length > 0
+                                ? seriesList.length + ' series'
+                                : movieList.length + ' movies';
+
+                        if (!confirm('Detect credits for ' + itemLabel + ' missing credits in "' + (lib.LibraryName || 'this library') + '"? This runs in the background and may take a while.')) {
+                            return;
+                        }
+
+                        helpers.showLoading();
+
+                        var succeeded = 0;
+                        var failed = 0;
+                        var errors = [];
+
+                        var chain = Promise.resolve();
+
+                        // Process series via ProcessSeries (more efficient than per-episode)
+                        seriesList.forEach(function (s) {
+                            chain = chain.then(function () {
+                                return helpers.creditsDetectorCall('ProcessSeries', { SeriesId: s.SeriesId })
+                                    .then(function () { succeeded++; })
+                                    .catch(function (err) {
+                                        failed++;
+                                        errors.push((s.SeriesName || s.SeriesId) + ': ' + (err.message || 'failed'));
+                                    });
+                            });
+                        });
+
+                        // Process movies via ProcessEpisode
+                        movieList.forEach(function (m) {
+                            chain = chain.then(function () {
+                                return helpers.creditsDetectorCall('ProcessEpisode', { ItemId: m.ItemId })
+                                    .then(function () { succeeded++; })
+                                    .catch(function (err) {
+                                        failed++;
+                                        errors.push((m.ItemName || m.ItemId) + ': ' + (err.message || 'failed'));
+                                    });
+                            });
+                        });
+
+                        return chain.then(function () {
+                            helpers.hideLoading();
+                            var resultMsg = 'Credits detection queued: ' + succeeded + ' of ' + totalItems + ' succeeded';
+                            if (failed > 0) {
+                                resultMsg += ', ' + failed + ' failed';
+                                if (errors.length > 0) {
+                                    resultMsg += '\n\nErrors:\n' + errors.join('\n');
+                                }
+                                helpers.showError(resultMsg);
+                            } else {
+                                helpers.showSuccess(resultMsg + '. Results will appear after the next sync.');
+                            }
+                        });
+                    })
+                    .catch(function (error) {
+                        console.error('Failed to detect credits for library:', error);
+                        helpers.showError('Failed to detect credits for this library.');
                     })
             );
         }
@@ -315,8 +419,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             }
 
-            // Check for EmbyCredits plugin and show/hide detect button
+            // Check for EmbyCredits plugin and show/hide detect buttons
             helpers.checkCreditsDetector().then(function (available) {
+                creditsDetectorAvailable = available;
                 var btnDetect = view.querySelector('#btnDetectAllCredits');
                 if (btnDetect) {
                     btnDetect.style.display = available ? '' : 'none';
