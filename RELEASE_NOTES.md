@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.2.0 - Detect Credits on Custom Query Page
+
+### Added
+
+- **"Detect Credits" bulk action on Custom Query page** (#46) — When the EmbyCredits plugin is installed, a "Detect Credits" button now appears in the bulk action bar alongside the existing delete buttons. Select rows and click to trigger credits detection for the selected items, with the same skip-existing prompt used on all other pages.
+
+---
+
 ## v1.0.1.6 - Reduce Lock Contention During Sync
 
 ### Improved

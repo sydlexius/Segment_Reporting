@@ -25,6 +25,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var currentCapabilities = null;
         var editingRow = null;
         var selectedRows = {};
+        var creditsDetectorAvailable = false;
 
         // ===== COLUMN AUTO-DETECTION =====
 
@@ -1568,6 +1569,19 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
                 btnContainer.appendChild(btnDeleteCredits);
             }
+
+            if (creditsDetectorAvailable) {
+                var btnDetectCredits = document.createElement('button');
+                btnDetectCredits.className = 'raised emby-button btn-bulk-detect-credits';
+                btnDetectCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+                btnDetectCredits.textContent = 'Detect Credits (' + count + ')';
+                btnDetectCredits.disabled = count === 0;
+                if (count === 0) btnDetectCredits.style.opacity = '0.5';
+                btnDetectCredits.addEventListener('click', function () {
+                    executeBulkDetectCredits();
+                });
+                btnContainer.appendChild(btnDetectCredits);
+            }
         }
 
         function executeBulkDelete(markerTypes) {
@@ -1590,6 +1604,29 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
 
             helpers.bulkDelete(uniqueItemIds, markerTypes).then(function (result) {
+                if (result) executeQuery();
+            });
+        }
+
+        function executeBulkDetectCredits() {
+            var targetRows = getTargetRows();
+
+            if (targetRows.length === 0) {
+                helpers.showError('No rows to detect credits for.');
+                return;
+            }
+
+            var seen = {};
+            var uniqueItemIds = [];
+            targetRows.forEach(function (row) {
+                var id = row['ItemId'];
+                if (id && !seen[id]) {
+                    seen[id] = true;
+                    uniqueItemIds.push(id);
+                }
+            });
+
+            helpers.bulkDetectCredits(uniqueItemIds).then(function (result) {
                 if (result) executeQuery();
             });
         }
@@ -1851,6 +1888,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         view.addEventListener('viewshow', function (e) {
             helpers.loadPreferences();
             loadQueries();
+
+            helpers.checkCreditsDetector().then(function (available) {
+                creditsDetectorAvailable = available;
+            });
 
             var queriesDropdown = view.querySelector('#queriesDropdown');
             if (queriesDropdown) {
