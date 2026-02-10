@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.0.1 - Cache Busting for Plugin Updates
+
+### Improved
+
+- **Automatic cache busting** - Browser-cached JS files are now invalidated automatically when the plugin is updated. Release builds embed a version tag (e.g. `segment_dashboard.v1_0_0_1.js`) into all page controllers and resource URLs, so browsers always load the correct version after an upgrade. No more manual cache clearing needed.
+
+---
+
 ## v1.0.0.0-RC2 - Selectable Columns, Bulk Actions & Sticky UI
 
 ### Added

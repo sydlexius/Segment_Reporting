@@ -1,9 +1,9 @@
 /**
- * Build script for JS minification and custom Chart.js bundling.
+ * Build script for JS minification, cache busting, and custom Chart.js bundling.
  *
  * Usage:
- *   node scripts/build-js.mjs minify   - Minify custom JS files in-place (backup originals first)
- *   node scripts/build-js.mjs restore  - Restore original JS files from backup
+ *   node scripts/build-js.mjs minify   - Patch cache tags, minify JS, and patch HTML (backup originals first)
+ *   node scripts/build-js.mjs restore  - Restore original JS and HTML files from backup
  *   node scripts/build-js.mjs chart    - Rebuild the custom Chart.js bundle (run once, then commit)
  *
  * Called by MSBuild during Release builds (see .csproj MinifyJS/RestoreJS targets).
@@ -32,7 +32,70 @@ const CUSTOM_JS_FILES = [
     'segment_settings.js'
 ];
 
+/** HTML files to patch with cache-busting version tags. */
+const HTML_FILES = [
+    'segment_dashboard.html',
+    'segment_library.html',
+    'segment_series.html',
+    'segment_settings.html',
+    'segment_custom_query.html',
+    'segment_about.html'
+];
+
 const CHART_OUTPUT = 'segment_reporting_chart.min.js';
+
+/**
+ * Read the AssemblyVersion from Properties/AssemblyInfo.cs.
+ * Returns the version string, e.g. "1.0.0.0".
+ */
+function readAssemblyVersion() {
+    const assemblyInfo = fs.readFileSync(
+        path.join(projectDir, 'Properties', 'AssemblyInfo.cs'), 'utf8'
+    );
+    // Match only uncommented [assembly: AssemblyVersion("...")] lines (skip // comments)
+    const match = assemblyInfo.match(/^\[assembly: AssemblyVersion\("([^"]+)"\)/m);
+    if (!match) {
+        throw new Error('Could not read AssemblyVersion from Properties/AssemblyInfo.cs');
+    }
+    return match[1];
+}
+
+/**
+ * Convert a version string like "1.0.0.0" into a cache tag like "v1_0_0_0".
+ * Must match the format used by Plugin.cs at runtime.
+ */
+function cacheTag(version) {
+    return 'v' + version.replace(/\./g, '_');
+}
+
+/**
+ * Patch JS and HTML files in-place to add version tags for cache busting.
+ * - JS: getConfigurationResourceUrl('file.js') → getConfigurationResourceUrl('file.{tag}.js')
+ * - HTML: data-controller="__plugin/file.js" → data-controller="__plugin/file.{tag}.js"
+ */
+function patchCacheBust(tag) {
+    // Patch JS files: version all getConfigurationResourceUrl calls
+    for (const file of CUSTOM_JS_FILES) {
+        const filePath = path.join(pagesDir, file);
+        let content = fs.readFileSync(filePath, 'utf8');
+        content = content.replace(
+            /getConfigurationResourceUrl\('([^']+)\.js'\)/g,
+            `getConfigurationResourceUrl('$1.${tag}.js')`
+        );
+        fs.writeFileSync(filePath, content);
+    }
+
+    // Patch HTML files: version data-controller paths
+    for (const file of HTML_FILES) {
+        const filePath = path.join(pagesDir, file);
+        let content = fs.readFileSync(filePath, 'utf8');
+        content = content.replace(
+            /data-controller="__plugin\/([^"]+)\.js"/g,
+            `data-controller="__plugin/$1.${tag}.js"`
+        );
+        fs.writeFileSync(filePath, content);
+    }
+}
 
 /**
  * Build a custom Chart.js v4 bundle with only the modules this plugin uses.
@@ -65,34 +128,51 @@ async function buildChart() {
 }
 
 /**
- * Minify custom JS files in-place using esbuild transform.
- * Originals are backed up to obj/js-backup/ for restoration after build.
+ * Minify custom JS files and patch all files for cache busting.
+ * Originals (JS + HTML) are backed up to obj/js-backup/ for restoration after build.
  */
 async function minifyJS() {
     fs.mkdirSync(backupDir, { recursive: true });
 
+    // Back up JS files
     for (const file of CUSTOM_JS_FILES) {
         const filePath = path.join(pagesDir, file);
-        const original = fs.readFileSync(filePath, 'utf8');
+        fs.writeFileSync(path.join(backupDir, file), fs.readFileSync(filePath, 'utf8'));
+    }
 
-        // Back up original
-        fs.writeFileSync(path.join(backupDir, file), original);
+    // Back up HTML files
+    for (const file of HTML_FILES) {
+        const filePath = path.join(pagesDir, file);
+        fs.writeFileSync(path.join(backupDir, file), fs.readFileSync(filePath, 'utf8'));
+    }
 
-        // Minify with esbuild (faster than terser, similar compression)
-        const result = await esbuild.transform(original, {
+    // Patch cache-busting version tags into JS and HTML files
+    const version = readAssemblyVersion();
+    const tag = cacheTag(version);
+    console.log('  Cache tag: ' + tag + ' (from AssemblyVersion ' + version + ')');
+    patchCacheBust(tag);
+
+    // Minify JS files (now containing versioned resource URLs)
+    for (const file of CUSTOM_JS_FILES) {
+        const filePath = path.join(pagesDir, file);
+        const patched = fs.readFileSync(filePath, 'utf8');
+
+        const result = await esbuild.transform(patched, {
             minify: true,
             target: 'es2015',
         });
 
         fs.writeFileSync(filePath, result.code);
 
-        const origKB = (Buffer.byteLength(original, 'utf8') / 1024).toFixed(1);
+        const origKB = (Buffer.byteLength(
+            fs.readFileSync(path.join(backupDir, file), 'utf8'), 'utf8'
+        ) / 1024).toFixed(1);
         const minKB = (Buffer.byteLength(result.code, 'utf8') / 1024).toFixed(1);
         console.log('  ' + file + ': ' + origKB + ' KB -> ' + minKB + ' KB');
     }
 }
 
-/** Restore original JS files from backup (called after build completes). */
+/** Restore original JS and HTML files from backup (called after build completes). */
 function restoreJS() {
     if (!fs.existsSync(backupDir)) {
         console.log('  No backup found, nothing to restore.');
@@ -100,14 +180,14 @@ function restoreJS() {
     }
 
     let restored = 0;
-    for (const file of CUSTOM_JS_FILES) {
+    for (const file of [...CUSTOM_JS_FILES, ...HTML_FILES]) {
         const backupPath = path.join(backupDir, file);
         if (fs.existsSync(backupPath)) {
             fs.copyFileSync(backupPath, path.join(pagesDir, file));
             restored++;
         }
     }
-    console.log('  Restored ' + restored + ' JS files from backup.');
+    console.log('  Restored ' + restored + ' files from backup.');
 }
 
 // --- Main ---
