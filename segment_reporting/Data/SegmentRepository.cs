@@ -18,6 +18,12 @@ namespace segment_reporting.Data
         private readonly string _dbPath;
         private bool _disposed;
 
+        private void ThrowIfDisposed()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(SegmentRepository));
+        }
+
         private static readonly string[] _dateFormats = new[]
         {
             "yyyy-MM-dd HH:mm:ss.fff",
@@ -38,7 +44,7 @@ namespace segment_reporting.Data
         {
             lock (_instanceLock)
             {
-                if (_instance == null)
+                if (_instance == null || _instance._disposed)
                 {
                     _instance = new SegmentRepository(dbPath, logger);
                 }
@@ -71,6 +77,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 _logger.Info("SegmentRepository: Initializing database at {0}", _dbPath);
 
                 _connection.Execute(
@@ -316,6 +323,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 UpsertSegmentInternal(segment);
             }
         }
@@ -324,6 +332,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 _connection.Execute("BEGIN TRANSACTION");
                 try
                 {
@@ -393,6 +402,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 var sql = "UPDATE MediaSegments SET " + column + " = @Ticks";
 
                 if (MarkerTypes.IsIntroType(markerType))
@@ -459,6 +469,7 @@ namespace segment_reporting.Data
             var results = new List<LibrarySummaryItem>();
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT LibraryId, LibraryName, " +
                     "COUNT(*) as TotalItems, " +
@@ -519,6 +530,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(sql))
                 {
                     TryBind(stmt, "@LibraryId", libraryId);
@@ -550,6 +562,7 @@ namespace segment_reporting.Data
             bool hasMovies = false;
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT DISTINCT ItemType FROM MediaSegments WHERE LibraryId = @LibraryId"))
                 {
@@ -590,6 +603,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(sql))
                 {
                     TryBind(stmt, "@LibraryId", libraryId);
@@ -612,6 +626,7 @@ namespace segment_reporting.Data
             var results = new List<SeasonListItem>();
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT SeasonId, SeasonName, SeasonNumber, SeriesName, LibraryId, " +
                     "COUNT(*) as TotalEpisodes, " +
@@ -663,6 +678,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(sql))
                 {
                     if (!isNullSeason)
@@ -688,6 +704,7 @@ namespace segment_reporting.Data
             var results = new List<SegmentInfo>();
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT * FROM MediaSegments " +
                     "WHERE SeriesId = @SeriesId " +
@@ -707,6 +724,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT * FROM MediaSegments WHERE ItemId = @ItemId"))
                 {
@@ -736,6 +754,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 var sql = "UPDATE MediaSegments SET " + column + " = NULL";
 
                 if (MarkerTypes.IsIntroType(markerType))
@@ -769,6 +788,7 @@ namespace segment_reporting.Data
 
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 _connection.Execute("CREATE TEMP TABLE IF NOT EXISTS _valid_items (ItemId TEXT PRIMARY KEY)");
                 _connection.Execute("DELETE FROM _valid_items");
 
@@ -821,6 +841,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 _logger.Info("SegmentRepository: Dropping and recreating MediaSegments table");
                 _connection.Execute("DROP TABLE IF EXISTS MediaSegments");
                 _connection.Execute("DROP TABLE IF EXISTS SyncStatus");
@@ -836,6 +857,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "INSERT OR REPLACE INTO SyncStatus (Id, LastFullSync, ItemsScanned, SyncDuration) " +
                     "VALUES (1, @LastFullSync, @ItemsScanned, @SyncDuration)"))
@@ -852,6 +874,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT LastFullSync, ItemsScanned, SyncDuration FROM SyncStatus WHERE Id = 1"))
                 {
@@ -878,6 +901,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 _logger.Info("SegmentRepository: Running VACUUM");
                 _connection.Execute("VACUUM");
             }
@@ -887,6 +911,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement("SELECT COUNT(*) FROM MediaSegments"))
                 {
                     if (stmt.MoveNext())
@@ -932,6 +957,7 @@ namespace segment_reporting.Data
             {
                 lock (_dbLock)
                 {
+                    ThrowIfDisposed();
                     using (var stmt = _connection.PrepareStatement(sql))
                     {
                         var colCount = stmt.Columns.Count;
@@ -974,6 +1000,7 @@ namespace segment_reporting.Data
             var prefs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement("SELECT [Key], [Value] FROM UserPreferences"))
                 {
                     while (stmt.MoveNext())
@@ -990,6 +1017,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT [Value] FROM UserPreferences WHERE [Key] = @Key"))
                 {
@@ -1007,6 +1035,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "INSERT OR REPLACE INTO UserPreferences ([Key], [Value]) VALUES (@Key, @Value)"))
                 {
@@ -1026,6 +1055,7 @@ namespace segment_reporting.Data
             var results = new List<Dictionary<string, object>>();
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "SELECT Id, QueryName, QuerySql, CreatedDate FROM SavedQueries ORDER BY QueryName"))
                 {
@@ -1049,6 +1079,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "INSERT INTO SavedQueries (QueryName, QuerySql) VALUES (@Name, @Sql)"))
                 {
@@ -1073,6 +1104,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "UPDATE SavedQueries SET QueryName = @Name, QuerySql = @Sql WHERE Id = @Id"))
                 {
@@ -1088,6 +1120,7 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
+                ThrowIfDisposed();
                 using (var stmt = _connection.PrepareStatement(
                     "DELETE FROM SavedQueries WHERE Id = @Id"))
                 {
@@ -1101,10 +1134,21 @@ namespace segment_reporting.Data
 
         public void Dispose()
         {
-            if (!_disposed)
+            lock (_instanceLock)
             {
-                _connection?.Dispose();
-                _disposed = true;
+                lock (_dbLock)
+                {
+                    if (_disposed)
+                        return;
+
+                    _disposed = true;
+                    _connection?.Dispose();
+                }
+
+                if (_instance == this)
+                {
+                    _instance = null;
+                }
             }
         }
     }

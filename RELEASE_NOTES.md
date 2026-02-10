@@ -1,6 +1,16 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.1.4 - Fix Singleton Disposal and Thread Safety
+
+### Fixed
+
+- **Thread-safe disposal** (#49) — `SegmentRepository.Dispose()` now acquires proper locks before closing the SQLite connection, preventing crashes if a query is in-flight during disposal.
+- **Disposed singleton recovery** (#49) — `GetInstance()` now detects a disposed singleton and creates a fresh instance instead of returning one with a closed connection.
+- **Use-after-dispose guard** (#49) — Every public repository method now throws `ObjectDisposedException` if called after disposal, instead of crashing with a native SQLite error.
+
+---
+
 ## v1.0.1.3 - Fix Duplicate Version Tag in JS Filenames
 
 ### Fixed
