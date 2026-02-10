@@ -1,0 +1,32 @@
+meta {
+  name: Bulk Apply - Missing Params (Should Fail)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_apply?SourceItemId={{sampleItemId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Apply - Validation Test
+
+  Tests that omitting required parameters returns an error.
+  This request omits `TargetItemIds` and `MarkerTypes`.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "targetItemIds is required"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns error for missing targetItemIds
+}

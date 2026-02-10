@@ -1,0 +1,49 @@
+meta {
+  name: Save Preferences
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/preferences?chartPalette=default&tableGridlines=true&tableStripedRows=true
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Save Preferences
+
+  Saves display/UI preferences. Only provided values are updated;
+  null/omitted values are left unchanged.
+
+  **Parameters (all optional):**
+  - `chartPalette` — Palette name or "auto"/"custom"
+  - `customColorBoth` — Custom hex color for Both Segments
+  - `customColorIntro` — Custom hex color for Intro Only
+  - `customColorCredits` — Custom hex color for Credits Only
+  - `customColorNone` — Custom hex color for No Segments
+  - `tableGridlines` — "true"/"false" — show table gridlines
+  - `tableStripedRows` — "true"/"false" — show alternating row colors
+  - `hideMovieLibraries` — "true"/"false" — hide Movie libraries from dashboard
+  - `hideMixedLibraries` — "true"/"false" — hide Mixed libraries from dashboard
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+  **Verification:**
+  After running, call `GET /preferences` to confirm values were saved.
+
+  **Acceptance Criteria:**
+  - ✅ Saves provided preference values
+  - ✅ Does not overwrite omitted values
+  - ✅ Returns success status
+  - ✅ Requires admin authentication
+}

@@ -1,0 +1,25 @@
+meta {
+  name: Get Series List - With Search
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/series_list?libraryId={{sampleLibraryId}}&search=the
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Series List - With Search Filter
+
+  Tests the search parameter on series_list. Uses "the" as a common search term.
+
+  **Acceptance Criteria:**
+  - ✅ Returns filtered results matching search term
+  - ✅ Same response shape as unfiltered request
+}

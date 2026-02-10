@@ -1,0 +1,31 @@
+meta {
+  name: Bulk Apply - Invalid MarkerType (Should Fail)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_apply?SourceItemId={{sampleItemId}}&TargetItemIds={{sampleItemId2}}&MarkerTypes=BadType
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Apply - Invalid MarkerType
+
+  Tests that invalid marker types are rejected.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "Invalid markerType: BadType"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Rejects invalid marker types before processing
+}

@@ -1,0 +1,46 @@
+meta {
+  name: Delete Segment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/delete_segment?ItemId={{sampleItemId}}&MarkerType=IntroStart
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Delete Segment
+
+  Removes a segment marker from an item. Writes through to Emby first,
+  then removes from the SQLite cache.
+
+  **Prerequisites:** Set `sampleItemId` in your environment.
+
+  **Parameters:**
+  - `ItemId` (required) — Internal item ID
+  - `MarkerType` (required) — One of: `IntroStart`, `IntroEnd`, `CreditsStart`
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+  ⚠️ **This modifies data** — removes the marker from both Emby and the cache.
+
+  **Verification:**
+  After running, call `item_segments?itemId=<id>` to confirm the marker was removed.
+
+  **Acceptance Criteria:**
+  - ✅ Removes the segment from Emby
+  - ✅ Removes from cache
+  - ✅ Returns success status
+  - ✅ Requires admin authentication
+}

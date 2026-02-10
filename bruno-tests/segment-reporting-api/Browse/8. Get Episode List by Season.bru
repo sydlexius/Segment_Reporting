@@ -1,0 +1,39 @@
+meta {
+  name: Get Episode List by Season
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/episode_list?seasonId={{sampleSeasonId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Episode List by Season
+
+  Returns episodes in a season with full segment tick values.
+
+  **Prerequisites:** Set `sampleSeasonId` in your environment.
+
+  **Parameters:**
+  - `seasonId` (optional) — Season ID
+  - `seriesId` (optional) — Series ID (alternative for flat view)
+  - At least one is required.
+
+  **Expected Response:**
+  Array of SegmentInfo objects with:
+  - `ItemId` / `ItemName` / `ItemType`
+  - `IntroStartTicks` / `IntroEndTicks` / `CreditsStartTicks`
+  - `HasIntro` / `HasCredits`
+
+  **Acceptance Criteria:**
+  - ✅ Returns array of episodes with segment data
+  - ✅ Tick values are present for items with segments
+  - ✅ Requires admin authentication
+}

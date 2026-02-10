@@ -1,0 +1,43 @@
+meta {
+  name: Get Series List
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/series_list?libraryId={{sampleLibraryId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Series List
+
+  Returns series and/or movies in a library with coverage stats.
+
+  **Prerequisites:** Set `sampleLibraryId` in your environment (get from Library Summary).
+
+  **Parameters:**
+  - `libraryId` (required) — Library ID from library_summary
+  - `search` (optional) — Search term to filter by name
+  - `filter` (optional) — Comma-separated: `missing_intro`, `missing_credits`
+
+  **Expected Response:**
+  ```json
+  {
+    "contentType": "series" | "movies" | "mixed",
+    "series": [...] | null,
+    "movies": [...] | null
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns contentType and appropriate list
+  - ✅ Series entries have coverage stats
+  - ✅ Movies entries have segment tick values
+  - ✅ Requires admin authentication
+}

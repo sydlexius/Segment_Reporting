@@ -1,0 +1,29 @@
+meta {
+  name: Get Episode List by Series
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/episode_list?seriesId={{sampleSeriesId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Episode List by Series (Flat View)
+
+  Returns all episodes across all seasons for a series.
+  Uses `seriesId` instead of `seasonId` for a flat view.
+
+  **Prerequisites:** Set `sampleSeriesId` in your environment.
+
+  **Acceptance Criteria:**
+  - ✅ Returns all episodes across seasons
+  - ✅ Same SegmentInfo shape as season-based query
+  - ✅ Requires admin authentication
+}

@@ -1,0 +1,43 @@
+meta {
+  name: Save Query (Create)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/saved_queries?name=Test Query&sql=SELECT COUNT(*) FROM MediaSegments
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Save Query - Create New
+
+  Creates a new saved query with a name and SQL text.
+
+  **Parameters:**
+  - `name` (required) — Query name
+  - `sql` (required) — SQL query text
+  - `id` (optional) — If provided, updates existing query instead
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true,
+    "id": 1
+  }
+  ```
+
+  **Verification:**
+  After running, call `GET /saved_queries` to confirm the query appears in the list.
+
+  **Acceptance Criteria:**
+  - ✅ Creates a new saved query
+  - ✅ Returns the new query ID
+  - ✅ Query appears in GET /saved_queries
+  - ✅ Requires admin authentication
+}

@@ -1,0 +1,33 @@
+meta {
+  name: Get Library Summary
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/library_summary
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Library Summary
+
+  Returns per-library coverage statistics. No parameters required.
+
+  **Expected Response:**
+  Array of objects, each with:
+  - `LibraryId` / `LibraryName`
+  - `TotalItems` — total movies/episodes in library
+  - `WithIntro` / `WithCredits` / `WithBoth` / `WithNeither` — counts
+  - `ContentType` — "series", "movies", or "mixed"
+
+  **Acceptance Criteria:**
+  - ✅ Returns array (may be empty if no sync has run)
+  - ✅ Each entry has library name and coverage counts
+  - ✅ Requires admin authentication
+}

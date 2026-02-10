@@ -1,0 +1,47 @@
+meta {
+  name: Bulk Apply
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_apply?SourceItemId={{sampleItemId}}&TargetItemIds={{sampleItemId2}}&MarkerTypes=IntroStart,IntroEnd
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Apply
+
+  Copies segment markers from a source item to one or more target items.
+  Writes through to Emby for each target, then updates the cache.
+
+  **Prerequisites:** Set `sampleItemId` and `sampleItemId2` in your environment.
+  The source item should have segments to copy.
+
+  **Parameters:**
+  - `SourceItemId` (required) — Source item to copy segments from
+  - `TargetItemIds` (required) — Comma-separated target item IDs (max 500)
+  - `MarkerTypes` (required) — Comma-separated: `IntroStart`, `IntroEnd`, `CreditsStart`
+
+  **Expected Response:**
+  ```json
+  {
+    "succeeded": 2,
+    "failed": 0,
+    "errors": []
+  }
+  ```
+
+  ⚠️ **This modifies data** — writes to both Emby and the cache for all targets.
+
+  **Acceptance Criteria:**
+  - ✅ Copies specified marker types from source to targets
+  - ✅ Reports succeeded/failed counts
+  - ✅ Skips markers that don't exist on source
+  - ✅ Requires admin authentication
+}

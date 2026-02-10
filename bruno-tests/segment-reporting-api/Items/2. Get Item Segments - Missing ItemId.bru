@@ -1,0 +1,31 @@
+meta {
+  name: Get Item Segments - Missing ItemId (Should Fail)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/item_segments
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Item Segments - Validation Test
+
+  Tests that omitting the required `itemId` parameter returns an error.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "itemId is required"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns error message when itemId is missing
+}

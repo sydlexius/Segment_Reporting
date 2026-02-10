@@ -1,0 +1,31 @@
+meta {
+  name: Get Season List - Missing SeriesId (Should Fail)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/season_list
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Season List - Validation Test
+
+  Tests that omitting the required `seriesId` parameter returns an error.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "seriesId is required"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns error message when seriesId is missing
+}

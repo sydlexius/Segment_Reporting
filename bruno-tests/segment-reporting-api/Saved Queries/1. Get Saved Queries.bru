@@ -1,0 +1,35 @@
+meta {
+  name: Get Saved Queries
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/saved_queries
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Saved Queries
+
+  Returns all user-saved custom queries. No parameters required.
+
+  **Expected Response:**
+  Array of objects, each with:
+  - `Id` — Auto-increment ID
+  - `Name` — User-given query name
+  - `Sql` — SQL query text
+  - `CreatedAt` — Timestamp
+
+  Returns empty array if no queries have been saved.
+
+  **Acceptance Criteria:**
+  - ✅ Returns array (may be empty)
+  - ✅ Each entry has Id, Name, Sql fields
+  - ✅ Requires admin authentication
+}

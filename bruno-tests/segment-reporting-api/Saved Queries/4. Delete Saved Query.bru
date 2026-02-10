@@ -1,0 +1,40 @@
+meta {
+  name: Delete Saved Query
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{baseUrl}}/emby/segment_reporting/saved_queries/1
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Delete Saved Query
+
+  Deletes a saved query by its ID (path parameter).
+
+  **Prerequisites:** Run "Save Query (Create)" first to create a query.
+  Adjust the ID in the URL if it differs from 1.
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+  **Verification:**
+  After running, call `GET /saved_queries` to confirm the query was removed.
+
+  **Acceptance Criteria:**
+  - ✅ Deletes the saved query
+  - ✅ Returns success status
+  - ✅ Query no longer appears in GET /saved_queries
+  - ✅ Requires admin authentication
+}

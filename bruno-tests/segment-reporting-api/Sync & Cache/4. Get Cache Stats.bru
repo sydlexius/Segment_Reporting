@@ -1,0 +1,44 @@
+meta {
+  name: Get Cache Stats
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/cache_stats
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Cache Stats
+
+  Returns cache database statistics. No parameters required.
+
+  **Expected Response:**
+  ```json
+  {
+    "rowCount": 1234,
+    "dbFileSize": 524288,
+    "lastFullSync": "2024-01-01T00:00:00Z",
+    "itemsScanned": 5000,
+    "syncDuration": 3500
+  }
+  ```
+
+  - `rowCount` — Number of rows in MediaSegments table
+  - `dbFileSize` — Database file size in bytes
+  - `lastFullSync` — DateTime of last sync (null if never synced)
+  - `itemsScanned` — Items processed in last sync
+  - `syncDuration` — Last sync duration in milliseconds
+
+  **Acceptance Criteria:**
+  - ✅ Returns row count and file size
+  - ✅ Returns sync status info
+  - ✅ Works even before first sync (nulls/zeros)
+  - ✅ Requires admin authentication
+}

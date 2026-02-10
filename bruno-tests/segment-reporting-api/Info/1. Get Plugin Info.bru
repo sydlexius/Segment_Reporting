@@ -1,0 +1,36 @@
+meta {
+  name: Get Plugin Info
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/plugin_info
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Plugin Info
+
+  Returns basic plugin metadata. No parameters required.
+
+  **Expected Response:**
+  ```json
+  {
+    "name": "Segment Reporting",
+    "version": "1.0.0.0",
+    "description": "..."
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns plugin name
+  - ✅ Returns version string
+  - ✅ Returns description
+  - ✅ Requires admin authentication
+}

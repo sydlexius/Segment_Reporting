@@ -1,0 +1,31 @@
+meta {
+  name: Get Item Segments - Not Found
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/item_segments?itemId=999999999
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Item Segments - Item Not Found
+
+  Tests behavior when requesting segments for a non-existent item ID.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "Item not found"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns "Item not found" error for invalid item ID
+}

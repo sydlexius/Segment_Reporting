@@ -1,0 +1,36 @@
+meta {
+  name: Get Season List
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/season_list?seriesId={{sampleSeriesId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Season List
+
+  Returns seasons for a series with coverage stats.
+
+  **Prerequisites:** Set `sampleSeriesId` in your environment.
+
+  **Parameters:**
+  - `seriesId` (required) — Series ID
+
+  **Expected Response:**
+  Array of objects with:
+  - `SeasonId` / `SeasonName`
+  - `TotalEpisodes` / `WithIntro` / `WithCredits` — counts
+
+  **Acceptance Criteria:**
+  - ✅ Returns array of seasons with episode counts
+  - ✅ Coverage stats are accurate
+  - ✅ Requires admin authentication
+}

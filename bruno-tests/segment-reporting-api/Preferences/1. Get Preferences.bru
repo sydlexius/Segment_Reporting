@@ -1,0 +1,44 @@
+meta {
+  name: Get Preferences
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/preferences
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Preferences
+
+  Returns all display/UI preferences. No parameters required.
+
+  **Expected Response:**
+  Object with key-value pairs, e.g.:
+  ```json
+  {
+    "chartPalette": "default",
+    "customColorBoth": "#4CAF50",
+    "customColorIntro": "#2196F3",
+    "customColorCredits": "#FF9800",
+    "customColorNone": "#F44336",
+    "tableGridlines": "true",
+    "tableStripedRows": "true",
+    "hideMovieLibraries": "false",
+    "hideMixedLibraries": "false"
+  }
+  ```
+
+  Returns empty object/defaults if no preferences have been saved.
+
+  **Acceptance Criteria:**
+  - ✅ Returns preferences object
+  - ✅ Works even with no saved preferences (returns defaults)
+  - ✅ Requires admin authentication
+}

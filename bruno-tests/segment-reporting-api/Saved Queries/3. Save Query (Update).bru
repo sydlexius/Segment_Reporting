@@ -1,0 +1,42 @@
+meta {
+  name: Save Query (Update)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/saved_queries?name=Updated Test Query&sql=SELECT * FROM MediaSegments LIMIT 5&id=1
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Save Query - Update Existing
+
+  Updates an existing saved query by providing its `id`.
+
+  **Prerequisites:** Run "Save Query (Create)" first to create query with id=1.
+  Adjust the `id` parameter if the actual ID differs.
+
+  **Parameters:**
+  - `name` (required) — Updated query name
+  - `sql` (required) — Updated SQL text
+  - `id` (required for update) — Existing query ID
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true,
+    "id": 1
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Updates the existing query name and sql
+  - ✅ Returns the same query ID
+  - ✅ Changes reflected in GET /saved_queries
+}

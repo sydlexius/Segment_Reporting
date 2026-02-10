@@ -1,0 +1,40 @@
+meta {
+  name: Get Item Segments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/item_segments?itemId={{sampleItemId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Item Segments
+
+  Returns full segment detail for a single item (episode or movie).
+
+  **Prerequisites:** Set `sampleItemId` in your environment.
+
+  **Parameters:**
+  - `itemId` (required) — Internal item ID
+
+  **Expected Response:**
+  A SegmentInfo object with:
+  - `ItemId` / `ItemName` / `ItemType`
+  - `IntroStartTicks` / `IntroEndTicks` / `CreditsStartTicks`
+  - `HasIntro` / `HasCredits`
+  - `SeriesName` / `SeasonName` (for episodes)
+  - `LibraryName` / `LibraryId`
+
+  **Acceptance Criteria:**
+  - ✅ Returns segment info for valid item
+  - ✅ Tick values are present if segments exist
+  - ✅ Returns error for non-existent item
+  - ✅ Requires admin authentication
+}

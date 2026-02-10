@@ -1,0 +1,33 @@
+meta {
+  name: Update Segment - Invalid MarkerType (Should Fail)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/update_segment?ItemId={{sampleItemId}}&MarkerType=InvalidType&Ticks=300000000
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Update Segment - Invalid MarkerType
+
+  Tests that an invalid MarkerType is rejected.
+  Valid types are: `IntroStart`, `IntroEnd`, `CreditsStart`.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "Invalid markerType: InvalidType"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Rejects invalid marker types
+  - ✅ Returns descriptive error message
+}

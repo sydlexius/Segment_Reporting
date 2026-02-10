@@ -1,0 +1,40 @@
+meta {
+  name: Save Preferences - Custom Colors
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/preferences?chartPalette=custom&customColorBoth=%234CAF50&customColorIntro=%232196F3&customColorCredits=%23FF9800&customColorNone=%23F44336
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Save Preferences - Custom Colors
+
+  Tests saving custom color palette preferences.
+  Hex colors are URL-encoded (`#` = `%23`).
+
+  **Parameters:**
+  - `chartPalette` = "custom"
+  - `customColorBoth` = "#4CAF50" (green)
+  - `customColorIntro` = "#2196F3" (blue)
+  - `customColorCredits` = "#FF9800" (orange)
+  - `customColorNone` = "#F44336" (red)
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Saves custom palette with all four colors
+  - ✅ Colors are stored correctly (verify with GET /preferences)
+}

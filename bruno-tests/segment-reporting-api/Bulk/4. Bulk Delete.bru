@@ -1,0 +1,44 @@
+meta {
+  name: Bulk Delete
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_delete?ItemIds={{sampleItemId}},{{sampleItemId2}}&MarkerTypes=IntroStart
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Delete
+
+  Removes specified segment types from multiple items.
+  Writes through to Emby for each item, then removes from the cache.
+
+  **Prerequisites:** Set `sampleItemId` and `sampleItemId2` in your environment.
+
+  **Parameters:**
+  - `ItemIds` (required) — Comma-separated item IDs (max 500)
+  - `MarkerTypes` (required) — Comma-separated: `IntroStart`, `IntroEnd`, `CreditsStart`
+
+  **Expected Response:**
+  ```json
+  {
+    "succeeded": 2,
+    "failed": 0,
+    "errors": []
+  }
+  ```
+
+  ⚠️ **This modifies data** — removes markers from both Emby and the cache.
+
+  **Acceptance Criteria:**
+  - ✅ Removes specified markers from all items
+  - ✅ Reports succeeded/failed counts
+  - ✅ Requires admin authentication
+}

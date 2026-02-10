@@ -1,0 +1,31 @@
+meta {
+  name: Get Series List - Missing LibraryId (Should Fail)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/series_list
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Series List - Validation Test
+
+  Tests that omitting the required `libraryId` parameter returns an error.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "libraryId is required"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns error message when libraryId is missing
+}

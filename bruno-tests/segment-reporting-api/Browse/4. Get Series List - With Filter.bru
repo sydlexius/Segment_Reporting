@@ -1,0 +1,26 @@
+meta {
+  name: Get Series List - With Filter
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/emby/segment_reporting/series_list?libraryId={{sampleLibraryId}}&filter=missing_intro
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Get Series List - With Coverage Filter
+
+  Tests the filter parameter. Valid filters: `missing_intro`, `missing_credits`.
+  Can be comma-separated for multiple filters.
+
+  **Acceptance Criteria:**
+  - ✅ Returns only items missing intros
+  - ✅ Same response shape as unfiltered request
+}

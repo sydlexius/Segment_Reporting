@@ -1,0 +1,32 @@
+meta {
+  name: Update Segment - Negative Ticks (Should Fail)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/update_segment?ItemId={{sampleItemId}}&MarkerType=IntroStart&Ticks=-1
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Update Segment - Negative Ticks Validation
+
+  Tests that negative tick values are rejected.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "ticks must be non-negative"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Rejects negative tick values
+  - ✅ Returns descriptive error message
+}

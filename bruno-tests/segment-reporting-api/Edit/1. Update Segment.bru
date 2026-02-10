@@ -1,0 +1,49 @@
+meta {
+  name: Update Segment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/update_segment?ItemId={{sampleItemId}}&MarkerType=IntroStart&Ticks=300000000
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Update Segment
+
+  Updates or adds a segment marker on a single item. Writes through to Emby's
+  chapter system first, then updates the SQLite cache.
+
+  **Prerequisites:** Set `sampleItemId` in your environment.
+
+  **Parameters:**
+  - `ItemId` (required) — Internal item ID
+  - `MarkerType` (required) — One of: `IntroStart`, `IntroEnd`, `CreditsStart`
+  - `Ticks` (required) — Timestamp in ticks (10,000,000 ticks = 1 second)
+
+  This test sets IntroStart to 30 seconds (300,000,000 ticks).
+
+  **Expected Response:**
+  ```json
+  {
+    "success": true
+  }
+  ```
+
+  ⚠️ **This modifies data** — writes to both Emby and the cache.
+
+  **Verification:**
+  After running, call `item_segments?itemId=<id>` to confirm the value was saved.
+
+  **Acceptance Criteria:**
+  - ✅ Successfully updates the segment in Emby
+  - ✅ Updates the cache
+  - ✅ Returns success status
+  - ✅ Requires admin authentication
+}

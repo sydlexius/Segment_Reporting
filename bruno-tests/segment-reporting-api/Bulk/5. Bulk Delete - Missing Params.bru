@@ -1,0 +1,31 @@
+meta {
+  name: Bulk Delete - Missing Params (Should Fail)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_delete
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Delete - Validation Test
+
+  Tests that omitting required parameters returns an error.
+
+  **Expected Response:**
+  ```json
+  {
+    "error": "itemIds is required"
+  }
+  ```
+
+  **Acceptance Criteria:**
+  - ✅ Returns error for missing itemIds
+}

@@ -1,0 +1,47 @@
+meta {
+  name: Bulk Set Credits End
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/emby/segment_reporting/bulk_set_credits_end?ItemIds={{sampleItemId}}&OffsetTicks=300000000
+  body: none
+  auth: none
+}
+
+headers {
+  X-Emby-Token: {{apiKey}}
+}
+
+docs {
+  ## Bulk Set Credits End
+
+  Sets CreditsStart to (runtime - offset) for specified items.
+  Useful for batch-setting credits markers at a fixed offset from the end.
+
+  **Prerequisites:** Set `sampleItemId` in your environment.
+
+  **Parameters:**
+  - `ItemIds` (required) — Comma-separated item IDs (max 500)
+  - `OffsetTicks` (optional, default 0) — Offset from end in ticks
+
+  This test sets CreditsStart to 30 seconds before the end (300,000,000 ticks offset).
+
+  **Expected Response:**
+  ```json
+  {
+    "succeeded": 1,
+    "failed": 0,
+    "errors": []
+  }
+  ```
+
+  ⚠️ **This modifies data** — writes to both Emby and the cache.
+
+  **Acceptance Criteria:**
+  - ✅ Sets CreditsStart based on item runtime minus offset
+  - ✅ Reports succeeded/failed counts
+  - ✅ Handles items with no runtime gracefully
+  - ✅ Requires admin authentication
+}
