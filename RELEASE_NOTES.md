@@ -1,6 +1,23 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.0.0-RC2 - Selectable Columns, Bulk Actions & Sticky UI
+
+### Added
+
+- **Selectable columns in query builder** (#43) - The query builder now has a column picker with drag-to-reorder pills. Click to toggle columns on/off, drag to change their order in the SQL SELECT clause.
+- **Row selection with checkboxes** (#43) - Query results now include a checkbox column for selecting individual rows or all rows at once via a header checkbox.
+- **Bulk delete actions** (#43) - Select rows and bulk-delete intro or credits segments. Buttons show the selection count and are disabled until rows are selected, making the scope of the action clear.
+- **Per-row delete button** (#43) - Each result row has a Delete button that opens a context menu listing the available segment types to remove.
+- **Auto-inject ItemId** (#43) - When executing a query that doesn't include `ItemId` in the SELECT list, it is automatically added so that delete and edit actions are always available.
+
+### Improved
+
+- **Sticky checkbox and actions columns** (#43) - The leftmost checkbox column and rightmost Actions column stay pinned during horizontal scrolling, so controls remain accessible on wide result sets.
+- **Tick values now render correctly** (#43) - Timestamp columns from custom queries are now properly converted from strings to numbers, enabling clickable playback links and formatted time display.
+
+---
+
 ## v1.0.0.0-RC1 - Interactive Custom Query Results
 
 ### Added

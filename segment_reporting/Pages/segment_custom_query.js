@@ -24,6 +24,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var currentColumns = [];
         var currentCapabilities = null;
         var editingRow = null;
+        var selectedRows = {};
 
         // ===== COLUMN AUTO-DETECTION =====
 
@@ -38,7 +39,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             }
             var canEdit = hasItemId && editableColumns.length > 0;
-            var canDelete = canEdit;
+            var canDelete = hasItemId; // Delete only needs ItemId — marker type chosen from menu
             var canPlayback = hasItemId && editableColumns.length > 0;
             return {
                 canEdit: canEdit,
@@ -128,11 +129,22 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var S_ROW = 'display:flex;align-items:center;gap:0.5em;margin-bottom:0.5em;flex-wrap:wrap;';
         var S_REMOVE = 'background:transparent;border:1px solid rgba(128,128,128,0.3);color:#F44336;border-radius:4px;cursor:pointer;padding:0.2em 0.55em;font-size:1em;line-height:1;';
         var S_ADD = 'background:transparent;border:1px solid rgba(128,128,128,0.3);border-radius:4px;cursor:pointer;padding:0.3em 0.8em;color:inherit;font-size:0.85em;margin-right:0.5em;';
+        var S_PILL = 'display:inline-flex;align-items:center;padding:0.3em 0.7em;border-radius:16px;font-size:0.85em;cursor:grab;user-select:none;white-space:nowrap;transition:opacity 0.15s;';
+        var S_PILL_OFF = S_PILL + 'background:transparent;border:1px dashed rgba(128,128,128,0.3);color:inherit;opacity:0.5;';
+        var _accentHex = null;
+
+        function getPillOnStyle() {
+            if (!_accentHex) _accentHex = helpers.detectAccentColor(view) || '#52b54b';
+            var rgb = helpers.hexToRgb(_accentHex);
+            return S_PILL + 'background:rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.2);border:1px solid rgba(' + rgb.r + ',' + rgb.g + ',' + rgb.b + ',0.5);color:inherit;';
+        }
 
         // ===== QUERY BUILDER: State =====
 
         var _nextId = 1;
         var builderState = {
+            columnOrder: BUILDER_FIELDS.map(function (f) { return f.name; }),
+            selectedColumns: BUILDER_FIELDS.map(function (f) { return f.name; }),
             rootConnector: 'AND',
             items: [],
             orderByField: '',
@@ -201,6 +213,26 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             html += '<option value="AND"' + (builderState.rootConnector === 'AND' ? ' selected' : '') + '>ALL conditions (AND)</option>';
             html += '<option value="OR"' + (builderState.rootConnector === 'OR' ? ' selected' : '') + '>ANY condition (OR)</option>';
             html += '</select>';
+            html += '</div>';
+
+            // Column picker (draggable pills)
+            html += '<div style="margin-bottom:1em;border-bottom:1px solid rgba(128,128,128,0.2);padding-bottom:1em;">';
+            html += '<div style="' + S_ROW + 'margin-bottom:0.5em;">';
+            html += '<label style="font-weight:bold;">Columns</label>';
+            html += '<span style="font-size:0.8em;opacity:0.6;">drag to reorder, click to toggle</span>';
+            html += '<button data-action="select-all-cols" style="' + S_ADD + 'font-size:0.8em;padding:0.2em 0.6em;margin-left:auto;">Enable All</button>';
+            html += '<button data-action="select-none-cols" style="' + S_ADD + 'font-size:0.8em;padding:0.2em 0.6em;">Disable All</button>';
+            html += '</div>';
+            html += '<div id="columnPicker" style="display:flex;flex-wrap:wrap;gap:0.4em;">';
+            for (var c = 0; c < builderState.columnOrder.length; c++) {
+                var colName = builderState.columnOrder[c];
+                var colDef = getFieldDef(colName);
+                var isEnabled = builderState.selectedColumns.indexOf(colName) >= 0;
+                html += '<div data-action="column-pill" data-col="' + colName + '" style="' + (isEnabled ? getPillOnStyle() : S_PILL_OFF) + 'touch-action:none;">';
+                html += escHtml(colDef.label);
+                html += '</div>';
+            }
+            html += '</div>';
             html += '</div>';
 
             // Conditions & groups
@@ -445,9 +477,26 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return null;
             }
 
-            var result = { rootConnector: 'AND', items: [], orderByField: '', orderByDir: 'ASC', limit: 0 };
+            var result = { selectedColumns: [], rootConnector: 'AND', items: [], orderByField: '', orderByDir: 'ASC', limit: 0 };
 
-            // Skip to WHERE, ORDER BY, or LIMIT
+            // Parse SELECT columns
+            if (match('keyword', 'SELECT')) {
+                if (peek() && peek().type === 'star') {
+                    next(); // consume * — selectedColumns stays empty = all
+                } else {
+                    while (pos < tokens.length) {
+                        var ct = peek();
+                        if (!ct || (ct.type === 'keyword' && ct.value === 'FROM')) break;
+                        if (ct.type === 'ident') {
+                            result.selectedColumns.push(next().value);
+                        } else {
+                            next(); // skip commas, etc.
+                        }
+                    }
+                }
+            }
+
+            // Skip FROM table_name to WHERE/ORDER/LIMIT
             while (pos < tokens.length) {
                 var t = peek();
                 if (t.type === 'keyword' && (t.value === 'WHERE' || t.value === 'ORDER' || t.value === 'LIMIT')) break;
@@ -621,6 +670,30 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 builderState.orderByDir = parsed.orderByDir || 'ASC';
                 builderState.limit = parsed.limit || 0;
 
+                // Set selected columns and order (empty from parser means SELECT * = all)
+                if (parsed.selectedColumns && parsed.selectedColumns.length > 0) {
+                    var validCols = parsed.selectedColumns.filter(function (col) {
+                        for (var i = 0; i < BUILDER_FIELDS.length; i++) {
+                            if (BUILDER_FIELDS[i].name === col) return true;
+                        }
+                        return false;
+                    });
+                    if (validCols.length > 0) {
+                        builderState.selectedColumns = validCols.slice();
+                        // Selected columns first (in SQL order), then remaining in default order
+                        var remaining = BUILDER_FIELDS.map(function (f) { return f.name; }).filter(function (n) {
+                            return validCols.indexOf(n) < 0;
+                        });
+                        builderState.columnOrder = validCols.concat(remaining);
+                    } else {
+                        builderState.selectedColumns = BUILDER_FIELDS.map(function (f) { return f.name; });
+                        builderState.columnOrder = BUILDER_FIELDS.map(function (f) { return f.name; });
+                    }
+                } else {
+                    builderState.selectedColumns = BUILDER_FIELDS.map(function (f) { return f.name; });
+                    builderState.columnOrder = BUILDER_FIELDS.map(function (f) { return f.name; });
+                }
+
                 if (builderState.items.length === 0) {
                     builderState.items.push(mkCondition());
                 }
@@ -691,7 +764,29 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function buildSQL() {
-            var sql = 'SELECT * FROM MediaSegments';
+            // Build column list respecting user's drag order
+            var orderedSelected = builderState.columnOrder.filter(function (name) {
+                return builderState.selectedColumns.indexOf(name) >= 0;
+            });
+            var allInDefaultOrder = orderedSelected.length === BUILDER_FIELDS.length &&
+                BUILDER_FIELDS.every(function (f, i) { return f.name === orderedSelected[i]; });
+
+            // Auto-include ItemId when any tick column is selected (enables edit/delete buttons)
+            var hasTickCol = false;
+            for (var i = 0; i < orderedSelected.length; i++) {
+                if (TICK_COLUMNS.indexOf(orderedSelected[i]) >= 0) { hasTickCol = true; break; }
+            }
+            if (hasTickCol && orderedSelected.indexOf('ItemId') < 0) {
+                orderedSelected.unshift('ItemId');
+            }
+
+            var colList;
+            if (orderedSelected.length === 0 || allInDefaultOrder) {
+                colList = '*';
+            } else {
+                colList = orderedSelected.join(', ');
+            }
+            var sql = 'SELECT ' + colList + ' FROM MediaSegments';
 
             var where = buildWhere(builderState.items, builderState.rootConnector);
             if (where) sql += '\nWHERE ' + where;
@@ -758,6 +853,28 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                 case 'remove':
                     removeFromItems(builderState.items, id);
+                    renderBuilder();
+                    break;
+
+                case 'column-pill':
+                    if (_wasDragging) break; // Don't toggle after a drag
+                    var pillCol = target.getAttribute('data-col');
+                    var pillIdx = builderState.selectedColumns.indexOf(pillCol);
+                    if (pillIdx >= 0) {
+                        builderState.selectedColumns.splice(pillIdx, 1);
+                    } else {
+                        builderState.selectedColumns.push(pillCol);
+                    }
+                    renderBuilder();
+                    break;
+
+                case 'select-all-cols':
+                    builderState.selectedColumns = BUILDER_FIELDS.map(function (f) { return f.name; });
+                    renderBuilder();
+                    break;
+
+                case 'select-none-cols':
+                    builderState.selectedColumns = [];
                     renderBuilder();
                     break;
             }
@@ -864,6 +981,124 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 panel.style.display = 'none';
                 btn.querySelector('span').textContent = 'Build Query';
             }
+        }
+
+        // ===== COLUMN DRAG (pointer-event-based, avoids Emby's dragDropTouch polyfill) =====
+
+        var _draggedCol = null;
+        var _draggedPill = null;
+        var _wasDragging = false;
+        var _dragStartX = 0;
+        var _dragStartY = 0;
+        var DRAG_THRESHOLD = 5; // px of movement before we commit to a drag
+
+        function findPillFromPoint(x, y) {
+            var el = document.elementFromPoint(x, y);
+            if (!el) return null;
+            if (el.nodeType === 3) el = el.parentElement;
+            while (el && el.getAttribute && el.getAttribute('data-action') !== 'column-pill') {
+                el = el.parentElement;
+            }
+            return (el && el.getAttribute) ? el : null;
+        }
+
+        function onPillPointerDown(e) {
+            var el = e.target;
+            if (el.nodeType === 3) el = el.parentElement;
+            while (el && el.getAttribute && el.getAttribute('data-action') !== 'column-pill') {
+                el = el.parentElement;
+            }
+            if (!el || !el.getAttribute) return;
+
+            _dragStartX = e.clientX;
+            _dragStartY = e.clientY;
+            _draggedPill = el;
+            _draggedCol = null; // not committed yet — wait for threshold
+            _wasDragging = false;
+
+            document.addEventListener('pointermove', onPillPointerMove);
+            document.addEventListener('pointerup', onPillPointerUp);
+        }
+
+        function onPillPointerMove(e) {
+            if (!_draggedPill) return;
+
+            // Check threshold before committing to drag
+            if (!_draggedCol) {
+                var dx = e.clientX - _dragStartX;
+                var dy = e.clientY - _dragStartY;
+                if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
+                // Commit to drag
+                _draggedCol = _draggedPill.getAttribute('data-col');
+                _wasDragging = true;
+                _draggedPill.style.opacity = '0.4';
+            }
+
+            e.preventDefault();
+
+            // Clear all indicators
+            var allPills = view.querySelectorAll('[data-action="column-pill"]');
+            for (var i = 0; i < allPills.length; i++) {
+                allPills[i].style.boxShadow = '';
+            }
+
+            // Show drop indicator on target pill
+            var pill = findPillFromPoint(e.clientX, e.clientY);
+            if (!pill || pill.getAttribute('data-col') === _draggedCol) return;
+
+            if (!_accentHex) _accentHex = helpers.detectAccentColor(view) || '#52b54b';
+            var rect = pill.getBoundingClientRect();
+            var midX = rect.left + rect.width / 2;
+            if (e.clientX < midX) {
+                pill.style.boxShadow = '-3px 0 0 0 ' + _accentHex;
+            } else {
+                pill.style.boxShadow = '3px 0 0 0 ' + _accentHex;
+            }
+        }
+
+        function onPillPointerUp(e) {
+            document.removeEventListener('pointermove', onPillPointerMove);
+            document.removeEventListener('pointerup', onPillPointerUp);
+
+            if (!_draggedCol) {
+                // Threshold was never crossed — let the click handler toggle the pill
+                _draggedPill = null;
+                return;
+            }
+
+            // Find drop target
+            var pill = findPillFromPoint(e.clientX, e.clientY);
+            if (pill) {
+                var targetCol = pill.getAttribute('data-col');
+                if (targetCol && targetCol !== _draggedCol) {
+                    var rect = pill.getBoundingClientRect();
+                    var midX = rect.left + rect.width / 2;
+                    var insertBefore = e.clientX < midX;
+
+                    var order = builderState.columnOrder;
+                    var fromIdx = order.indexOf(_draggedCol);
+                    if (fromIdx >= 0) {
+                        order.splice(fromIdx, 1);
+                        var toIdx = order.indexOf(targetCol);
+                        if (!insertBefore) toIdx++;
+                        order.splice(toIdx, 0, _draggedCol);
+                    }
+                }
+            }
+
+            // Reset visual state
+            var allPills = view.querySelectorAll('[data-action="column-pill"]');
+            for (var i = 0; i < allPills.length; i++) {
+                allPills[i].style.boxShadow = '';
+                allPills[i].style.opacity = '';
+            }
+
+            _draggedCol = null;
+            _draggedPill = null;
+            renderBuilder();
+
+            // Clear _wasDragging after a brief delay so the click handler sees it
+            setTimeout(function () { _wasDragging = false; }, 100);
         }
 
         // ===== QUERIES: Unified Dropdown (Built-in + Saved) =====
@@ -999,6 +1234,28 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ===== EXISTING: Query Execution =====
 
         /**
+         * Auto-inject ItemId into SELECT queries on MediaSegments so that
+         * delete/edit actions are always available, even when the user doesn't
+         * explicitly include it in their column list.
+         */
+        function ensureItemIdInQuery(sql) {
+            var match = sql.match(/^(\s*SELECT\s+)([\s\S]*?)(\s+FROM\s+MediaSegments\b)/i);
+            if (!match) return sql;
+
+            var colList = match[2].trim();
+            if (colList === '*') return sql;
+
+            // Check if ItemId is already present
+            var cols = colList.split(',');
+            for (var i = 0; i < cols.length; i++) {
+                if (cols[i].trim().toUpperCase() === 'ITEMID') return sql;
+            }
+
+            // Inject ItemId at the start of the column list
+            return match[1] + 'ItemId, ' + colList + match[3];
+        }
+
+        /**
          * Execute the SQL query
          */
         function executeQuery() {
@@ -1009,6 +1266,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 helpers.showError('Please enter a SQL query.');
                 return;
             }
+
+            // Auto-include ItemId for action support
+            query = ensureItemIdInQuery(query);
 
             helpers.showLoading();
             var btnExecute = view.querySelector('#btnExecute');
@@ -1041,10 +1301,25 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         var results = [];
                         var columns = response.Columns;
 
+                        // Columns whose values should be treated as numbers
+                        var numericCols = {};
+                        columns.forEach(function (col) {
+                            if (col.endsWith('Ticks') || col === 'HasIntro' || col === 'HasCredits' ||
+                                col === 'SeasonNumber' || col === 'EpisodeNumber') {
+                                numericCols[col] = true;
+                            }
+                        });
+
                         response.Rows.forEach(function (row) {
                             var obj = {};
                             columns.forEach(function (col, idx) {
-                                obj[col] = row[idx];
+                                var val = row[idx];
+                                if (val !== null && val !== undefined && numericCols[col]) {
+                                    var num = Number(val);
+                                    obj[col] = isNaN(num) ? val : num;
+                                } else {
+                                    obj[col] = val;
+                                }
                             });
                             results.push(obj);
                         });
@@ -1250,12 +1525,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             menu.style.cssText = 'position: absolute; background: #333; border: 1px solid #555; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
 
             var available = [];
-            currentCapabilities.editableColumns.forEach(function (col) {
-                var ticks = rowData[col];
-                if (ticks && ticks > 0) {
-                    available.push({ column: col, marker: columnToMarker(col), ticks: ticks });
-                }
-            });
+            if (currentCapabilities.editableColumns.length > 0) {
+                // Tick columns present — only offer markers that have non-zero values
+                currentCapabilities.editableColumns.forEach(function (col) {
+                    var ticks = rowData[col];
+                    if (ticks && ticks > 0) {
+                        available.push({ column: col, marker: columnToMarker(col), ticks: ticks });
+                    }
+                });
+            } else {
+                // No tick columns in result set — offer all marker types
+                TICK_COLUMNS.forEach(function (col) {
+                    available.push({ column: col, marker: columnToMarker(col), ticks: null });
+                });
+            }
 
             if (available.length === 0) {
                 helpers.showError('No segments to delete on this item.');
@@ -1316,6 +1599,131 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
         }
 
+        // ===== BULK ACTIONS =====
+
+        function getSelectedCount() {
+            return Object.keys(selectedRows).length;
+        }
+
+        function getTargetRows() {
+            return currentResults.filter(function (row, idx) {
+                return selectedRows[idx];
+            });
+        }
+
+        function updateBulkActionBar(hasActions) {
+            var bar = view.querySelector('#bulkActionBar');
+            if (!bar) return;
+
+            if (!hasActions || !currentCapabilities || !currentCapabilities.canDelete) {
+                bar.style.display = 'none';
+                return;
+            }
+
+            bar.style.display = 'flex';
+
+            var info = view.querySelector('#bulkSelectionInfo');
+            var count = getSelectedCount();
+            info.textContent = count > 0
+                ? count + ' of ' + currentResults.length + ' selected'
+                : 'Select rows for bulk actions';
+
+            var btnContainer = view.querySelector('#bulkActionButtons');
+            btnContainer.innerHTML = '';
+
+            // When tick columns are in the result set, we know which marker types are present.
+            // When they aren't, offer both intro and credits options.
+            var hasTickCols = currentCapabilities.editableColumns.length > 0;
+            var hasIntro = !hasTickCols ||
+                           currentCapabilities.editableColumns.indexOf('IntroStartTicks') >= 0 ||
+                           currentCapabilities.editableColumns.indexOf('IntroEndTicks') >= 0;
+            var hasCredits = !hasTickCols ||
+                             currentCapabilities.editableColumns.indexOf('CreditsStartTicks') >= 0;
+
+            if (hasIntro) {
+                var btnDeleteIntro = document.createElement('button');
+                btnDeleteIntro.className = 'raised emby-button btn-bulk-delete-intro';
+                btnDeleteIntro.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+                btnDeleteIntro.textContent = 'Delete Intros (' + count + ')';
+                btnDeleteIntro.disabled = count === 0;
+                if (count === 0) btnDeleteIntro.style.opacity = '0.5';
+                btnDeleteIntro.addEventListener('click', function () {
+                    executeBulkDelete(['IntroStart', 'IntroEnd']);
+                });
+                btnContainer.appendChild(btnDeleteIntro);
+            }
+
+            if (hasCredits) {
+                var btnDeleteCredits = document.createElement('button');
+                btnDeleteCredits.className = 'raised emby-button btn-bulk-delete-credits';
+                btnDeleteCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
+                btnDeleteCredits.textContent = 'Delete Credits (' + count + ')';
+                btnDeleteCredits.disabled = count === 0;
+                if (count === 0) btnDeleteCredits.style.opacity = '0.5';
+                btnDeleteCredits.addEventListener('click', function () {
+                    executeBulkDelete(['CreditsStart']);
+                });
+                btnContainer.appendChild(btnDeleteCredits);
+            }
+        }
+
+        function executeBulkDelete(markerTypes) {
+            var targetRows = getTargetRows();
+
+            if (targetRows.length === 0) {
+                helpers.showError('No rows to delete from.');
+                return;
+            }
+
+            // Deduplicate by ItemId
+            var seen = {};
+            var uniqueItemIds = [];
+            targetRows.forEach(function (row) {
+                var id = row['ItemId'];
+                if (id && !seen[id]) {
+                    seen[id] = true;
+                    uniqueItemIds.push(id);
+                }
+            });
+
+            var typeLabel = markerTypes.indexOf('CreditsStart') >= 0 ? 'credits' : 'intro';
+            var msg = 'Delete all ' + typeLabel + ' segments from ' + uniqueItemIds.length + ' item(s)?\n\nThis cannot be undone.';
+
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_delete', 'POST', JSON.stringify({
+                ItemIds: uniqueItemIds.join(','),
+                MarkerTypes: markerTypes.join(',')
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                var resultMsg = 'Bulk delete complete: ' + result.succeeded + ' succeeded';
+                if (result.failed > 0) {
+                    resultMsg += ', ' + result.failed + ' failed';
+                    if (result.errors && result.errors.length > 0) {
+                        resultMsg += '\n\nErrors:\n' + result.errors.join('\n');
+                    }
+                    helpers.showError(resultMsg);
+                } else {
+                    helpers.showSuccess(resultMsg);
+                }
+                // Re-execute the query to refresh results
+                executeQuery();
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Bulk delete failed:', error);
+                helpers.showError('Bulk delete failed: ' + (error.message || 'Unknown error'));
+            });
+        }
+
+        function onSelectionChange() {
+            var hasActions = currentCapabilities && (currentCapabilities.canEdit || currentCapabilities.canDelete);
+            updateBulkActionBar(hasActions);
+        }
+
         // ===== EXISTING: Results Display =====
 
         /**
@@ -1327,6 +1735,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
 
+            selectedRows = {};
             var columns = Object.keys(results[0]);
             currentCapabilities = detectCapabilities(columns);
             var hasActions = currentCapabilities.canEdit || currentCapabilities.canDelete;
@@ -1339,6 +1748,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             thead.innerHTML = '';
             var headerRow = document.createElement('tr');
             headerRow.style.backgroundColor = 'rgba(128, 128, 128, 0.15)';
+
+            // Detect page background for sticky cell backgrounds
+            var pageBg = getComputedStyle(view.closest('.page') || view).backgroundColor || '#1c1c1e';
+            var headerBg = 'rgba(128, 128, 128, 0.15)';
+
+            // Checkbox column for row selection (when actions are available)
+            if (hasActions) {
+                var thCheck = document.createElement('th');
+                thCheck.className = 'col-sticky-left';
+                thCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.3); width: 40px; background: ' + pageBg + ';';
+                thCheck.innerHTML = '<input type="checkbox" class="select-all-cb" title="Select all">';
+                headerRow.appendChild(thCheck);
+            }
+
             columns.forEach(function (col) {
                 var th = document.createElement('th');
                 th.textContent = col;
@@ -1349,10 +1772,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
             if (hasActions) {
                 var thActions = document.createElement('th');
+                thActions.className = 'col-sticky-right';
                 thActions.textContent = 'Actions';
-                thActions.style.padding = '0.5em';
-                thActions.style.textAlign = 'center';
-                thActions.style.borderBottom = '1px solid rgba(128, 128, 128, 0.3)';
+                thActions.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.3); background: ' + pageBg + ';';
                 headerRow.appendChild(thActions);
             }
             thead.appendChild(headerRow);
@@ -1364,6 +1786,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (idx % 2 === 1) {
                     tr.style.backgroundColor = 'rgba(128, 128, 128, 0.05)';
                 }
+
+                var rowBg = idx % 2 === 1 ? 'rgba(128, 128, 128, 0.05)' : pageBg;
+
+                // Row checkbox
+                if (hasActions) {
+                    var tdCheck = document.createElement('td');
+                    tdCheck.className = 'col-sticky-left';
+                    tdCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.1); width: 40px; background: ' + rowBg + ';';
+                    tdCheck.innerHTML = '<input type="checkbox" class="row-select-cb">';
+                    tr.appendChild(tdCheck);
+                }
+
                 columns.forEach(function (col) {
                     var td = document.createElement('td');
                     var value = row[col];
@@ -1391,11 +1825,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                 if (hasActions) {
                     var actionsTd = document.createElement('td');
-                    actionsTd.style.padding = '0.5em';
-                    actionsTd.style.borderBottom = '1px solid rgba(128, 128, 128, 0.1)';
-                    actionsTd.style.textAlign = 'center';
-                    actionsTd.style.whiteSpace = 'nowrap';
-                    actionsTd.className = 'actions-cell';
+                    actionsTd.className = 'actions-cell col-sticky-right';
+                    actionsTd.style.cssText = 'padding: 0.5em; border-bottom: 1px solid rgba(128, 128, 128, 0.1); text-align: center; white-space: nowrap; background: ' + rowBg + ';';
 
                     if (currentCapabilities.canEdit) {
                         actionsTd.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
@@ -1415,11 +1846,17 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             helpers.applyTableStyles(table);
 
+            // Show/hide bulk action bar
+            updateBulkActionBar(hasActions);
+
             // Show capabilities indicator
             var indicator = view.querySelector('#editingIndicator');
             if (indicator) {
-                if (hasActions) {
-                    indicator.textContent = 'Editing enabled \u2014 ItemId and timestamp columns detected';
+                if (currentCapabilities.canEdit) {
+                    indicator.textContent = 'Edit & delete enabled \u2014 ItemId and timestamp columns detected';
+                    indicator.style.display = 'inline';
+                } else if (currentCapabilities.canDelete) {
+                    indicator.textContent = 'Delete enabled \u2014 ItemId column detected';
                     indicator.style.display = 'inline';
                 } else {
                     indicator.style.display = 'none';
@@ -1441,6 +1878,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var resultError = view.querySelector('#resultError');
             var table = view.querySelector('#resultsTable');
             var noResults = view.querySelector('#noResults');
+            var bulkBar = view.querySelector('#bulkActionBar');
+            if (bulkBar) bulkBar.style.display = 'none';
 
             table.style.display = 'none';
             noResults.style.display = 'block';
@@ -1457,6 +1896,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var resultInfo = view.querySelector('#resultInfo');
             var table = view.querySelector('#resultsTable');
             var noResults = view.querySelector('#noResults');
+            var bulkBar = view.querySelector('#bulkActionBar');
+            if (bulkBar) bulkBar.style.display = 'none';
 
             table.style.display = 'none';
             noResults.style.display = 'block';
@@ -1485,9 +1926,12 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             view.querySelector('#btnExportCsv').style.display = 'none';
             var indicator = view.querySelector('#editingIndicator');
             if (indicator) indicator.style.display = 'none';
+            selectedRows = {};
             currentResults = [];
             currentColumns = [];
             currentCapabilities = null;
+            var bulkBar = view.querySelector('#bulkActionBar');
+            if (bulkBar) bulkBar.style.display = 'none';
         }
 
         /**
@@ -1623,6 +2067,53 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
             }
 
+            // Checkbox handlers (delegated on the whole table)
+            var resultsTable = view.querySelector('#resultsTable');
+            if (resultsTable) {
+                resultsTable.addEventListener('change', function (e) {
+                    var target = e.target;
+
+                    // Select-all checkbox in header
+                    if (target.classList.contains('select-all-cb')) {
+                        var checked = target.checked;
+                        var rowCbs = resultsTable.querySelectorAll('.row-select-cb');
+                        selectedRows = {};
+                        for (var i = 0; i < rowCbs.length; i++) {
+                            rowCbs[i].checked = checked;
+                            if (checked) {
+                                var tr = rowCbs[i].closest('tr');
+                                if (tr) selectedRows[tr.getAttribute('data-row-index')] = true;
+                            }
+                        }
+                        onSelectionChange();
+                        return;
+                    }
+
+                    // Individual row checkbox
+                    if (target.classList.contains('row-select-cb')) {
+                        var rowTr = target.closest('tr');
+                        if (rowTr) {
+                            var rowIdx = rowTr.getAttribute('data-row-index');
+                            if (target.checked) {
+                                selectedRows[rowIdx] = true;
+                            } else {
+                                delete selectedRows[rowIdx];
+                            }
+                        }
+                        // Update select-all checkbox state
+                        var allCb = resultsTable.querySelector('.select-all-cb');
+                        var allRowCbs = resultsTable.querySelectorAll('.row-select-cb');
+                        var allChecked = allRowCbs.length > 0;
+                        for (var j = 0; j < allRowCbs.length; j++) {
+                            if (!allRowCbs[j].checked) { allChecked = false; break; }
+                        }
+                        if (allCb) allCb.checked = allChecked;
+                        onSelectionChange();
+                        return;
+                    }
+                });
+            }
+
             // Query builder
             var btnToggleBuilder = view.querySelector('#btnToggleBuilder');
             if (btnToggleBuilder) {
@@ -1634,6 +2125,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 builderPanel.addEventListener('click', onBuilderClick);
                 builderPanel.addEventListener('change', onBuilderChange);
                 builderPanel.addEventListener('input', onBuilderChange);
+                builderPanel.addEventListener('pointerdown', onPillPointerDown);
             }
         });
 
@@ -1642,7 +2134,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             currentColumns = [];
             currentCapabilities = null;
             editingRow = null;
+            selectedRows = {};
             builderState.items = [];
+            builderState.columnOrder = BUILDER_FIELDS.map(function (f) { return f.name; });
+            builderState.selectedColumns = BUILDER_FIELDS.map(function (f) { return f.name; });
+            _draggedCol = null;
+            _draggedPill = null;
+            _wasDragging = false;
+            _accentHex = null;
+            document.removeEventListener('pointermove', onPillPointerMove);
+            document.removeEventListener('pointerup', onPillPointerUp);
             _nextId = 1;
         });
     };
