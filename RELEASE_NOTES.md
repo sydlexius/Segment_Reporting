@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.3.0 - Per-Library Visibility Controls
+
+### Added
+
+- **Exclude individual libraries from the dashboard** (#52) — The Library Visibility section on the Settings page now shows a checkbox for every library in your server. Uncheck any library to hide it from the dashboard charts and tables. This works alongside the existing "Hide Movie libraries" and "Hide Mixed libraries" options, giving full control over which libraries appear in your reports.
+
+---
+
 ## v1.0.2.1 - Fix Missing Intros/Credits Filter for Series
 
 ### Fixed

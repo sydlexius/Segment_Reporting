@@ -5,6 +5,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         var helpers = getSegmentReportingHelpers();
         var previewChart = null;
+        var allLibraries = [];
 
         // --- Palette preview ---
 
@@ -116,6 +117,67 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             renderPreviewChart();
         }
 
+        // --- Per-library exclusions ---
+
+        function loadLibraries(prefs) {
+            helpers.apiCall('library_summary', 'GET')
+                .then(function (data) {
+                    allLibraries = data || [];
+                    renderLibraryCheckboxes(prefs);
+                })
+                .catch(function () {
+                    allLibraries = [];
+                });
+        }
+
+        function renderLibraryCheckboxes(prefs) {
+            var section = view.querySelector('#perLibrarySection');
+            var container = view.querySelector('#perLibraryList');
+            container.innerHTML = '';
+
+            if (allLibraries.length === 0) {
+                section.style.display = 'none';
+                return;
+            }
+
+            section.style.display = '';
+
+            var excludedIds = [];
+            var raw = (prefs && prefs.excludedLibraryIds) ? prefs.excludedLibraryIds : '';
+            if (raw) {
+                excludedIds = raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+            }
+
+            allLibraries.forEach(function (lib) {
+                var label = document.createElement('label');
+                label.style.cssText = 'display: flex; align-items: center; gap: 0.5em; cursor: pointer;';
+
+                var cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'lib-visibility-cb';
+                cb.setAttribute('data-library-id', lib.LibraryId);
+                cb.checked = excludedIds.indexOf(lib.LibraryId) < 0;
+
+                var span = document.createElement('span');
+                span.textContent = lib.LibraryName + ' (' + (lib.TotalItems || 0) + ' items)';
+
+                label.appendChild(cb);
+                label.appendChild(span);
+                container.appendChild(label);
+            });
+        }
+
+        function getExcludedLibraryIds() {
+            var checkboxes = view.querySelectorAll('.lib-visibility-cb');
+            var excluded = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                if (!checkboxes[i].checked) {
+                    excluded.push(checkboxes[i].getAttribute('data-library-id'));
+                }
+            }
+            return excluded.join(',');
+        }
+
         // --- Save preferences ---
 
         function savePreferences() {
@@ -128,7 +190,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 tableGridlines: view.querySelector('#prefGridlines').checked ? 'true' : 'false',
                 tableStripedRows: view.querySelector('#prefStripedRows').checked ? 'true' : 'false',
                 hideMovieLibraries: view.querySelector('#prefHideMovies').checked ? 'true' : 'false',
-                hideMixedLibraries: view.querySelector('#prefHideMixed').checked ? 'true' : 'false'
+                hideMixedLibraries: view.querySelector('#prefHideMixed').checked ? 'true' : 'false',
+                excludedLibraryIds: getExcludedLibraryIds()
             });
 
             var btn = view.querySelector('#btnSavePreferences');
@@ -201,6 +264,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.loadPreferences().then(function (prefs) {
                 populateForm(prefs);
                 renderPreviewChart();
+                loadLibraries(prefs);
             });
 
             loadCacheStats();

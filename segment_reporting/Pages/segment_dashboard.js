@@ -36,10 +36,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     // Filter hidden library types based on preferences
                     var hideMovies = helpers.getPreference('hideMovieLibraries') === 'true';
                     var hideMixed = helpers.getPreference('hideMixedLibraries') === 'true';
-                    if (hideMovies || hideMixed) {
+                    var excludedRaw = helpers.getPreference('excludedLibraryIds') || '';
+                    var excludedIds = excludedRaw ? excludedRaw.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+
+                    if (hideMovies || hideMixed || excludedIds.length > 0) {
                         libraryData = libraryData.filter(function (lib) {
                             if (hideMovies && lib.ContentType === 'movies') return false;
                             if (hideMixed && lib.ContentType === 'mixed') return false;
+                            if (excludedIds.length > 0 && excludedIds.indexOf(lib.LibraryId) >= 0) return false;
                             return true;
                         });
                     }

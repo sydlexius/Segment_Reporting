@@ -238,6 +238,9 @@ namespace segment_reporting.Api
 
         [ApiMember(Name = "hideMixedLibraries", Description = "Hide Mixed libraries from dashboard", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
         public string HideMixedLibraries { get; set; }
+
+        [ApiMember(Name = "excludedLibraryIds", Description = "Comma-separated library IDs to exclude from dashboard", IsRequired = false, DataType = "string", ParameterType = "query", Verb = "POST")]
+        public string ExcludedLibraryIds { get; set; }
     }
 
     // http(s)://<host>:<port>/emby/segment_reporting/saved_queries
@@ -890,7 +893,8 @@ namespace segment_reporting.Api
                 { "tableGridlines", request.TableGridlines },
                 { "tableStripedRows", request.TableStripedRows },
                 { "hideMovieLibraries", request.HideMovieLibraries },
-                { "hideMixedLibraries", request.HideMixedLibraries }
+                { "hideMixedLibraries", request.HideMixedLibraries },
+                { "excludedLibraryIds", request.ExcludedLibraryIds }
             };
 
             foreach (var entry in entries)
