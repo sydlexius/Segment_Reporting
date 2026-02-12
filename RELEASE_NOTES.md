@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
-## v1.1.0.0 - Autocomplete & Multi-Value Pill UI for Query Builder
+## [v1.1.0.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.1.0.0) - Autocomplete & Multi-Value Pill UI for Query Builder
 
 ### Added
 
@@ -24,7 +24,7 @@
 
 ---
 
-## v1.0.4.2 - Remove Redundant LastSyncDate Column
+## [v1.0.4.2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.4.2) - Remove Redundant LastSyncDate Column
 
 ### Added
 
@@ -36,7 +36,7 @@
 
 ---
 
-## v1.0.3.0 - Per-Library Visibility Controls
+## [v1.0.3.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.3.0) - Per-Library Visibility Controls
 
 ### Added
 
@@ -44,7 +44,7 @@
 
 ---
 
-## v1.0.2.1 - Fix Missing Intros/Credits Filter for Series
+## [v1.0.2.1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.2.1) - Fix Missing Intros/Credits Filter for Series
 
 ### Fixed
 
@@ -52,7 +52,7 @@
 
 ---
 
-## v1.0.2.0 - Detect Credits on Custom Query Page
+## [v1.0.2.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.2.0) - Detect Credits on Custom Query Page
 
 ### Added
 
@@ -60,7 +60,7 @@
 
 ---
 
-## v1.0.1.6 - Reduce Lock Contention During Sync
+## [v1.0.1.6](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.6) - Reduce Lock Contention During Sync
 
 ### Improved
 
@@ -70,7 +70,7 @@
 
 ---
 
-## v1.0.1.5 - Code Cleanup
+## [v1.0.1.5](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.5) - Code Cleanup
 
 ### Removed
 
@@ -84,7 +84,7 @@
 
 ---
 
-## v1.0.1.4 - Fix Singleton Disposal and Thread Safety
+## [v1.0.1.4](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.4) - Fix Singleton Disposal and Thread Safety
 
 ### Fixed
 
@@ -94,7 +94,7 @@
 
 ---
 
-## v1.0.1.3 - Fix Duplicate Version Tag in JS Filenames
+## [v1.0.1.3](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.3) - Fix Duplicate Version Tag in JS Filenames
 
 ### Fixed
 
@@ -102,7 +102,7 @@
 
 ---
 
-## v1.0.1.2 - Emby Forums Link
+## [v1.0.1.2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.2) - Emby Forums Link
 
 ### Added
 
@@ -110,7 +110,7 @@
 
 ---
 
-## v1.0.1.1 - Drill-Down Filtering and Bulk Actions at Every Level
+## [v1.0.1.1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.1.1) - Drill-Down Filtering and Bulk Actions at Every Level
 
 ### Added
 
@@ -125,7 +125,7 @@
 
 ---
 
-## v1.0.0.1 - Cache Busting for Plugin Updates
+## [v1.0.0.1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.0.1) - Cache Busting for Plugin Updates
 
 ### Improved
 
@@ -133,7 +133,7 @@
 
 ---
 
-## v1.0.0.0-RC2 - Selectable Columns, Bulk Actions & Sticky UI
+## [v1.0.0.0-RC2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.0.0-RC2) - Selectable Columns, Bulk Actions & Sticky UI
 
 ### Added
 
@@ -149,7 +149,7 @@
 
 ---
 
-## v1.0.0.0-RC1 - Interactive Custom Query Results
+## [v1.0.0.0-RC1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.0.0-RC1) - Interactive Custom Query Results
 
 ### Added
 
@@ -164,13 +164,13 @@
 
 ---
 
-## v1.0.0.0-RC0 - Pre-Production Release
+## [v1.0.0.0-RC0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.0.0.0-RC0) - Pre-Production Release
 
 This is a pre-production release candidate. All planned features are implemented and working. Please report any issues before the final v1.0.0.0 release.
 
 ---
 
-## v0.0.17.0 - Palette Preview on Settings Page
+## [v0.0.17.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.17.0) - Palette Preview on Settings Page
 
 ### Added
 
@@ -178,7 +178,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.16.0 - Breadcrumb Navigation
+## [v0.0.16.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.16.0) - Breadcrumb Navigation
 
 ### Added
 
@@ -187,7 +187,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.15.0 - Database-Backed Saved Queries
+## [v0.0.15.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.15.0) - Database-Backed Saved Queries
 
 ### Added
 
@@ -200,7 +200,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.14.0 - Configurable Theming & UI Settings
+## [v0.0.14.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.14.0) - Configurable Theming & UI Settings
 
 ### Added
 
@@ -220,7 +220,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.13.0 - Better Display for Shows Without Season Folders
+## [v0.0.13.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.13.0) - Better Display for Shows Without Season Folders
 
 ### Fixed
 
@@ -228,7 +228,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.12.0 - About Page
+## [v0.0.12.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.12.0) - About Page
 
 ### Added
 
@@ -241,7 +241,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.11.0 - EmbyCredits Plugin Integration
+## [v0.0.11.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.11.0) - EmbyCredits Plugin Integration
 
 ### Added
 
@@ -256,7 +256,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.10.0 - Browser Back Button and Unassigned Season Fix
+## [v0.0.10.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.10.0) - Browser Back Button and Unassigned Season Fix
 
 ### Fixed
 
@@ -265,7 +265,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.9 - Separate Intro and Credit Percentages
+## [v0.0.9.9](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.9) - Separate Intro and Credit Percentages
 
 ### Improved
 
@@ -275,7 +275,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.8 - Curated Chart Color Palettes
+## [v0.0.9.8](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.8) - Curated Chart Color Palettes
 
 ### Improved
 
@@ -283,7 +283,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.7 - Movie Library Browsing
+## [v0.0.9.7](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.7) - Movie Library Browsing
 
 ### Added
 
@@ -293,7 +293,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.6 - Bulk Operation Limits and Unnecessary API Call Removal
+## [v0.0.9.6](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.6) - Bulk Operation Limits and Unnecessary API Call Removal
 
 ### Improved
 
@@ -303,7 +303,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.5 - SQLite UPSERT and Connection Improvements
+## [v0.0.9.5](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.5) - SQLite UPSERT and Connection Improvements
 
 ### Improved
 
@@ -318,7 +318,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.4 - Reduce Backend Duplication
+## [v0.0.9.4](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.4) - Reduce Backend Duplication
 
 ### Improved
 
@@ -333,7 +333,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.3 - Reduce Frontend Duplication
+## [v0.0.9.3](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.3) - Reduce Frontend Duplication
 
 ### Improved
 
@@ -347,7 +347,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.2 - Reduce DLL Size
+## [v0.0.9.2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.2) - Reduce DLL Size
 
 ### Improved
 
@@ -363,7 +363,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.1 - Fix Duplicate Button Clicks on Page Re-navigation
+## [v0.0.9.1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.1) - Fix Duplicate Button Clicks on Page Re-navigation
 
 ### Fixed
 
@@ -371,7 +371,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.9.0 - Security Fixes
+## [v0.0.9.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.9.0) - Security Fixes
 
 ### Security
 
@@ -380,7 +380,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.8.0 - Visual Query Builder
+## [v0.0.8.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.8.0) - Visual Query Builder
 
 ### Added
 
@@ -388,7 +388,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.7.7 - UI Enhancements
+## [v0.0.7.7](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.7.7) - UI Enhancements
 
 - **Theme-derived chart colors** (#21) - Dashboard summary cards and charts now use colors derived from the active Emby theme accent color.
 - **Clickable timestamps** (#19) - Segment timestamps in the series view are now clickable to launch playback at that position.
@@ -397,7 +397,7 @@ This is a pre-production release candidate. All planned features are implemented
 
 ---
 
-## v0.0.7 - Initial Release
+## [v0.0.7](https://github.com/sydlexius/Segment_Reporting/releases/tag/v0.0.7) - Initial Release
 
 An Emby server plugin that caches media segment markers (Intros, Credits) into a local SQLite database and provides comprehensive reporting, charts, inline editing, and bulk management through embedded web pages.
 
