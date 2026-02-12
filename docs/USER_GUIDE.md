@@ -71,6 +71,11 @@ Segment Reporting gives you visibility and control over the intro and credits
 markers in your Emby libraries. These markers are the timestamps that power
 Emby's "Skip Intro" and "Skip Credits" buttons during playback.
 
+The plugin tracks three marker types — **Intro Start**, **Intro End**, and
+**Credits Start** — which are the marker types that Emby currently supports.
+Other segment types such as recaps, previews, commercials, and mid/post-credit
+scenes are not supported by Emby's chapter system and cannot be tracked here.
+
 The plugin builds a local index of all your segment data so you can:
 
 - **See** which episodes and movies have markers — and which are missing them

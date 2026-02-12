@@ -93,7 +93,7 @@ The compiled DLL will be in `bin/Release/`.
 - `IntroEnd` — Intro marker end timestamp
 - `CreditsStart` — Credits marker start timestamp
 
-These are the segment types currently supported by Emby.
+These are the three marker types that Emby currently supports. Other segment types such as recaps, previews, commercials, and mid/post-credit scenes are not supported by Emby's chapter system and therefore cannot be tracked by this plugin.
 
 ## Data Model
 
