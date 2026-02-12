@@ -354,13 +354,14 @@ rather than edit it to a new value.
 ### Setting Credits to End
 
 The **End** button on each episode row sets the Credits Start marker to the
-very end of the episode's runtime. This is a convenient shortcut when you know
-the credits roll right up to the end of the file and you just want a marker
-placed there without looking up the exact timestamp.
+very end of the episode's runtime. This is primarily intended for episodes that
+have **no end credits at all** — by placing the marker at the end, you signal
+that the item has been accounted for. This prevents the
+[EmbyCredits](https://github.com/faush01/EmbyCredits) plugin from needlessly
+scanning these items for credits that do not exist.
 
-> **Note:** If you need the credits marker slightly before the end (for example,
-> 30 seconds before the last frame), use the bulk version of this feature which
-> supports an offset — see [Bulk Set Credits to End](#bulk-set-credits-to-end).
+> **Tip:** To apply this across many episodes at once, use the bulk version —
+> see [Bulk Set Credits to End](#bulk-set-credits-to-end).
 
 ---
 
@@ -415,9 +416,11 @@ A confirmation prompt appears before any deletions are made.
 **Set All Credits to End** / **Set Credits to End (N)** places the Credits
 Start marker at each episode's runtime endpoint.
 
-When triggered, the plugin looks up each episode's total runtime from Emby and
-sets Credits Start to that value (optionally minus an offset). This is useful
-for series where credits always run to the very end of each episode file.
+This is primarily useful for episodes that have **no end credits** — placing
+the marker at the end signals that the item has been accounted for, which
+prevents the EmbyCredits plugin from needlessly rescanning these items. It is
+also useful for series where credits always run to the very end of each
+episode file.
 
 ### Bulk Detect Credits
 
