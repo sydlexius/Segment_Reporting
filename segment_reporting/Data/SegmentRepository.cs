@@ -1057,6 +1057,57 @@ namespace segment_reporting.Data
             return result;
         }
 
+        private static readonly HashSet<string> _distinctValueFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "ItemType", "SeriesName", "LibraryName"
+        };
+
+        public List<string> GetDistinctValues(string field)
+        {
+            if (!_distinctValueFields.Contains(field))
+            {
+                return null;
+            }
+
+            var values = new List<string>();
+
+            // Resolve to exact casing to avoid SQL injection
+            string safeField = null;
+            foreach (var f in _distinctValueFields)
+            {
+                if (string.Equals(f, field, StringComparison.OrdinalIgnoreCase))
+                {
+                    safeField = f;
+                    break;
+                }
+            }
+
+            if (safeField == null)
+            {
+                return values;
+            }
+
+            var sql = "SELECT DISTINCT " + safeField + " FROM MediaSegments WHERE " + safeField + " IS NOT NULL AND " + safeField + " != '' ORDER BY " + safeField;
+
+            lock (_dbLock)
+            {
+                ThrowIfDisposed();
+                using (var stmt = _connection.PrepareStatement(sql))
+                {
+                    while (stmt.MoveNext())
+                    {
+                        var row = stmt.Current;
+                        if (!row.IsDBNull(0))
+                        {
+                            values.Add(row.GetString(0));
+                        }
+                    }
+                }
+            }
+
+            return values;
+        }
+
         #endregion
 
         #region User Preferences

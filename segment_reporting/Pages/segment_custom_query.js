@@ -54,12 +54,12 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         var BUILDER_FIELDS = [
             { name: 'ItemName', label: 'Item Name', type: 'text' },
-            { name: 'ItemType', label: 'Item Type', type: 'enum', options: ['Episode', 'Movie'] },
-            { name: 'SeriesName', label: 'Series Name', type: 'text' },
+            { name: 'ItemType', label: 'Item Type', type: 'autocomplete' },
+            { name: 'SeriesName', label: 'Series Name', type: 'autocomplete' },
             { name: 'SeasonName', label: 'Season Name', type: 'text' },
             { name: 'SeasonNumber', label: 'Season #', type: 'integer' },
             { name: 'EpisodeNumber', label: 'Episode #', type: 'integer' },
-            { name: 'LibraryName', label: 'Library Name', type: 'text' },
+            { name: 'LibraryName', label: 'Library Name', type: 'autocomplete' },
             { name: 'IntroStartTicks', label: 'Intro Start', type: 'ticks' },
             { name: 'IntroEndTicks', label: 'Intro End', type: 'ticks' },
             { name: 'CreditsStartTicks', label: 'Credits Start', type: 'ticks' },
@@ -77,12 +77,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 { v: '!=', l: 'not equals' },
                 { v: 'LIKE', l: 'contains' },
                 { v: 'NOT LIKE', l: 'does not contain' },
-                { v: 'IS NULL', l: 'is empty' },
-                { v: 'IS NOT NULL', l: 'is not empty' }
-            ],
-            'enum': [
-                { v: '=', l: 'equals' },
-                { v: '!=', l: 'not equals' },
                 { v: 'IS NULL', l: 'is empty' },
                 { v: 'IS NOT NULL', l: 'is not empty' }
             ],
@@ -111,17 +105,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             'boolean': [
                 { v: '=', l: 'equals' }
             ],
-            datetime: [
-                { v: '=', l: '=' },
-                { v: '!=', l: '!=' },
-                { v: '<', l: 'before' },
-                { v: '>', l: 'after' },
-                { v: '<=', l: 'on or before' },
-                { v: '>=', l: 'on or after' },
-                { v: 'BETWEEN', l: 'between' },
+            autocomplete: [
+                { v: '=', l: 'equals' },
+                { v: '!=', l: 'not equals' },
+                { v: 'IN', l: 'is any of' },
+                { v: 'NOT IN', l: 'is none of' },
+                { v: 'LIKE', l: 'contains' },
+                { v: 'NOT LIKE', l: 'does not contain' },
                 { v: 'IS NULL', l: 'is empty' },
                 { v: 'IS NOT NULL', l: 'is not empty' }
-            ]
+            ],
         };
 
         // Shared inline styles
@@ -153,6 +146,40 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         };
         var builderVisible = false;
 
+        // ===== AUTOCOMPLETE: Cache & Fetch =====
+
+        var _autocompleteCache = {};
+        var _acDropdownIdx = -1; // keyboard-highlighted index in dropdown
+
+        function fetchAutocompleteValues(fieldName, callback) {
+            if (_autocompleteCache[fieldName]) {
+                callback(_autocompleteCache[fieldName]);
+                return;
+            }
+            helpers.apiCall('distinct_values?field=' + encodeURIComponent(fieldName), 'GET')
+                .then(function (data) {
+                    var vals = (data && data.values) || (data && data.Values) || [];
+                    if (Array.isArray(data) && !data.values && !data.Values) {
+                        vals = data;
+                    }
+                    _autocompleteCache[fieldName] = vals;
+                    callback(vals);
+                })
+                .catch(function (err) {
+                    console.error('distinct_values fetch failed for ' + fieldName + ':', err);
+                    // Don't cache failures — allow retry on next focus
+                    callback([]);
+                });
+        }
+
+        function filterSuggestions(allValues, query, excludeValues) {
+            var q = (query || '').toLowerCase();
+            return allValues.filter(function (v) {
+                if (excludeValues && excludeValues.indexOf(v) >= 0) return false;
+                return !q || v.toLowerCase().indexOf(q) >= 0;
+            });
+        }
+
         function getFieldDef(name) {
             for (var i = 0; i < BUILDER_FIELDS.length; i++) {
                 if (BUILDER_FIELDS[i].name === name) return BUILDER_FIELDS[i];
@@ -167,7 +194,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var escHtml = helpers.escHtml;
 
         function mkCondition() {
-            return { id: _nextId++, type: 'condition', field: BUILDER_FIELDS[0].name, operator: '=', value: '', value2: '' };
+            return { id: _nextId++, type: 'condition', field: BUILDER_FIELDS[0].name, operator: '=', value: '', value2: '', values: [] };
         }
 
         function mkGroup() {
@@ -326,14 +353,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return html;
             }
 
-            if (fieldDef.type === 'enum' && fieldDef.options) {
-                var html2 = '<select data-field="value" data-id="' + cond.id + '" style="' + S_INPUT + '">';
-                for (var i = 0; i < fieldDef.options.length; i++) {
-                    var sel = cond.value === fieldDef.options[i] ? ' selected' : '';
-                    html2 += '<option value="' + escHtml(fieldDef.options[i]) + '"' + sel + '>' + escHtml(fieldDef.options[i]) + '</option>';
+            // Autocomplete fields: pill/chip UI for IN/NOT IN, autocomplete input for =/!=
+            if (fieldDef.type === 'autocomplete') {
+                if (op === 'IN' || op === 'NOT IN') {
+                    return getPillContainerHtml(cond, fieldDef);
                 }
-                html2 += '</select>';
-                return html2;
+                if (op === '=' || op === '!=') {
+                    return getAutocompleteInputHtml(cond, fieldDef);
+                }
+                // LIKE / NOT LIKE: plain text input (no autocomplete for pattern matching)
+                var h2 = '<input type="text" data-field="value" data-id="' + cond.id + '" ' +
+                    'value="' + escHtml(cond.value) + '" placeholder="Type a pattern..." style="' + S_INPUT + 'width:200px;">';
+                return h2;
             }
 
             var inputType = 'text';
@@ -342,8 +373,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 inputType = 'number';
             } else if (fieldDef.type === 'ticks') {
                 placeholder = 'HH:MM:SS.fff';
-            } else if (fieldDef.type === 'datetime') {
-                placeholder = 'YYYY-MM-DD';
             }
 
             var h = '<input type="' + inputType + '" data-field="value" data-id="' + cond.id + '" ' +
@@ -356,6 +385,37 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
 
             return h;
+        }
+
+        function getPillContainerHtml(cond, fieldDef) {
+            var vals = cond.values || [];
+            var accentRgb = getAccentRgb();
+            var html = '<div class="sr-pill-container" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '">';
+            for (var i = 0; i < vals.length; i++) {
+                html += '<span class="sr-chip" style="background:rgba(' + accentRgb + ',0.2);border:1px solid rgba(' + accentRgb + ',0.5);">';
+                html += escHtml(vals[i]);
+                html += '<span class="sr-chip-x" data-action="remove-chip" data-id="' + cond.id + '" data-idx="' + i + '">&times;</span>';
+                html += '</span>';
+            }
+            html += '<input type="text" class="sr-pill-input" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" placeholder="Type to search..." autocomplete="off">';
+            html += '<div class="sr-ac-dropdown" data-id="' + cond.id + '" style="display:none;"></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function getAutocompleteInputHtml(cond, fieldDef) {
+            var html = '<div class="sr-ac-wrapper" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '">';
+            html += '<input type="text" class="sr-ac-input" data-field="value" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" ' +
+                'value="' + escHtml(cond.value) + '" placeholder="Type to search..." style="' + S_INPUT + 'width:200px;" autocomplete="off">';
+            html += '<div class="sr-ac-dropdown" data-id="' + cond.id + '" style="display:none;"></div>';
+            html += '</div>';
+            return html;
+        }
+
+        function getAccentRgb() {
+            if (!_accentHex) _accentHex = helpers.detectAccentColor(view) || '#52b54b';
+            var rgb = helpers.hexToRgb(_accentHex);
+            return rgb.r + ',' + rgb.g + ',' + rgb.b;
         }
 
         function renderGroupBlock(group) {
@@ -451,7 +511,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         ident += sql[i]; i++;
                     }
                     var upper = ident.toUpperCase();
-                    var KW = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IS', 'NULL', 'BETWEEN', 'LIKE', 'ORDER', 'BY', 'ASC', 'DESC', 'LIMIT'];
+                    var KW = ['SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IS', 'NULL', 'BETWEEN', 'LIKE', 'IN', 'ORDER', 'BY', 'ASC', 'DESC', 'LIMIT'];
                     if (KW.indexOf(upper) >= 0) {
                         tokens.push({ type: 'keyword', value: upper });
                     } else {
@@ -583,7 +643,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
 
             function parseCondition() {
-                var cond = { id: _nextId++, type: 'condition', field: '', operator: '=', value: '', value2: '' };
+                var cond = { id: _nextId++, type: 'condition', field: '', operator: '=', value: '', value2: '', values: [] };
 
                 var fieldTok = next();
                 if (!fieldTok) return cond;
@@ -603,13 +663,25 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     return cond;
                 }
 
-                // NOT LIKE
+                // NOT IN (...) or NOT LIKE
                 if (peek() && peek().type === 'keyword' && peek().value === 'NOT') {
                     next();
+                    if (match('keyword', 'IN')) {
+                        cond.operator = 'NOT IN';
+                        cond.values = parseInList();
+                        return cond;
+                    }
                     match('keyword', 'LIKE');
                     cond.operator = 'NOT LIKE';
                     var v = next();
                     cond.value = v ? stripWildcards(v.value) : '';
+                    return cond;
+                }
+
+                // IN (...)
+                if (match('keyword', 'IN')) {
+                    cond.operator = 'IN';
+                    cond.values = parseInList();
                     return cond;
                 }
 
@@ -637,6 +709,22 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
                 cond.value = parsedToBuilderValue(fieldDef, next());
                 return cond;
+            }
+
+            function parseInList() {
+                var values = [];
+                match('lparen');
+                while (pos < tokens.length) {
+                    var t = peek();
+                    if (!t || t.type === 'rparen') break;
+                    if (t.type === 'comma') { next(); continue; }
+                    var valTok = next();
+                    if (valTok && (valTok.type === 'string' || valTok.type === 'number' || valTok.type === 'ident')) {
+                        values.push(String(valTok.value));
+                    }
+                }
+                match('rparen');
+                return values;
             }
 
             function stripWildcards(val) {
@@ -713,11 +801,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             switch (fieldDef.type) {
                 case 'text':
+                case 'autocomplete':
                     if (op === 'LIKE' || op === 'NOT LIKE') {
                         return "'%" + String(val).replace(/'/g, "''") + "%'";
                     }
-                    return "'" + String(val).replace(/'/g, "''") + "'";
-                case 'enum':
                     return "'" + String(val).replace(/'/g, "''") + "'";
                 case 'integer':
                     return String(parseInt(val, 10) || 0);
@@ -725,8 +812,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     return String(helpers.timeToTicks(val));
                 case 'boolean':
                     return val === '1' ? '1' : '0';
-                case 'datetime':
-                    return "'" + String(val).replace(/'/g, "''") + "'";
                 default:
                     return "'" + String(val).replace(/'/g, "''") + "'";
             }
@@ -738,6 +823,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             if (op === 'IS NULL') return cond.field + ' IS NULL';
             if (op === 'IS NOT NULL') return cond.field + ' IS NOT NULL';
+
+            if (op === 'IN' || op === 'NOT IN') {
+                var vals = (cond.values || []).map(function (v) {
+                    return "'" + String(v).replace(/'/g, "''") + "'";
+                });
+                if (vals.length === 0) return '1=1';
+                return cond.field + ' ' + op + ' (' + vals.join(', ') + ')';
+            }
 
             var val = fmtValue(fieldDef, op, cond.value);
 
@@ -815,7 +908,53 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ===== QUERY BUILDER: Event Handling =====
 
         function onBuilderClick(e) {
-            var target = e.target;
+            var rawTarget = e.target;
+
+            // Handle autocomplete dropdown item clicks before data-action walk-up
+            var acItem = rawTarget.closest ? rawTarget.closest('.sr-ac-item') : null;
+            if (acItem) {
+                var acVal = acItem.getAttribute('data-value');
+                var acCondId = parseInt(acItem.getAttribute('data-id'), 10);
+                var acCond = findInItems(builderState.items, acCondId);
+                if (acCond && acVal !== null) {
+                    var container = acItem.closest('.sr-pill-container');
+                    if (container) {
+                        if (!acCond.values) acCond.values = [];
+                        if (acCond.values.indexOf(acVal) < 0) {
+                            acCond.values.push(acVal);
+                        }
+                        renderBuilder();
+                        syncToSQL();
+                        setTimeout(function () {
+                            var newInput = view.querySelector('.sr-pill-input[data-id="' + acCondId + '"]');
+                            if (newInput) newInput.focus();
+                        }, 0);
+                    } else {
+                        acCond.value = acVal;
+                        var acInput = view.querySelector('.sr-ac-input[data-id="' + acCondId + '"]');
+                        if (acInput) acInput.value = acVal;
+                        closeAllDropdowns();
+                        syncToSQL();
+                    }
+                }
+                return;
+            }
+
+            // Handle chip remove clicks
+            var chipX = rawTarget.closest ? rawTarget.closest('.sr-chip-x') : null;
+            if (chipX) {
+                var chipCondId = parseInt(chipX.getAttribute('data-id'), 10);
+                var chipIdx = parseInt(chipX.getAttribute('data-idx'), 10);
+                var chipCond = findInItems(builderState.items, chipCondId);
+                if (chipCond && chipCond.values && chipIdx >= 0 && chipIdx < chipCond.values.length) {
+                    chipCond.values.splice(chipIdx, 1);
+                    renderBuilder();
+                    syncToSQL();
+                }
+                return;
+            }
+
+            var target = rawTarget;
             // Walk up to find the element with data-action (handle clicks on button text)
             while (target && target !== e.currentTarget && !target.getAttribute('data-action')) {
                 target = target.parentElement;
@@ -882,6 +1021,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         function onBuilderChange(e) {
             var target = e.target;
+
+            // Skip autocomplete inputs — handled by onAcInput
+            if (target.classList && (target.classList.contains('sr-pill-input') || target.classList.contains('sr-ac-input'))) return;
+
             var action = target.getAttribute('data-action');
             var fieldAttr = target.getAttribute('data-field');
             var id = parseInt(target.getAttribute('data-id'), 10);
@@ -940,6 +1083,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         if (!opValid) cond.operator = newOps[0].v;
                         cond.value = '';
                         cond.value2 = '';
+                        cond.values = [];
                     }
                     renderBuilder();
                 } else if (fieldAttr === 'operator') {
@@ -947,6 +1091,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     if (cond.operator === 'IS NULL' || cond.operator === 'IS NOT NULL') {
                         cond.value = '';
                         cond.value2 = '';
+                        cond.values = [];
                     }
                     renderBuilder();
                 } else if (fieldAttr === 'value') {
@@ -956,6 +1101,202 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     cond.value2 = target.value;
                     syncToSQL();
                 }
+            }
+        }
+
+        // ===== AUTOCOMPLETE: Event Handlers =====
+
+        function closeAllDropdowns() {
+            var dds = view.querySelectorAll('.sr-ac-dropdown');
+            for (var i = 0; i < dds.length; i++) {
+                dds[i].style.display = 'none';
+                dds[i].innerHTML = '';
+            }
+            _acDropdownIdx = -1;
+        }
+
+        var _dropdownBg = null;
+
+        function detectDropdownBg() {
+            if (_dropdownBg) return _dropdownBg;
+            // Walk up from the page element to find a solid background
+            var el = view;
+            while (el) {
+                var bg = getComputedStyle(el).backgroundColor;
+                if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+                    _dropdownBg = bg;
+                    return bg;
+                }
+                el = el.parentElement;
+            }
+            _dropdownBg = '#1a1a1a';
+            return _dropdownBg;
+        }
+
+        function showDropdown(dropdown, suggestions, condId) {
+            dropdown.style.backgroundColor = detectDropdownBg();
+
+            if (suggestions.length === 0) {
+                dropdown.innerHTML = '<div class="sr-ac-empty">No matches</div>';
+                dropdown.style.display = 'block';
+                _acDropdownIdx = -1;
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < suggestions.length && i < 50; i++) {
+                html += '<div class="sr-ac-item" data-value="' + escHtml(suggestions[i]) + '" data-id="' + condId + '">' + escHtml(suggestions[i]) + '</div>';
+            }
+            if (suggestions.length > 50) {
+                html += '<div class="sr-ac-empty">... ' + (suggestions.length - 50) + ' more (keep typing)</div>';
+            }
+            dropdown.innerHTML = html;
+            dropdown.style.display = 'block';
+            _acDropdownIdx = -1;
+        }
+
+        function highlightDropdownItem(dropdown, idx) {
+            var items = dropdown.querySelectorAll('.sr-ac-item');
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.remove('sr-ac-active');
+            }
+            if (idx >= 0 && idx < items.length) {
+                items[idx].classList.add('sr-ac-active');
+                items[idx].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        function onAcFocusIn(e) {
+            var target = e.target;
+            if (!target.classList) return;
+
+            var fieldName = target.getAttribute('data-field-name');
+            var condId = parseInt(target.getAttribute('data-id'), 10);
+            if (!fieldName || !condId) return;
+
+            if (target.classList.contains('sr-pill-input') || target.classList.contains('sr-ac-input')) {
+                fetchAutocompleteValues(fieldName, function (allValues) {
+                    var query = target.value || '';
+                    var cond = findInItems(builderState.items, condId);
+                    var exclude = (cond && cond.values) ? cond.values : [];
+                    var suggestions = filterSuggestions(allValues, query, target.classList.contains('sr-pill-input') ? exclude : []);
+                    var dropdown = target.parentElement.querySelector('.sr-ac-dropdown');
+                    if (dropdown) showDropdown(dropdown, suggestions, condId);
+                });
+            }
+        }
+
+        var _acDebounceTimer = null;
+
+        function onAcInput(e) {
+            var target = e.target;
+            if (!target.classList) return;
+
+            if (target.classList.contains('sr-ac-input')) {
+                // Single-value: update condition value live
+                var condId = parseInt(target.getAttribute('data-id'), 10);
+                var cond = findInItems(builderState.items, condId);
+                if (cond) {
+                    cond.value = target.value;
+                    syncToSQL();
+                }
+            }
+
+            if (target.classList.contains('sr-pill-input') || target.classList.contains('sr-ac-input')) {
+                var fieldName = target.getAttribute('data-field-name');
+                var acCondId = parseInt(target.getAttribute('data-id'), 10);
+                if (!fieldName) return;
+
+                clearTimeout(_acDebounceTimer);
+                _acDebounceTimer = setTimeout(function () {
+                    fetchAutocompleteValues(fieldName, function (allValues) {
+                        var query = target.value || '';
+                        var cond2 = findInItems(builderState.items, acCondId);
+                        var exclude = (cond2 && cond2.values) ? cond2.values : [];
+                        var suggestions = filterSuggestions(allValues, query, target.classList.contains('sr-pill-input') ? exclude : []);
+                        var dropdown = target.parentElement.querySelector('.sr-ac-dropdown');
+                        if (dropdown) showDropdown(dropdown, suggestions, acCondId);
+                    });
+                }, 150);
+            }
+        }
+
+        function onAcKeydown(e) {
+            var target = e.target;
+            if (!target.classList) return;
+            if (!target.classList.contains('sr-pill-input') && !target.classList.contains('sr-ac-input')) return;
+
+            var dropdown = target.parentElement.querySelector('.sr-ac-dropdown');
+            var items = dropdown ? dropdown.querySelectorAll('.sr-ac-item') : [];
+            var condId = parseInt(target.getAttribute('data-id'), 10);
+
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    if (items.length > 0) {
+                        _acDropdownIdx = Math.min(_acDropdownIdx + 1, items.length - 1);
+                        highlightDropdownItem(dropdown, _acDropdownIdx);
+                    }
+                    break;
+
+                case 'ArrowUp':
+                    e.preventDefault();
+                    if (items.length > 0) {
+                        _acDropdownIdx = Math.max(_acDropdownIdx - 1, 0);
+                        highlightDropdownItem(dropdown, _acDropdownIdx);
+                    }
+                    break;
+
+                case 'Enter':
+                    e.preventDefault();
+                    var selectedVal = '';
+                    if (_acDropdownIdx >= 0 && _acDropdownIdx < items.length) {
+                        selectedVal = items[_acDropdownIdx].getAttribute('data-value');
+                    } else if (target.value.trim()) {
+                        selectedVal = target.value.trim();
+                    }
+
+                    if (selectedVal) {
+                        var cond = findInItems(builderState.items, condId);
+                        if (target.classList.contains('sr-pill-input') && cond) {
+                            // Multi-value: add pill
+                            if (!cond.values) cond.values = [];
+                            if (cond.values.indexOf(selectedVal) < 0) {
+                                cond.values.push(selectedVal);
+                            }
+                            renderBuilder();
+                            syncToSQL();
+                            setTimeout(function () {
+                                var newInput = view.querySelector('.sr-pill-input[data-id="' + condId + '"]');
+                                if (newInput) newInput.focus();
+                            }, 0);
+                        } else if (target.classList.contains('sr-ac-input') && cond) {
+                            // Single-value: set and close
+                            cond.value = selectedVal;
+                            target.value = selectedVal;
+                            closeAllDropdowns();
+                            syncToSQL();
+                        }
+                    }
+                    break;
+
+                case 'Backspace':
+                    if (target.value === '' && target.classList.contains('sr-pill-input')) {
+                        var bsCond = findInItems(builderState.items, condId);
+                        if (bsCond && bsCond.values && bsCond.values.length > 0) {
+                            bsCond.values.pop();
+                            renderBuilder();
+                            syncToSQL();
+                            setTimeout(function () {
+                                var newInput = view.querySelector('.sr-pill-input[data-id="' + condId + '"]');
+                                if (newInput) newInput.focus();
+                            }, 0);
+                        }
+                    }
+                    break;
+
+                case 'Escape':
+                    closeAllDropdowns();
+                    break;
             }
         }
 
@@ -2026,8 +2367,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 builderPanel.addEventListener('change', onBuilderChange);
                 builderPanel.addEventListener('input', onBuilderChange);
                 builderPanel.addEventListener('pointerdown', onPillPointerDown);
+                builderPanel.addEventListener('focusin', onAcFocusIn);
+                builderPanel.addEventListener('input', onAcInput);
+                builderPanel.addEventListener('keydown', onAcKeydown);
             }
+
+            // Close autocomplete dropdowns when clicking outside
+            document.addEventListener('click', _onDocClickCloseAc);
         });
+
+        function _onDocClickCloseAc(e) {
+            if (!e.target.closest || (!e.target.closest('.sr-pill-container') && !e.target.closest('.sr-ac-wrapper'))) {
+                closeAllDropdowns();
+            }
+        }
 
         view.addEventListener('viewdestroy', function (e) {
             currentResults = [];
@@ -2042,8 +2395,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             _draggedPill = null;
             _wasDragging = false;
             _accentHex = null;
+            _autocompleteCache = {};
+            _acDropdownIdx = -1;
+            _dropdownBg = null;
+            clearTimeout(_acDebounceTimer);
             document.removeEventListener('pointermove', onPillPointerMove);
             document.removeEventListener('pointerup', onPillPointerUp);
+            document.removeEventListener('click', _onDocClickCloseAc);
             _nextId = 1;
         });
     };

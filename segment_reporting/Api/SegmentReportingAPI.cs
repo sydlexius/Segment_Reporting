@@ -193,6 +193,15 @@ namespace segment_reporting.Api
         public string Query { get; set; }
     }
 
+    // http(s)://<host>:<port>/emby/segment_reporting/distinct_values?field=SeriesName
+    [Route("/segment_reporting/distinct_values", "GET", Summary = "Get distinct values for a field from the cache")]
+    [Authenticated(Roles = "admin")]
+    public class GetDistinctValues : IReturn<object>
+    {
+        [ApiMember(Name = "field", Description = "Field name (ItemType, SeriesName, or LibraryName)", IsRequired = true, DataType = "string", ParameterType = "query", Verb = "GET")]
+        public string Field { get; set; }
+    }
+
     // http(s)://<host>:<port>/emby/segment_reporting/canned_queries
     [Route("/segment_reporting/canned_queries", "GET", Summary = "Return list of built-in queries")]
     [Authenticated(Roles = "admin")]
@@ -845,6 +854,24 @@ namespace segment_reporting.Api
             QueryResult result = repo.RunCustomQuery(request.Query);
 
             return result;
+        }
+
+        public object Get(GetDistinctValues request)
+        {
+            if (string.IsNullOrWhiteSpace(request.Field))
+            {
+                return new { error = "field is required" };
+            }
+
+            SegmentRepository repo = GetRepository();
+            var values = repo.GetDistinctValues(request.Field);
+
+            if (values == null)
+            {
+                return new { error = "Invalid field. Allowed: ItemType, SeriesName, LibraryName" };
+            }
+
+            return new { values };
         }
 
         public object Get(GetCannedQueries request)

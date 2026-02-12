@@ -38,6 +38,87 @@
         #segmentCustomQueryPage .col-sticky-right {
             box-shadow: none;
         }
+        /* Pill/chip container for multi-value autocomplete */
+        #segmentCustomQueryPage .sr-pill-container {
+            display: inline-flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 6px;
+            border: 1px solid rgba(128,128,128,0.3);
+            border-radius: 4px;
+            background: rgba(0,0,0,0.2);
+            min-height: 2em;
+            min-width: 200px;
+            max-width: 400px;
+            cursor: text;
+            position: relative;
+        }
+        #segmentCustomQueryPage .sr-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+            white-space: nowrap;
+            color: inherit;
+        }
+        #segmentCustomQueryPage .sr-chip-x {
+            cursor: pointer;
+            opacity: 0.6;
+            font-size: 1.1em;
+            line-height: 1;
+            margin-left: 2px;
+        }
+        #segmentCustomQueryPage .sr-chip-x:hover {
+            opacity: 1;
+        }
+        #segmentCustomQueryPage .sr-pill-input {
+            flex: 1;
+            min-width: 80px;
+            border: none;
+            background: transparent;
+            color: inherit;
+            font-size: inherit;
+            outline: none;
+            padding: 2px 0;
+        }
+        /* Autocomplete wrapper for single-value inputs */
+        #segmentCustomQueryPage .sr-ac-wrapper {
+            display: inline-block;
+            position: relative;
+        }
+        /* Shared autocomplete dropdown — background set dynamically by JS */
+        #segmentCustomQueryPage .sr-ac-dropdown {
+            position: absolute;
+            left: 0;
+            top: 100%;
+            z-index: 1000;
+            max-height: 200px;
+            min-width: 180px;
+            overflow-y: auto;
+            border: 1px solid rgba(128,128,128,0.4);
+            border-radius: 4px;
+            margin-top: 2px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        #segmentCustomQueryPage .sr-ac-item {
+            padding: 6px 10px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: inherit;
+        }
+        #segmentCustomQueryPage .sr-ac-item:hover,
+        #segmentCustomQueryPage .sr-ac-item.sr-ac-active {
+            background: rgba(128,128,128,0.2);
+        }
+        #segmentCustomQueryPage .sr-ac-empty {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            opacity: 0.5;
+            font-style: italic;
+        }
     </style>
 
     <div data-role="content">

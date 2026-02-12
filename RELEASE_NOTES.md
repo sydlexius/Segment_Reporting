@@ -1,6 +1,25 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.1.0.0 - Autocomplete & Multi-Value Pill UI for Query Builder
+
+### Added
+
+- **Autocomplete suggestions for query builder fields** (#54) — The "Item Type", "Series Name", and "Library Name" fields in the visual query builder now show a dropdown of matching values from your library as you type, so you no longer need to remember exact names.
+- **Multi-value pill selection** (#54) — Choose the "is any of" or "is none of" operator to select multiple values as removable pills. The builder generates `IN (...)` and `NOT IN (...)` SQL clauses automatically.
+- **New API endpoint** (#54) — `GET /segment_reporting/distinct_values?field=...` returns all unique values for a given field from the cache, powering the autocomplete dropdowns.
+
+### Improved
+
+- **Saved query round-trip** (#54) — Queries containing `IN` and `NOT IN` clauses are correctly imported back into the visual builder when loading a saved query.
+- **Theme-aware dropdown** (#54) — The autocomplete dropdown background matches your Emby theme (light or dark) instead of using a hardcoded color.
+
+### Removed
+
+- **Dead operator sets** — Cleaned up unused `enum` and `datetime` operator definitions left over from previous refactors.
+
+---
+
 ## v1.0.4.2 - Remove Redundant LastSyncDate Column
 
 ### Added
