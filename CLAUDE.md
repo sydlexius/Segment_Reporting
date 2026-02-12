@@ -74,4 +74,28 @@ When asked to tag/release a version, follow these steps in order:
 6. **Wait for CI** to create the GitHub Release (check with `gh release view vX.Y.Z.W`)
 7. **Close related issues** if applicable, with a comment referencing the version
 
+## Documentation Maintenance
+
+Three docs describe the plugin at different levels. When code changes affect documented behavior, update the relevant docs in the same commit:
+
+| Document | Audience | What to update |
+|----------|----------|---------------|
+| `README.md` | GitHub visitors | Feature list, installation steps, screenshots, supported segment types |
+| `docs/USER_GUIDE.md` | Emby admins | How-to instructions, UI workflows, filter/button labels, settings options, troubleshooting |
+| `docs/DEVELOPER.md` | Contributors | Architecture, schema, API endpoints, helper functions, build pipeline, page lifecycle |
+
+**When to update which doc:**
+
+- **New/changed API endpoint** → DEVELOPER.md (API Reference section)
+- **New/changed UI feature or button** → USER_GUIDE.md (relevant section) and README.md (Features list if it's a headline feature)
+- **New/changed setting or preference** → USER_GUIDE.md (Settings section) and DEVELOPER.md (Preferences endpoint)
+- **Schema change (new column/table)** → DEVELOPER.md (Schema section)
+- **New page added** → all three (README features, USER_GUIDE walkthrough, DEVELOPER.md page overview)
+- **New/changed bulk operation** → USER_GUIDE.md (Bulk Operations section)
+- **New/changed query builder feature** → USER_GUIDE.md (Custom Queries section)
+- **Build/CI changes** → DEVELOPER.md (CI/CD section)
+- **New screenshot needed** → capture to `Screenshots/`, reference in USER_GUIDE.md, consider updating README.md hero images
+
+**Screenshot freshness:** When a UI change alters the appearance of a page that has a screenshot in `Screenshots/`, flag that the screenshot needs retaking. Screenshots are captured via Playwright MCP (`browser_take_screenshot`) from a local Emby server with DOM manipulation to anonymize personal library data (see issue #56 for the anonymization patterns and fictional name lists used). Do not commit screenshots containing real media library names.
+
 Prefer solving tasks in a single session. Only spawn subagents for genuinely independent workstreams.

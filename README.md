@@ -9,7 +9,7 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 - **Interactive Dashboard** — Overview charts showing segment coverage per library, with breadcrumb drill-down navigation into libraries, series, and episodes
 - **Library Browsing** — Browse series and movies with segment coverage stats, sortable columns, and filtering by segment status (missing intros, missing credits, has intro, has credits, etc.)
 - **Series Detail** — Season/episode grid with per-season intro and credits coverage percentages, expandable accordions, and search
-- **Movie Support** — Movie libraries display a flat table with inline segment timestamps; mixed libraries show both series and movies
+- **Movie Support** — Movie libraries display a flat table with inline segment timestamps; mixed libraries show both series and movies. Note: there is currently no automated detection mechanism for movie intros or credits, so movie and mixed library support is primarily reporting-only unless you add markers manually
 
 ### Editing & Bulk Operations
 

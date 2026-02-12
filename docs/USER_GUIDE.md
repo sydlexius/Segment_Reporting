@@ -230,10 +230,18 @@ For movie-only libraries, the view shows a flat table of movies with their
 segment timestamps displayed directly. You can edit timestamps inline and
 delete individual markers without leaving the page.
 
+> **Note:** There is currently no automated way to detect intros or credits for
+> movies. Tools like EmbyCredits only support TV episodes. Movie and mixed
+> libraries are primarily useful for **reporting** — you can see which movies
+> have markers and which do not. If you need to add markers to movies, you
+> must enter the timestamps manually using inline editing.
+
 ### Mixed Libraries
 
 Libraries that contain both TV shows and movies display two separate sections —
 a series table and a movie table — so you can work with each type independently.
+TV shows in mixed libraries have full support for bulk operations and credits
+detection, while movie items are limited to reporting and manual editing.
 
 ---
 
