@@ -170,6 +170,13 @@ namespace segment_reporting.Api
     {
     }
 
+    // http(s)://<host>:<port>/emby/segment_reporting/vacuum
+    [Route("/segment_reporting/vacuum", "POST", Summary = "Run VACUUM on the cache database to reclaim disk space")]
+    [Authenticated(Roles = "admin")]
+    public class VacuumDatabase : IReturn<object>
+    {
+    }
+
     // http(s)://<host>:<port>/emby/segment_reporting/cache_stats
     [Route("/segment_reporting/cache_stats", "GET", Summary = "Get cache row count, DB file size, and last sync info")]
     [Authenticated(Roles = "admin")]
@@ -769,6 +776,31 @@ namespace segment_reporting.Api
             catch (Exception ex)
             {
                 _logger.ErrorException("ForceRescan: Failed", ex);
+                return new { error = ex.Message };
+            }
+        }
+
+        public object Post(VacuumDatabase request)
+        {
+            _logger.Info("VacuumDatabase: Running VACUUM");
+
+            try
+            {
+                SegmentRepository repo = GetRepository();
+                repo.VacuumDatabase();
+
+                long dbFileSize = 0;
+                string dbPath = GetDbPath();
+                if (File.Exists(dbPath))
+                {
+                    dbFileSize = new FileInfo(dbPath).Length;
+                }
+
+                return new { success = true, dbFileSize };
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorException("VacuumDatabase: Failed", ex);
                 return new { error = ex.Message };
             }
         }

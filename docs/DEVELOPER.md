@@ -272,7 +272,6 @@ segment markers.
 | `CreditsStartTicks` | BIGINT | Yes | Credits start position in ticks |
 | `HasIntro` | INT | No | 1 if either IntroStartTicks or IntroEndTicks is set |
 | `HasCredits` | INT | No | 1 if CreditsStartTicks is set |
-| `LastSyncDate` | DATETIME | Yes | When this row was last updated |
 
 #### SyncStatus Table
 
@@ -596,8 +595,7 @@ JavaScript's `encodeURIComponent(null)`).*
     "IntroEndTicks": 900000000,
     "CreditsStartTicks": 35000000000,
     "HasIntro": 1,
-    "HasCredits": 1,
-    "LastSyncDate": "2026-02-09 02:00:00.000"
+    "HasCredits": 1
   }
 ]
 ```

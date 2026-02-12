@@ -1,6 +1,18 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.0.4.2 - Remove Redundant LastSyncDate Column
+
+### Added
+
+- **Vacuum Database button on Settings page** — A new "Vacuum Database" button in the Advanced section lets you reclaim disk space on demand, without waiting for the weekly scheduled cleanup task.
+
+### Improved
+
+- **Removed `LastSyncDate` from the MediaSegments table** (#53) — Every row in the cache used to store an identical sync timestamp, wasting space across thousands of rows. Sync timing is already tracked centrally in the `SyncStatus` table (shown as "Last synced" on the dashboard), so the per-row column was redundant. Existing databases will have the column's values cleared automatically on first load; a Force Rescan will fully remove the column.
+
+---
+
 ## v1.0.3.0 - Per-Library Visibility Controls
 
 ### Added

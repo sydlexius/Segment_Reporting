@@ -256,6 +256,24 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             );
         }
 
+        function onVacuumClick() {
+            var btn = view.querySelector('#btnVacuum');
+            helpers.withButtonLoading(btn, 'Vacuuming...',
+                helpers.apiCall('vacuum', 'POST')
+                    .then(function (result) {
+                        if (result.error) {
+                            helpers.showError(result.error);
+                        } else {
+                            helpers.showSuccess('Database vacuumed. New size: ' + helpers.formatBytes(result.dbFileSize));
+                            loadCacheStats();
+                        }
+                    })
+                    .catch(function () {
+                        helpers.showError('Failed to vacuum database.');
+                    })
+            );
+        }
+
         // --- Event wiring ---
 
         view.addEventListener('viewshow', function () {
@@ -283,6 +301,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             // Existing buttons
             view.querySelector('#btnForceRescan').addEventListener('click', onForceRescanClick);
+            view.querySelector('#btnVacuum').addEventListener('click', onVacuumClick);
             view.querySelector('#btnRefreshStats').addEventListener('click', loadCacheStats);
         });
 
@@ -291,6 +310,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             view.querySelector('#prefChartPalette').removeEventListener('change', toggleCustomPanel);
             view.querySelector('#btnSavePreferences').removeEventListener('click', savePreferences);
             view.querySelector('#btnForceRescan').removeEventListener('click', onForceRescanClick);
+            view.querySelector('#btnVacuum').removeEventListener('click', onVacuumClick);
             view.querySelector('#btnRefreshStats').removeEventListener('click', loadCacheStats);
         });
     };

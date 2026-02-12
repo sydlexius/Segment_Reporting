@@ -86,7 +86,6 @@ namespace segment_reporting.Tasks
 
             var segments = new List<SegmentInfo>(totalItems);
             var validItemIds = new List<string>(totalItems);
-            var syncDate = DateTime.UtcNow;
             int skipped = 0;
 
             for (int i = 0; i < totalItems; i++)
@@ -97,7 +96,7 @@ namespace segment_reporting.Tasks
 
                 try
                 {
-                    var segment = BuildSegmentInfo(item, syncDate);
+                    var segment = BuildSegmentInfo(item);
                     segments.Add(segment);
                     validItemIds.Add(segment.ItemId);
                 }
@@ -139,7 +138,7 @@ namespace segment_reporting.Tasks
             return Task.CompletedTask;
         }
 
-        private SegmentInfo BuildSegmentInfo(BaseItem item, DateTime syncDate)
+        private SegmentInfo BuildSegmentInfo(BaseItem item)
         {
             long? introStart = null;
             long? introEnd = null;
@@ -181,8 +180,7 @@ namespace segment_reporting.Tasks
                 IntroEndTicks = introEnd,
                 CreditsStartTicks = creditsStart,
                 HasIntro = (introStart.HasValue || introEnd.HasValue) ? 1 : 0,
-                HasCredits = creditsStart.HasValue ? 1 : 0,
-                LastSyncDate = syncDate
+                HasCredits = creditsStart.HasValue ? 1 : 0
             };
 
             var topParent = item.GetTopParent();

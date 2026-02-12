@@ -98,8 +98,7 @@ namespace segment_reporting.Data
                     "IntroEndTicks BIGINT, " +
                     "CreditsStartTicks BIGINT, " +
                     "HasIntro INT, " +
-                    "HasCredits INT, " +
-                    "LastSyncDate DATETIME)");
+                    "HasCredits INT)");
 
                 _connection.Execute(
                     "CREATE TABLE IF NOT EXISTS SyncStatus (" +
@@ -162,8 +161,7 @@ namespace segment_reporting.Data
                 { "IntroEndTicks", "BIGINT" },
                 { "CreditsStartTicks", "BIGINT" },
                 { "HasIntro", "INT DEFAULT 0" },
-                { "HasCredits", "INT DEFAULT 0" },
-                { "LastSyncDate", "DATETIME" }
+                { "HasCredits", "INT DEFAULT 0" }
             };
 
             foreach (var col in requiredColumns)
@@ -173,6 +171,16 @@ namespace segment_reporting.Data
                     _logger.Info("SegmentRepository: Adding column {0}", col.Key);
                     _connection.Execute("ALTER TABLE MediaSegments ADD COLUMN " + col.Key + " " + col.Value);
                 }
+            }
+
+            // LastSyncDate was removed in v1.0.4 — sync timing is tracked in the
+            // SyncStatus table.  The column may still exist in databases created by
+            // older versions; null it out so it no longer wastes space.  A Force
+            // Rescan drops and recreates the table without it entirely.
+            if (existingColumns.Contains("LastSyncDate"))
+            {
+                _logger.Info("SegmentRepository: Clearing obsolete LastSyncDate column");
+                _connection.Execute("UPDATE MediaSegments SET LastSyncDate = NULL WHERE LastSyncDate IS NOT NULL");
             }
         }
 
@@ -310,8 +318,7 @@ namespace segment_reporting.Data
                 IntroEndTicks = ReadNullableLong(row, 13),
                 CreditsStartTicks = ReadNullableLong(row, 14),
                 HasIntro = ReadInt(row, 15),
-                HasCredits = ReadInt(row, 16),
-                LastSyncDate = ReadDateTime(row, 17)
+                HasCredits = ReadInt(row, 16)
             };
         }
 
@@ -375,12 +382,12 @@ namespace segment_reporting.Data
                 "(ItemId, ItemName, ItemType, SeriesName, SeriesId, " +
                 "SeasonName, SeasonId, SeasonNumber, EpisodeNumber, " +
                 "LibraryName, LibraryId, IntroStartTicks, IntroEndTicks, " +
-                "CreditsStartTicks, HasIntro, HasCredits, LastSyncDate) " +
+                "CreditsStartTicks, HasIntro, HasCredits) " +
                 "VALUES " +
                 "(@ItemId, @ItemName, @ItemType, @SeriesName, @SeriesId, " +
                 "@SeasonName, @SeasonId, @SeasonNumber, @EpisodeNumber, " +
                 "@LibraryName, @LibraryId, @IntroStartTicks, @IntroEndTicks, " +
-                "@CreditsStartTicks, @HasIntro, @HasCredits, @LastSyncDate) " +
+                "@CreditsStartTicks, @HasIntro, @HasCredits) " +
                 "ON CONFLICT(ItemId) DO UPDATE SET " +
                 "ItemName = excluded.ItemName, ItemType = excluded.ItemType, " +
                 "SeriesName = excluded.SeriesName, SeriesId = excluded.SeriesId, " +
@@ -389,8 +396,7 @@ namespace segment_reporting.Data
                 "LibraryName = excluded.LibraryName, LibraryId = excluded.LibraryId, " +
                 "IntroStartTicks = excluded.IntroStartTicks, IntroEndTicks = excluded.IntroEndTicks, " +
                 "CreditsStartTicks = excluded.CreditsStartTicks, " +
-                "HasIntro = excluded.HasIntro, HasCredits = excluded.HasCredits, " +
-                "LastSyncDate = excluded.LastSyncDate"))
+                "HasIntro = excluded.HasIntro, HasCredits = excluded.HasCredits"))
             {
                 BindSegmentParams(stmt, segment);
                 stmt.MoveNext();
@@ -421,12 +427,11 @@ namespace segment_reporting.Data
                     sql += ", HasCredits = 1";
                 }
 
-                sql += ", LastSyncDate = @LastSyncDate WHERE ItemId = @ItemId";
+                sql += " WHERE ItemId = @ItemId";
 
                 using (var stmt = _connection.PrepareStatement(sql))
                 {
                     TryBind(stmt, "@Ticks", ticks);
-                    TryBindDateTime(stmt, "@LastSyncDate", DateTime.UtcNow);
                     TryBind(stmt, "@ItemId", itemId);
                     stmt.MoveNext();
                 }
@@ -451,7 +456,6 @@ namespace segment_reporting.Data
             TryBindNullableLong(stmt, "@CreditsStartTicks", segment.CreditsStartTicks);
             TryBind(stmt, "@HasIntro", segment.HasIntro);
             TryBind(stmt, "@HasCredits", segment.HasCredits);
-            TryBindDateTime(stmt, "@LastSyncDate", segment.LastSyncDate);
         }
 
         #endregion

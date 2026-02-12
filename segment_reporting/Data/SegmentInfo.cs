@@ -22,7 +22,6 @@ namespace segment_reporting.Data
         public long? CreditsStartTicks { get; set; }
         public int HasIntro { get; set; }
         public int HasCredits { get; set; }
-        public DateTime LastSyncDate { get; set; }
     }
 
     public class LibrarySummaryItem
