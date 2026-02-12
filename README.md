@@ -4,17 +4,32 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 
 ## Features
 
-- **Interactive Dashboard** — Overview charts showing segment coverage per library with drill-down navigation
-- **Library & Series Browsing** — Explore segments organized by library, series, season, and episode
-- **Inline Editing** — Edit intro/credits timestamps directly in the table view
-- **Bulk Operations** — Copy segments across episodes or delete in bulk
-- **Custom SQL Queries** — Write your own queries against the segment cache
-- **Scheduled Sync** — Automatic daily sync with your Emby server (configurable)
-- **Admin Settings** — Control sync schedule, display preferences, and cache maintenance
+### Reporting & Navigation
 
-## Screenshots
+- **Interactive Dashboard** — Overview charts showing segment coverage per library, with breadcrumb drill-down navigation into libraries, series, and episodes
+- **Library Browsing** — Browse series and movies with segment coverage stats, sortable columns, and filtering by segment status (missing intros, missing credits, has intro, has credits, etc.)
+- **Series Detail** — Season/episode grid with per-season intro and credits coverage percentages, expandable accordions, and search
+- **Movie Support** — Movie libraries display a flat table with inline segment timestamps; mixed libraries show both series and movies
 
-*Dashboard, Library View, Series Detail, and Settings pages to be added after UI implementation.*
+### Editing & Bulk Operations
+
+- **Inline Editing** — Edit intro/credits timestamps directly in any table view (library, series, or query results)
+- **Bulk Operations** — Copy segments across episodes, bulk delete intros or credits, and set credits-to-end in bulk
+- **EmbyCredits Integration** — When the [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin is installed, "Detect Credits" buttons appear on the dashboard, library, series, and custom query pages to trigger credits detection directly
+
+### Custom Query
+
+- **Visual Query Builder** — Point-and-click query builder with field/operator selection, condition groups, and drag-to-reorder column pills
+- **Autocomplete & Multi-Value Selection** — Fields like Series Name, Library Name, and Item Type offer autocomplete suggestions from your library; use "is any of" / "is none of" operators for multi-value pill selection with `IN`/`NOT IN` SQL generation
+- **Interactive Results** — Query results support inline editing, row selection with checkboxes, bulk actions, clickable playback links on timestamps, and CSV export
+- **Saved Queries** — Save, load, and delete named queries; the visual builder fully round-trips `IN`/`NOT IN` clauses
+
+### Settings & Maintenance
+
+- **Display Preferences** — Choose from six chart color palettes or define custom colors, toggle gridlines and alternating row colors, and hide specific libraries from the dashboard
+- **Scheduled Sync** — Automatic daily sync with your Emby server (configurable via Emby's Scheduled Tasks)
+- **Cache Maintenance** — Weekly VACUUM task, on-demand Vacuum button, force rescan, and sync status display
+- **About Page** — Plugin version, acknowledgements, Emby Forums link, and API endpoint reference
 
 ## Installation
 
@@ -30,14 +45,16 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 
 The plugin integrates with Emby's built-in Scheduled Tasks system:
 
-- **TaskSyncSegments** — Default: Daily at 2:00 AM (crawls all libraries and syncs segment data)
-- **TaskCleanSegmentDb** — Default: Weekly on Sunday at 3:00 AM (database maintenance)
+- **Sync Segments** — Default: Daily at 2:00 AM (crawls all libraries and syncs segment data to the cache)
+- **Clean Segment DB** — Default: Weekly on Sunday at 3:00 AM (VACUUM and health check)
 
-From the plugin Settings page, you can:
+From the plugin Settings page you can:
 
-- Adjust the sync schedule
-- Configure display preferences (time format, chart colors)
-- Force a full rescan of the segment cache (advanced)
+- Choose a chart color palette (six presets or custom colors) with a live preview chart
+- Toggle table gridlines and alternating row colors
+- Hide specific libraries from the dashboard (per-library checkboxes)
+- View cache statistics (row count, database size, last sync time)
+- Force a full rescan or vacuum the database on demand
 
 ## Building from Source
 
@@ -109,4 +126,5 @@ For detailed architecture, data models, API specifications, and implementation d
 
 ## Support
 
-For issues, feature requests, or contributions, please open an issue or pull request on [GitHub](../../issues).
+- **Emby Forums** — [Segment Reporting discussion thread](https://emby.media/community/index.php?/topic/146268-segment-reporting-plugin/)
+- **GitHub** — [Issues and feature requests](../../issues)
