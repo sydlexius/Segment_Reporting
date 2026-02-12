@@ -6,6 +6,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var helpers = getSegmentReportingHelpers();
         var previewChart = null;
         var allLibraries = [];
+        var listenersAttached = false;
 
         // --- Palette preview ---
 
@@ -287,31 +288,30 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             loadCacheStats();
 
-            // Color picker sync
-            setupColorSync('colorBoth', 'colorBothText');
-            setupColorSync('colorIntro', 'colorIntroText');
-            setupColorSync('colorCredits', 'colorCreditsText');
-            setupColorSync('colorNone', 'colorNoneText');
+            if (!listenersAttached) {
+                listenersAttached = true;
 
-            // Palette dropdown toggle
-            view.querySelector('#prefChartPalette').addEventListener('change', toggleCustomPanel);
+                // Color picker sync
+                setupColorSync('colorBoth', 'colorBothText');
+                setupColorSync('colorIntro', 'colorIntroText');
+                setupColorSync('colorCredits', 'colorCreditsText');
+                setupColorSync('colorNone', 'colorNoneText');
 
-            // Save button
-            view.querySelector('#btnSavePreferences').addEventListener('click', savePreferences);
+                // Palette dropdown toggle
+                view.querySelector('#prefChartPalette').addEventListener('change', toggleCustomPanel);
 
-            // Existing buttons
-            view.querySelector('#btnForceRescan').addEventListener('click', onForceRescanClick);
-            view.querySelector('#btnVacuum').addEventListener('click', onVacuumClick);
-            view.querySelector('#btnRefreshStats').addEventListener('click', loadCacheStats);
+                // Save button
+                view.querySelector('#btnSavePreferences').addEventListener('click', savePreferences);
+
+                // Existing buttons
+                view.querySelector('#btnForceRescan').addEventListener('click', onForceRescanClick);
+                view.querySelector('#btnVacuum').addEventListener('click', onVacuumClick);
+                view.querySelector('#btnRefreshStats').addEventListener('click', loadCacheStats);
+            }
         });
 
         view.addEventListener('viewhide', function () {
             if (previewChart) { previewChart.destroy(); previewChart = null; }
-            view.querySelector('#prefChartPalette').removeEventListener('change', toggleCustomPanel);
-            view.querySelector('#btnSavePreferences').removeEventListener('click', savePreferences);
-            view.querySelector('#btnForceRescan').removeEventListener('click', onForceRescanClick);
-            view.querySelector('#btnVacuum').removeEventListener('click', onVacuumClick);
-            view.querySelector('#btnRefreshStats').removeEventListener('click', loadCacheStats);
         });
     };
 });

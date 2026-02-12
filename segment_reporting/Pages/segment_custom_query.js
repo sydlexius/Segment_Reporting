@@ -26,6 +26,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var editingRow = null;
         var selectedRows = {};
         var creditsDetectorAvailable = false;
+        var listenersAttached = false;
 
         // ===== COLUMN AUTO-DETECTION =====
 
@@ -2233,147 +2234,151 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 creditsDetectorAvailable = available;
             });
 
-            var queriesDropdown = view.querySelector('#queriesDropdown');
-            if (queriesDropdown) {
-                queriesDropdown.addEventListener('change', handleQuerySelect);
-            }
+            if (!listenersAttached) {
+                listenersAttached = true;
 
-            var btnSaveQuery = view.querySelector('#btnSaveQuery');
-            if (btnSaveQuery) {
-                btnSaveQuery.addEventListener('click', saveCurrentQuery);
-            }
+                var queriesDropdown = view.querySelector('#queriesDropdown');
+                if (queriesDropdown) {
+                    queriesDropdown.addEventListener('change', handleQuerySelect);
+                }
 
-            var btnDeleteQuery = view.querySelector('#btnDeleteQuery');
-            if (btnDeleteQuery) {
-                btnDeleteQuery.addEventListener('click', deleteSelectedQuery);
-            }
+                var btnSaveQuery = view.querySelector('#btnSaveQuery');
+                if (btnSaveQuery) {
+                    btnSaveQuery.addEventListener('click', saveCurrentQuery);
+                }
 
-            var btnExecute = view.querySelector('#btnExecute');
-            if (btnExecute) {
-                btnExecute.addEventListener('click', executeQuery);
-            }
+                var btnDeleteQuery = view.querySelector('#btnDeleteQuery');
+                if (btnDeleteQuery) {
+                    btnDeleteQuery.addEventListener('click', deleteSelectedQuery);
+                }
 
-            var btnClear = view.querySelector('#btnClear');
-            if (btnClear) {
-                btnClear.addEventListener('click', clearResults);
-            }
+                var btnExecute = view.querySelector('#btnExecute');
+                if (btnExecute) {
+                    btnExecute.addEventListener('click', executeQuery);
+                }
 
-            var btnExportCsv = view.querySelector('#btnExportCsv');
-            if (btnExportCsv) {
-                btnExportCsv.addEventListener('click', exportToCsv);
-            }
+                var btnClear = view.querySelector('#btnClear');
+                if (btnClear) {
+                    btnClear.addEventListener('click', clearResults);
+                }
 
-            // Delegated click handler for results table (playback links + action buttons)
-            var resultsTableBody = view.querySelector('#resultsTableBody');
-            if (resultsTableBody) {
-                resultsTableBody.addEventListener('click', function (e) {
-                    var target = e.target;
+                var btnExportCsv = view.querySelector('#btnExportCsv');
+                if (btnExportCsv) {
+                    btnExportCsv.addEventListener('click', exportToCsv);
+                }
 
-                    // Timestamp playback links
-                    var link = target.closest('.timestamp-link');
-                    if (link) {
-                        var tr = link.closest('tr');
-                        if (tr && tr.classList.contains('editing')) return;
-                        e.preventDefault();
-                        var ticks = parseInt(link.getAttribute('data-ticks'), 10);
-                        var itemId = link.getAttribute('data-item-id');
-                        helpers.launchPlayback(itemId, ticks);
-                        return;
-                    }
+                // Delegated click handler for results table (playback links + action buttons)
+                var resultsTableBody = view.querySelector('#resultsTableBody');
+                if (resultsTableBody) {
+                    resultsTableBody.addEventListener('click', function (e) {
+                        var target = e.target;
 
-                    // Edit button
-                    if (target.classList.contains('btn-edit')) {
-                        e.stopPropagation();
-                        var editTr = target.closest('tr');
-                        if (editTr) startRowEdit(editTr);
-                        return;
-                    }
+                        // Timestamp playback links
+                        var link = target.closest('.timestamp-link');
+                        if (link) {
+                            var tr = link.closest('tr');
+                            if (tr && tr.classList.contains('editing')) return;
+                            e.preventDefault();
+                            var ticks = parseInt(link.getAttribute('data-ticks'), 10);
+                            var itemId = link.getAttribute('data-item-id');
+                            helpers.launchPlayback(itemId, ticks);
+                            return;
+                        }
 
-                    // Save button
-                    if (target.classList.contains('btn-save')) {
-                        e.stopPropagation();
-                        var saveTr = target.closest('tr');
-                        if (saveTr) saveRowEdit(saveTr);
-                        return;
-                    }
+                        // Edit button
+                        if (target.classList.contains('btn-edit')) {
+                            e.stopPropagation();
+                            var editTr = target.closest('tr');
+                            if (editTr) startRowEdit(editTr);
+                            return;
+                        }
 
-                    // Cancel button
-                    if (target.classList.contains('btn-cancel')) {
-                        e.stopPropagation();
-                        var cancelTr = target.closest('tr');
-                        if (cancelTr) cancelRowEdit(cancelTr);
-                        return;
-                    }
+                        // Save button
+                        if (target.classList.contains('btn-save')) {
+                            e.stopPropagation();
+                            var saveTr = target.closest('tr');
+                            if (saveTr) saveRowEdit(saveTr);
+                            return;
+                        }
 
-                });
-            }
+                        // Cancel button
+                        if (target.classList.contains('btn-cancel')) {
+                            e.stopPropagation();
+                            var cancelTr = target.closest('tr');
+                            if (cancelTr) cancelRowEdit(cancelTr);
+                            return;
+                        }
 
-            // Checkbox handlers (delegated on the whole table)
-            var resultsTable = view.querySelector('#resultsTable');
-            if (resultsTable) {
-                resultsTable.addEventListener('change', function (e) {
-                    var target = e.target;
+                    });
+                }
 
-                    // Select-all checkbox in header
-                    if (target.classList.contains('select-all-cb')) {
-                        var checked = target.checked;
-                        var rowCbs = resultsTable.querySelectorAll('.row-select-cb');
-                        selectedRows = {};
-                        for (var i = 0; i < rowCbs.length; i++) {
-                            rowCbs[i].checked = checked;
-                            if (checked) {
-                                var tr = rowCbs[i].closest('tr');
-                                if (tr) selectedRows[tr.getAttribute('data-row-index')] = true;
+                // Checkbox handlers (delegated on the whole table)
+                var resultsTable = view.querySelector('#resultsTable');
+                if (resultsTable) {
+                    resultsTable.addEventListener('change', function (e) {
+                        var target = e.target;
+
+                        // Select-all checkbox in header
+                        if (target.classList.contains('select-all-cb')) {
+                            var checked = target.checked;
+                            var rowCbs = resultsTable.querySelectorAll('.row-select-cb');
+                            selectedRows = {};
+                            for (var i = 0; i < rowCbs.length; i++) {
+                                rowCbs[i].checked = checked;
+                                if (checked) {
+                                    var tr = rowCbs[i].closest('tr');
+                                    if (tr) selectedRows[tr.getAttribute('data-row-index')] = true;
+                                }
                             }
+                            onSelectionChange();
+                            return;
                         }
-                        onSelectionChange();
-                        return;
-                    }
 
-                    // Individual row checkbox
-                    if (target.classList.contains('row-select-cb')) {
-                        var rowTr = target.closest('tr');
-                        if (rowTr) {
-                            var rowIdx = rowTr.getAttribute('data-row-index');
-                            if (target.checked) {
-                                selectedRows[rowIdx] = true;
-                            } else {
-                                delete selectedRows[rowIdx];
+                        // Individual row checkbox
+                        if (target.classList.contains('row-select-cb')) {
+                            var rowTr = target.closest('tr');
+                            if (rowTr) {
+                                var rowIdx = rowTr.getAttribute('data-row-index');
+                                if (target.checked) {
+                                    selectedRows[rowIdx] = true;
+                                } else {
+                                    delete selectedRows[rowIdx];
+                                }
                             }
+                            // Update select-all checkbox state
+                            var allCb = resultsTable.querySelector('.select-all-cb');
+                            var allRowCbs = resultsTable.querySelectorAll('.row-select-cb');
+                            var allChecked = allRowCbs.length > 0;
+                            for (var j = 0; j < allRowCbs.length; j++) {
+                                if (!allRowCbs[j].checked) { allChecked = false; break; }
+                            }
+                            if (allCb) allCb.checked = allChecked;
+                            onSelectionChange();
+                            return;
                         }
-                        // Update select-all checkbox state
-                        var allCb = resultsTable.querySelector('.select-all-cb');
-                        var allRowCbs = resultsTable.querySelectorAll('.row-select-cb');
-                        var allChecked = allRowCbs.length > 0;
-                        for (var j = 0; j < allRowCbs.length; j++) {
-                            if (!allRowCbs[j].checked) { allChecked = false; break; }
-                        }
-                        if (allCb) allCb.checked = allChecked;
-                        onSelectionChange();
-                        return;
-                    }
-                });
-            }
+                    });
+                }
 
-            // Query builder
-            var btnToggleBuilder = view.querySelector('#btnToggleBuilder');
-            if (btnToggleBuilder) {
-                btnToggleBuilder.addEventListener('click', toggleBuilder);
-            }
+                // Query builder
+                var btnToggleBuilder = view.querySelector('#btnToggleBuilder');
+                if (btnToggleBuilder) {
+                    btnToggleBuilder.addEventListener('click', toggleBuilder);
+                }
 
-            var builderPanel = view.querySelector('#queryBuilderPanel');
-            if (builderPanel) {
-                builderPanel.addEventListener('click', onBuilderClick);
-                builderPanel.addEventListener('change', onBuilderChange);
-                builderPanel.addEventListener('input', onBuilderChange);
-                builderPanel.addEventListener('pointerdown', onPillPointerDown);
-                builderPanel.addEventListener('focusin', onAcFocusIn);
-                builderPanel.addEventListener('input', onAcInput);
-                builderPanel.addEventListener('keydown', onAcKeydown);
-            }
+                var builderPanel = view.querySelector('#queryBuilderPanel');
+                if (builderPanel) {
+                    builderPanel.addEventListener('click', onBuilderClick);
+                    builderPanel.addEventListener('change', onBuilderChange);
+                    builderPanel.addEventListener('input', onBuilderChange);
+                    builderPanel.addEventListener('pointerdown', onPillPointerDown);
+                    builderPanel.addEventListener('focusin', onAcFocusIn);
+                    builderPanel.addEventListener('input', onAcInput);
+                    builderPanel.addEventListener('keydown', onAcKeydown);
+                }
 
-            // Close autocomplete dropdowns when clicking outside
-            document.addEventListener('click', _onDocClickCloseAc);
+                // Close autocomplete dropdowns when clicking outside
+                document.addEventListener('click', _onDocClickCloseAc);
+            }
         });
 
         function _onDocClickCloseAc(e) {

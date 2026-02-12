@@ -14,6 +14,10 @@
 - **Saved query round-trip** (#54) — Queries containing `IN` and `NOT IN` clauses are correctly imported back into the visual builder when loading a saved query.
 - **Theme-aware dropdown** (#54) — The autocomplete dropdown background matches your Emby theme (light or dark) instead of using a hardcoded color.
 
+### Fixed
+
+- **Event listeners no longer stack on repeated page visits** (#55) — The Custom Query and Settings pages now attach event listeners only once per page lifecycle, matching the guard pattern already used by the Dashboard, Library, and Series pages. Previously, navigating to these pages multiple times in a single session caused button clicks and color picker inputs to fire repeatedly.
+
 ### Removed
 
 - **Dead operator sets** — Cleaned up unused `enum` and `datetime` operator definitions left over from previous refactors.
