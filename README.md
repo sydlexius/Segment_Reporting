@@ -31,6 +31,14 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 - **Cache Maintenance** — Weekly VACUUM task, on-demand Vacuum button, force rescan, and sync status display
 - **About Page** — Plugin version, acknowledgements, Emby Forums link, and API endpoint reference
 
+## Screenshots
+
+![Dashboard](Screenshots/dashboard.png)
+
+![Query Builder](Screenshots/query-builder.png)
+
+See the **[User Guide](docs/USER_GUIDE.md)** for a full walkthrough with all screenshots.
+
 ## Installation
 
 1. Download the latest release from the [GitHub Releases](../../releases) page
@@ -122,7 +130,8 @@ Both projects are licensed under GPL-3.0 and have been instrumental in understan
 
 ## Documentation
 
-For detailed architecture, data models, API specifications, and implementation details, see the [Developer Guide](docs/DEVELOPER.md).
+- **[User Guide](docs/USER_GUIDE.md)** — Full walkthrough with screenshots
+- **[Developer Guide](docs/DEVELOPER.md)** — Architecture, data models, API specs
 
 ## Support
 
