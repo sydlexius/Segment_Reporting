@@ -46,7 +46,7 @@ Clean up C# code while no frontend work is in flight.
 Large JS refactors that touch shared files. Do these before feature work to avoid merge conflicts.
 
 - [x] **Session 4A** — #67 Milestones 1-2 — Design + implement shared inline editor (Medium) `[plan first]`
-- [ ] **Session 4B** — #67 Milestones 3-5 — Migrate all 3 pages to shared editor (Medium-Large) `[plan first]`
+- [x] **Session 4B** — #67 Milestones 3-5 — Migrate all 3 pages to shared editor (Medium-Large) `[plan first]`
 - [ ] **Session 4C** — #70 — Debounce/guard buttons across pages (Small-Medium)
 - [ ] **Session 4D** — #69 — Movie delete menu theme colors (Small)
 

@@ -23,7 +23,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var currentResults = [];
         var currentColumns = [];
         var currentCapabilities = null;
-        var editingRow = null;
+        var activeEditor = null;
         var selectedRows = {};
         var creditsDetectorAvailable = false;
         var listenersAttached = false;
@@ -1680,11 +1680,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         // ===== INLINE EDITING =====
 
-        function columnToMarker(colName) {
-            // IntroStartTicks -> IntroStart
-            return colName.replace(/Ticks$/, '');
-        }
-
         function setActionButtonsDisabled(disabled) {
             var btns = ['#btnExecute', '#btnClear', '#btnExportCsv', '#btnToggleBuilder'];
             btns.forEach(function (sel) {
@@ -1694,144 +1689,52 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function startRowEdit(tr) {
-            if (editingRow && editingRow !== tr) {
-                cancelRowEdit(editingRow);
-            }
-
+            if (activeEditor) { activeEditor.cancel(); }
             var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
             var rowData = currentResults[rowIndex];
             if (!rowData) return;
 
-            editingRow = tr;
-            tr.classList.add('editing');
-            tr.style.backgroundColor = 'rgba(255, 235, 59, 0.1)';
-
-            var tickCells = tr.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var col = cell.getAttribute('data-column');
-                var currentTicks = rowData[col];
-                var currentDisplay = helpers.ticksToTime(currentTicks);
-
-                cell.setAttribute('data-original-ticks', currentTicks || '');
-
-                var input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentTicks ? currentDisplay : '';
-                input.placeholder = '00:00:00.000';
-                input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
-                input.setAttribute('data-column', col);
-
-                cell.innerHTML = '';
-                cell.appendChild(input);
-            });
-
-            var actionsCell = tr.querySelector('.actions-cell');
-            if (actionsCell) {
-                actionsCell.innerHTML =
-                    '<button class="raised emby-button btn-save" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em; background-color: #4CAF50;">Save</button>' +
-                    '<button class="raised button-cancel emby-button btn-cancel" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Cancel</button>';
-            }
-
-            setActionButtonsDisabled(true);
-        }
-
-        function saveRowEdit(tr) {
-            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
-            var rowData = currentResults[rowIndex];
-            if (!rowData) return;
-
-            var inputs = tr.querySelectorAll('.tick-cell input');
-            var updates = [];
-
-            for (var i = 0; i < inputs.length; i++) {
-                var input = inputs[i];
-                var col = input.getAttribute('data-column');
-                var cell = input.parentElement;
-                var originalTicks = parseInt(cell.getAttribute('data-original-ticks'), 10) || 0;
-                var newValue = input.value.trim();
-
-                if (!newValue) {
-                    // Clearing a value is a delete (handled by M4), skip here
-                    continue;
-                }
-
-                var newTicks = helpers.timeToTicks(newValue);
-                if (newTicks === 0 && newValue !== '00:00:00.000') {
-                    helpers.showError('Invalid time format for ' + col + '. Use HH:MM:SS.fff');
-                    return;
-                }
-
-                if (newTicks !== originalTicks) {
-                    updates.push({ column: col, marker: columnToMarker(col), ticks: newTicks });
-                }
-            }
-
-            if (updates.length === 0) {
-                cancelRowEdit(tr);
-                return;
-            }
-
-            helpers.showLoading();
-
-            var chain = Promise.resolve();
-            updates.forEach(function (update) {
-                chain = chain.then(function () {
-                    return helpers.apiCall('update_segment', 'POST', JSON.stringify({
-                        ItemId: rowData['ItemId'],
-                        MarkerType: update.marker,
-                        Ticks: update.ticks
-                    }));
-                });
-            });
-
-            chain
-                .then(function () {
-                    helpers.hideLoading();
-                    helpers.showSuccess('Segments updated successfully.');
-                    // Update local data so the table reflects the new values
-                    updates.forEach(function (update) {
-                        rowData[update.column] = update.ticks;
-                    });
-                    restoreRow(tr, rowData);
-                })
-                .catch(function (error) {
-                    helpers.hideLoading();
-                    console.error('Failed to save segments:', error);
-                    helpers.showError('Failed to save segment changes.');
-                });
-        }
-
-        function cancelRowEdit(tr) {
-            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
-            var rowData = currentResults[rowIndex];
-
-            tr.classList.remove('editing');
-            tr.style.backgroundColor = (rowIndex % 2 === 1) ? 'rgba(128, 128, 128, 0.05)' : '';
-
-            if (rowData) {
-                restoreRow(tr, rowData);
-            }
-        }
-
-        function restoreRow(tr, rowData) {
-            var tickCells = tr.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var col = cell.getAttribute('data-column');
-                var ticks = rowData[col];
-                if (ticks && ticks > 0 && currentCapabilities && currentCapabilities.canPlayback) {
-                    cell.innerHTML = helpers.renderTimestamp(ticks, rowData['ItemId']);
-                } else {
-                    cell.textContent = helpers.ticksToTime(ticks);
+            activeEditor = helpers.createInlineEditor({
+                row: tr,
+                getCellValue: function (cell) {
+                    return rowData[cell.getAttribute('data-column')];
+                },
+                getItemId: function () { return rowData['ItemId']; },
+                allowDelete: false,
+                actionsCellSelector: '.actions-cell',
+                restoreCell: function (cell) {
+                    var col = cell.getAttribute('data-column');
+                    var ticks = rowData[col];
+                    if (ticks && ticks > 0 && currentCapabilities && currentCapabilities.canPlayback) {
+                        cell.innerHTML = helpers.renderTimestamp(ticks, rowData['ItemId']);
+                    } else {
+                        cell.textContent = helpers.ticksToTime(ticks);
+                    }
+                },
+                restoreActions: function (actionsCell) {
+                    actionsCell.innerHTML = '<button class="raised emby-button btn-actions" title="Episode actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
+                },
+                getRowBackground: function () {
+                    return (rowIndex % 2 === 1) ? 'rgba(128, 128, 128, 0.05)' : '';
+                },
+                onStart: function () {
+                    setActionButtonsDisabled(true);
+                },
+                onSaveComplete: function (updates) {
+                    for (var i = 0; i < updates.length; i++) {
+                        var col = updates[i].cell.getAttribute('data-column');
+                        if (col) rowData[col] = updates[i].ticks;
+                    }
+                    activeEditor.restoreDisplay();
+                    activeEditor = null;
+                    setActionButtonsDisabled(false);
+                },
+                onCancel: function () {
+                    activeEditor = null;
+                    setActionButtonsDisabled(false);
                 }
             });
-
-            var actionsCell = tr.querySelector('.actions-cell');
-            if (actionsCell) {
-                actionsCell.innerHTML = '<button class="raised emby-button btn-actions" title="Episode actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
-            }
-
-            editingRow = null;
-            setActionButtonsDisabled(false);
+            activeEditor.start();
         }
 
         // ===== PER-ROW ACTIONS MENU =====
@@ -2296,9 +2199,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
          * Clear results
          */
         function clearResults() {
-            if (editingRow) {
-                editingRow = null;
-                setActionButtonsDisabled(false);
+            if (activeEditor) {
+                activeEditor.cancel();
             }
             view.querySelector('#sqlInput').value = '';
             view.querySelector('#queriesDropdown').selectedIndex = 0;
@@ -2431,22 +2333,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                             return;
                         }
 
-                        // Save button
-                        if (target.classList.contains('btn-save')) {
-                            e.stopPropagation();
-                            var saveTr = target.closest('tr');
-                            if (saveTr) saveRowEdit(saveTr);
-                            return;
-                        }
-
-                        // Cancel button
-                        if (target.classList.contains('btn-cancel')) {
-                            e.stopPropagation();
-                            var cancelTr = target.closest('tr');
-                            if (cancelTr) cancelRowEdit(cancelTr);
-                            return;
-                        }
-
                     });
                 }
 
@@ -2529,7 +2415,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             currentResults = [];
             currentColumns = [];
             currentCapabilities = null;
-            editingRow = null;
+            activeEditor = null;
             selectedRows = {};
             builderState.items = [];
             builderState.columnOrder = BUILDER_FIELDS.map(function (f) { return f.name; });

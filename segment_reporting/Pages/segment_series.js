@@ -27,7 +27,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var loadedSeasons = {};  // seasonId -> episode array (lazy-load cache)
         var chart = null;
         var bulkSource = null;  // { ItemId, ItemName, IntroStartTicks, IntroEndTicks, CreditsStartTicks, copyMode }
-        var editingRow = null;  // currently editing row element (only one at a time)
+        var activeEditor = null;  // current createInlineEditor instance
         var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
         var listenersAttached = false;
         var creditsDetectorAvailable = false;
@@ -470,155 +470,34 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ── Inline Editing ──
 
         function startEdit(row, ep) {
-            // Cancel any existing edit first
-            if (editingRow && editingRow !== row) {
-                cancelCurrentEdit();
-            }
-
-            editingRow = row;
-            row.classList.add('editing');
-            row.style.backgroundColor = 'rgba(255, 235, 59, 0.1)';
-
-            var tickCells = row.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var marker = cell.getAttribute('data-marker');
-                var currentTicks = ep[marker + 'Ticks'];
-                var currentDisplay = helpers.ticksToTime(currentTicks);
-
-                // Store original value for cancel
-                cell.setAttribute('data-original-ticks', currentTicks || '');
-                cell.setAttribute('data-original-display', currentDisplay);
-
-                var input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentTicks ? currentDisplay : '';
-                input.placeholder = '00:00:00.000';
-                input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
-                input.setAttribute('data-marker', marker);
-
-                cell.innerHTML = '';
-                cell.appendChild(input);
-            });
-
-            // Replace action buttons with Save/Cancel
-            var actionsCell = row.querySelector('td:last-child');
-            actionsCell.innerHTML =
-                '<button class="raised emby-button btn-save" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em; background-color: #4CAF50;">Save</button>' +
-                '<button class="raised button-cancel emby-button btn-cancel" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Cancel</button>';
-
-            actionsCell.querySelector('.btn-save').addEventListener('click', function (e) {
-                e.stopPropagation();
-                saveEdit(row, ep);
-            });
-
-            actionsCell.querySelector('.btn-cancel').addEventListener('click', function (e) {
-                e.stopPropagation();
-                cancelEdit(row, ep);
-            });
-        }
-
-        function saveEdit(row, ep) {
-            var inputs = row.querySelectorAll('.tick-cell input');
-            var updates = [];
-
-            // Collect changes
-            inputs.forEach(function (input) {
-                var marker = input.getAttribute('data-marker');
-                var originalTicks = parseInt(row.querySelector('.tick-cell[data-marker="' + marker + '"]').getAttribute('data-original-ticks'), 10) || 0;
-                var newValue = input.value.trim();
-
-                if (!newValue) {
-                    // Empty field — if there was a value before, this means delete
-                    if (originalTicks > 0) {
-                        updates.push({ type: 'delete', marker: marker });
-                    }
-                    return;
-                }
-
-                var newTicks = helpers.timeToTicks(newValue);
-                if (newTicks === 0 && newValue !== '00:00:00.000') {
-                    // Invalid format
-                    helpers.showError('Invalid time format for ' + marker + '. Use HH:MM:SS.fff');
-                    return;
-                }
-
-                if (newTicks !== originalTicks) {
-                    updates.push({ type: 'update', marker: marker, ticks: newTicks });
-                }
-            });
-
-            if (updates.length === 0) {
-                // No changes
-                cancelEdit(row, ep);
-                return;
-            }
-
-            helpers.showLoading();
-
-            // Process updates sequentially
-            var chain = Promise.resolve();
-            updates.forEach(function (update) {
-                chain = chain.then(function () {
-                    if (update.type === 'delete') {
-                        return helpers.apiCall('delete_segment', 'POST', JSON.stringify({
-                            ItemId: ep.ItemId,
-                            MarkerType: update.marker
-                        }));
-                    } else {
-                        return helpers.apiCall('update_segment', 'POST', JSON.stringify({
-                            ItemId: ep.ItemId,
-                            MarkerType: update.marker,
-                            Ticks: update.ticks
-                        }));
-                    }
-                });
-            });
-
-            chain
-                .then(function () {
-                    helpers.hideLoading();
-                    helpers.showSuccess('Segments updated successfully.');
-                    // Refresh the episode data for this season
+            if (activeEditor) { activeEditor.cancel(); }
+            activeEditor = helpers.createInlineEditor({
+                row: row,
+                getCellValue: function (cell) {
+                    return ep[cell.getAttribute('data-marker') + 'Ticks'];
+                },
+                getItemId: function () { return ep.ItemId; },
+                restoreCell: function (cell) {
+                    var marker = cell.getAttribute('data-marker');
+                    cell.innerHTML = helpers.renderTimestamp(ep[marker + 'Ticks'], ep.ItemId);
+                },
+                restoreActions: function (actionsCell) {
+                    actionsCell.innerHTML = buildActionButtons(ep);
+                    attachRowActions(row, ep);
+                },
+                getRowBackground: function () {
+                    return bulkSource && bulkSource.ItemId === ep.ItemId
+                        ? 'rgba(33, 150, 243, 0.1)' : '';
+                },
+                onSaveComplete: function () {
+                    activeEditor = null;
                     refreshRow(row, ep);
-                })
-                .catch(function (error) {
-                    helpers.hideLoading();
-                    console.error('Failed to save segments:', error);
-                    helpers.showError('Failed to save segment changes.');
-                });
-        }
-
-        function cancelEdit(row, ep) {
-            row.classList.remove('editing');
-            row.style.backgroundColor = bulkSource && bulkSource.ItemId === ep.ItemId
-                ? 'rgba(33, 150, 243, 0.1)'
-                : '';
-
-            // Restore tick cells with clickable timestamps
-            var tickCells = row.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var marker = cell.getAttribute('data-marker');
-                var ticks = ep[marker + 'Ticks'];
-                cell.innerHTML = helpers.renderTimestamp(ticks, ep.ItemId);
-            });
-
-            // Restore action buttons
-            var actionsCell = row.querySelector('td:last-child');
-            actionsCell.innerHTML = buildActionButtons(ep);
-            attachRowActions(row, ep);
-
-            editingRow = null;
-        }
-
-        function cancelCurrentEdit() {
-            if (editingRow) {
-                // Find the episode data from the row's item ID
-                var itemId = editingRow.getAttribute('data-item-id');
-                var ep = findEpisodeByItemId(itemId);
-                if (ep) {
-                    cancelEdit(editingRow, ep);
+                },
+                onCancel: function () {
+                    activeEditor = null;
                 }
-            }
+            });
+            activeEditor.start();
         }
 
         function refreshRow(row, ep) {
@@ -639,11 +518,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     var seasonId = container ? container.getAttribute('data-season-id') : null;
                     var newRow = createEpisodeRow(ep, seasonId);
                     row.parentNode.replaceChild(newRow, row);
-                    editingRow = null;
                 })
                 .catch(function () {
-                    // Fallback: just cancel the edit state
-                    cancelEdit(row, ep);
+                    // Fallback: rebuild the row from cached data
+                    var container = row.closest('[data-season-id]');
+                    var seasonId = container ? container.getAttribute('data-season-id') : null;
+                    var newRow = createEpisodeRow(ep, seasonId);
+                    row.parentNode.replaceChild(newRow, row);
                 });
         }
 
@@ -1249,19 +1130,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         // ── Helpers ──
-
-        function findEpisodeByItemId(itemId) {
-            var keys = Object.keys(loadedSeasons);
-            for (var i = 0; i < keys.length; i++) {
-                var episodes = loadedSeasons[keys[i]];
-                for (var j = 0; j < episodes.length; j++) {
-                    if (episodes[j].ItemId === itemId) {
-                        return episodes[j];
-                    }
-                }
-            }
-            return null;
-        }
 
         function renderBreadcrumbs() {
             var bc = view.querySelector('#breadcrumbContainer');

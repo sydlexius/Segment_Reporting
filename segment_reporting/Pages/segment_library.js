@@ -32,7 +32,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var sortAscending = true;
         var movieSortColumn = null;
         var movieSortAscending = true;
-        var editingRow = null;
+        var activeEditor = null;
         var listenersAttached = false;
         var libraryName = null;
         var creditsDetectorAvailable = false;
@@ -574,148 +574,30 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ── Movie Inline Editing ──
 
         function startMovieEdit(row, movie) {
-            if (editingRow && editingRow !== row) {
-                cancelCurrentMovieEdit();
-            }
-
-            editingRow = row;
-            row.classList.add('editing');
-            row.style.backgroundColor = 'rgba(255, 235, 59, 0.1)';
-
-            var tickCells = row.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var marker = cell.getAttribute('data-marker');
-                var currentTicks = movie[marker + 'Ticks'];
-                var currentDisplay = helpers.ticksToTime(currentTicks);
-
-                cell.setAttribute('data-original-ticks', currentTicks || '');
-                cell.setAttribute('data-original-display', currentDisplay);
-
-                var input = document.createElement('input');
-                input.type = 'text';
-                input.value = currentTicks ? currentDisplay : '';
-                input.placeholder = '00:00:00.000';
-                input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
-                input.setAttribute('data-marker', marker);
-
-                cell.innerHTML = '';
-                cell.appendChild(input);
-            });
-
-            var actionsCell = row.querySelector('td:last-child');
-            actionsCell.innerHTML =
-                '<button class="raised emby-button btn-save" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em; background-color: #4CAF50;">Save</button>' +
-                '<button class="raised button-cancel emby-button btn-cancel" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Cancel</button>';
-
-            actionsCell.querySelector('.btn-save').addEventListener('click', function (e) {
-                e.stopPropagation();
-                saveMovieEdit(row, movie);
-            });
-
-            actionsCell.querySelector('.btn-cancel').addEventListener('click', function (e) {
-                e.stopPropagation();
-                cancelMovieEdit(row, movie);
-            });
-        }
-
-        function saveMovieEdit(row, movie) {
-            var inputs = row.querySelectorAll('.tick-cell input');
-            var updates = [];
-
-            inputs.forEach(function (input) {
-                var marker = input.getAttribute('data-marker');
-                var originalTicks = parseInt(row.querySelector('.tick-cell[data-marker="' + marker + '"]').getAttribute('data-original-ticks'), 10) || 0;
-                var newValue = input.value.trim();
-
-                if (!newValue) {
-                    if (originalTicks > 0) {
-                        updates.push({ type: 'delete', marker: marker });
-                    }
-                    return;
-                }
-
-                var newTicks = helpers.timeToTicks(newValue);
-                if (newTicks === 0 && newValue !== '00:00:00.000') {
-                    helpers.showError('Invalid time format for ' + marker + '. Use HH:MM:SS.fff');
-                    return;
-                }
-
-                if (newTicks !== originalTicks) {
-                    updates.push({ type: 'update', marker: marker, ticks: newTicks });
-                }
-            });
-
-            if (updates.length === 0) {
-                cancelMovieEdit(row, movie);
-                return;
-            }
-
-            helpers.showLoading();
-
-            var chain = Promise.resolve();
-            updates.forEach(function (update) {
-                chain = chain.then(function () {
-                    if (update.type === 'delete') {
-                        return helpers.apiCall('delete_segment', 'POST', JSON.stringify({
-                            ItemId: movie.ItemId,
-                            MarkerType: update.marker
-                        }));
-                    } else {
-                        return helpers.apiCall('update_segment', 'POST', JSON.stringify({
-                            ItemId: movie.ItemId,
-                            MarkerType: update.marker,
-                            Ticks: update.ticks
-                        }));
-                    }
-                });
-            });
-
-            chain
-                .then(function () {
-                    helpers.hideLoading();
-                    helpers.showSuccess('Segments updated successfully.');
+            if (activeEditor) { activeEditor.cancel(); }
+            activeEditor = helpers.createInlineEditor({
+                row: row,
+                getCellValue: function (cell) {
+                    return movie[cell.getAttribute('data-marker') + 'Ticks'];
+                },
+                getItemId: function () { return movie.ItemId; },
+                restoreCell: function (cell) {
+                    var marker = cell.getAttribute('data-marker');
+                    cell.innerHTML = helpers.renderTimestamp(movie[marker + 'Ticks'], movie.ItemId);
+                },
+                restoreActions: function (actionsCell) {
+                    actionsCell.innerHTML = buildMovieActionButtons();
+                    attachMovieRowActions(row, movie);
+                },
+                onSaveComplete: function () {
+                    activeEditor = null;
                     refreshMovieRow(row, movie);
-                })
-                .catch(function (error) {
-                    helpers.hideLoading();
-                    console.error('Failed to save segments:', error);
-                    helpers.showError('Failed to save segment changes.');
-                });
-        }
-
-        function cancelMovieEdit(row, movie) {
-            row.classList.remove('editing');
-            row.style.backgroundColor = '';
-
-            var tickCells = row.querySelectorAll('.tick-cell');
-            tickCells.forEach(function (cell) {
-                var marker = cell.getAttribute('data-marker');
-                var ticks = movie[marker + 'Ticks'];
-                cell.innerHTML = helpers.renderTimestamp(ticks, movie.ItemId);
-            });
-
-            var actionsCell = row.querySelector('td:last-child');
-            actionsCell.innerHTML = buildMovieActionButtons();
-            attachMovieRowActions(row, movie);
-
-            editingRow = null;
-        }
-
-        function cancelCurrentMovieEdit() {
-            if (editingRow) {
-                var itemId = editingRow.getAttribute('data-item-id');
-                var movie = findMovieByItemId(itemId);
-                if (movie) {
-                    cancelMovieEdit(editingRow, movie);
+                },
+                onCancel: function () {
+                    activeEditor = null;
                 }
-            }
-        }
-
-        function findMovieByItemId(itemId) {
-            for (var i = 0; i < movieData.length; i++) {
-                if (movieData[i].ItemId === itemId) return movieData[i];
-            }
-            return null;
+            });
+            activeEditor.start();
         }
 
         function refreshMovieRow(row, movie) {
@@ -731,10 +613,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                     var newRow = createMovieRow(movie);
                     row.parentNode.replaceChild(newRow, row);
-                    editingRow = null;
                 })
                 .catch(function () {
-                    cancelMovieEdit(row, movie);
+                    // Fallback: rebuild the row from cached data
+                    var newRow = createMovieRow(movie);
+                    row.parentNode.replaceChild(newRow, row);
                 });
         }
 
