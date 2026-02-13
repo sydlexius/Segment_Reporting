@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
-## v1.2.0.4 - Unified Actions Dropdown
+## [v1.2.0.4](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.2.0.4) - Unified Actions Dropdown
 
 ### Improved
 
