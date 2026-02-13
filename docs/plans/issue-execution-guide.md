@@ -10,6 +10,8 @@ Read docs/plans/issue-execution-guide.md and execute the next unchecked session.
 
 **Before committing:** If the session involves behavioral changes (API, queries, UI interactions), perform manual acceptance testing by deploying the built DLL to Emby and verifying the changes work end-to-end. Build-only verification is not sufficient for sessions that change runtime behavior. Do not commit the code or mark the checkbox until acceptance testing passes. Do not close the related issue until the commit with the fix has been verified.
 
+**Planning mode:** Sessions marked with `[plan first]` involve design decisions or multi-file refactors where the approach should be reviewed before writing code. Enter plan mode, explore the codebase, propose the approach, and get approval before implementing.
+
 ---
 
 ## Progress Tracker
@@ -36,15 +38,15 @@ Set up analyzers and linting so they catch problems during all subsequent work.
 
 Clean up C# code while no frontend work is in flight.
 
-- [ ] **Session 3A** — #68 — Extract bulk operation helper (Small-Medium)
+- [ ] **Session 3A** — #68 — Extract bulk operation helper (Small-Medium) `[plan first]`
 - [ ] **Session 3B** — #60 — Drop LastSyncDate column migration (Small-Medium)
 
 ### Phase 4 — Frontend Refactors
 
 Large JS refactors that touch shared files. Do these before feature work to avoid merge conflicts.
 
-- [ ] **Session 4A** — #67 Milestones 1-2 — Design + implement shared inline editor (Medium)
-- [ ] **Session 4B** — #67 Milestones 3-5 — Migrate all 3 pages to shared editor (Medium-Large)
+- [ ] **Session 4A** — #67 Milestones 1-2 — Design + implement shared inline editor (Medium) `[plan first]`
+- [ ] **Session 4B** — #67 Milestones 3-5 — Migrate all 3 pages to shared editor (Medium-Large) `[plan first]`
 - [ ] **Session 4C** — #70 — Debounce/guard buttons across pages (Small-Medium)
 - [ ] **Session 4D** — #69 — Movie delete menu theme colors (Small)
 
@@ -53,7 +55,7 @@ Large JS refactors that touch shared files. Do these before feature work to avoi
 Build new functionality on the cleaned-up codebase.
 
 - [ ] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
-- [ ] **Session 5B** — #63 — Season-level Actions dropdown (Medium)
+- [ ] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
 
 ### Phase 6 — Documentation (last)
 
