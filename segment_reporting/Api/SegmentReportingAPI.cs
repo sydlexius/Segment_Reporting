@@ -361,6 +361,72 @@ namespace segment_reporting.Api
             return null;
         }
 
+        private object ExecuteBulkOperation(
+            string itemIdsStr,
+            string markerTypesStr,
+            Func<string, string, bool> perItemAction,
+            string operationName)
+        {
+            var itemIds = SplitAndTrim(itemIdsStr);
+
+            if (itemIds.Length > MaxBulkItems)
+            {
+                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
+            }
+
+            string[] markerTypes = null;
+            if (markerTypesStr != null)
+            {
+                markerTypes = SplitAndTrim(markerTypesStr);
+                var validationError = ValidateMarkerTypes(markerTypes);
+                if (validationError != null)
+                    return validationError;
+            }
+
+            int succeeded = 0;
+            int failed = 0;
+            var errors = new List<string>();
+
+            foreach (var itemId in itemIds)
+            {
+                if (markerTypes != null)
+                {
+                    foreach (var markerType in markerTypes)
+                    {
+                        try
+                        {
+                            if (perItemAction(itemId, markerType))
+                                succeeded++;
+                        }
+                        catch (Exception ex)
+                        {
+                            failed++;
+                            errors.Add(itemId + "/" + markerType + ": " + ex.Message);
+                            _logger.Warn("{0}: Failed for item {1} marker {2}: {3}",
+                                operationName, itemId, markerType, ex.Message);
+                        }
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        if (perItemAction(itemId, null))
+                            succeeded++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failed++;
+                        errors.Add(itemId + ": " + ex.Message);
+                        _logger.Warn("{0}: Failed for item {1}: {2}",
+                            operationName, itemId, ex.Message);
+                    }
+                }
+            }
+
+            return new { succeeded, failed, errors };
+        }
+
         public object Get(GetPluginVersion request)
         {
             var v = GetType().Assembly.GetName().Version;
@@ -562,18 +628,6 @@ namespace segment_reporting.Api
                 return new { error = "markerTypes is required" };
             }
 
-            var targetIds = SplitAndTrim(request.TargetItemIds);
-            var markerTypes = SplitAndTrim(request.MarkerTypes);
-
-            if (targetIds.Length > MaxBulkItems)
-            {
-                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
-            }
-
-            var validationError = ValidateMarkerTypes(markerTypes);
-            if (validationError != null)
-                return validationError;
-
             SegmentRepository repo = GetRepository();
 
             SegmentInfo sourceSegment = repo.GetItemSegments(request.SourceItemId);
@@ -582,38 +636,19 @@ namespace segment_reporting.Api
                 return new { error = "Source item not found in cache" };
             }
 
-            int succeeded = 0;
-            int failed = 0;
-            var errors = new List<string>();
-
-            foreach (var targetId in targetIds)
-            {
-                foreach (var markerType in markerTypes)
+            return ExecuteBulkOperation(request.TargetItemIds, request.MarkerTypes,
+                (targetId, markerType) =>
                 {
-                    try
-                    {
-                        long? sourceTicks = GetTicksForMarkerType(sourceSegment, markerType);
-                        if (!sourceTicks.HasValue)
-                        {
-                            continue;
-                        }
+                    long? sourceTicks = GetTicksForMarkerType(sourceSegment, markerType);
+                    if (!sourceTicks.HasValue)
+                        return false;
 
-                        long targetInternalId = long.Parse(targetId);
-                        WriteSegmentToEmby(targetInternalId, markerType, sourceTicks.Value);
-                        repo.UpdateSegmentTicks(targetId, markerType, sourceTicks.Value);
-                        succeeded++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        errors.Add(targetId + "/" + markerType + ": " + ex.Message);
-                        _logger.Warn("BulkApply: Failed for item {0} marker {1}: {2}",
-                            targetId, markerType, ex.Message);
-                    }
-                }
-            }
-
-            return new { succeeded, failed, errors };
+                    long targetInternalId = long.Parse(targetId);
+                    WriteSegmentToEmby(targetInternalId, markerType, sourceTicks.Value);
+                    repo.UpdateSegmentTicks(targetId, markerType, sourceTicks.Value);
+                    return true;
+                },
+                "BulkApply");
         }
 
         public object Post(BulkDelete request)
@@ -630,46 +665,17 @@ namespace segment_reporting.Api
                 return new { error = "markerTypes is required" };
             }
 
-            var itemIds = SplitAndTrim(request.ItemIds);
-            var markerTypes = SplitAndTrim(request.MarkerTypes);
-
-            if (itemIds.Length > MaxBulkItems)
-            {
-                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
-            }
-
-            var validationError = ValidateMarkerTypes(markerTypes);
-            if (validationError != null)
-                return validationError;
-
             SegmentRepository repo = GetRepository();
 
-            int succeeded = 0;
-            int failed = 0;
-            var errors = new List<string>();
-
-            foreach (var itemId in itemIds)
-            {
-                foreach (var markerType in markerTypes)
+            return ExecuteBulkOperation(request.ItemIds, request.MarkerTypes,
+                (itemId, markerType) =>
                 {
-                    try
-                    {
-                        long internalId = long.Parse(itemId);
-                        WriteSegmentToEmby(internalId, markerType, null);
-                        repo.DeleteSegment(itemId, markerType);
-                        succeeded++;
-                    }
-                    catch (Exception ex)
-                    {
-                        failed++;
-                        errors.Add(itemId + "/" + markerType + ": " + ex.Message);
-                        _logger.Warn("BulkDelete: Failed for item {0} marker {1}: {2}",
-                            itemId, markerType, ex.Message);
-                    }
-                }
-            }
-
-            return new { succeeded, failed, errors };
+                    long internalId = long.Parse(itemId);
+                    WriteSegmentToEmby(internalId, markerType, null);
+                    repo.DeleteSegment(itemId, markerType);
+                    return true;
+                },
+                "BulkDelete");
         }
 
         public object Post(BulkSetCreditsEnd request)
@@ -682,60 +688,29 @@ namespace segment_reporting.Api
                 return new { error = "itemIds is required" };
             }
 
-            var itemIds = SplitAndTrim(request.ItemIds);
-
-            if (itemIds.Length > MaxBulkItems)
-            {
-                return new { error = "Maximum " + MaxBulkItems + " items per batch" };
-            }
-
             SegmentRepository repo = GetRepository();
 
-            int succeeded = 0;
-            int failed = 0;
-            var errors = new List<string>();
-
-            foreach (var itemId in itemIds)
-            {
-                try
+            return ExecuteBulkOperation(request.ItemIds, null,
+                (itemId, _) =>
                 {
                     long internalId = long.Parse(itemId);
                     var item = _libraryManager.GetItemById(internalId);
                     if (item == null)
-                    {
-                        failed++;
-                        errors.Add(itemId + ": Item not found");
-                        continue;
-                    }
+                        throw new InvalidOperationException("Item not found");
 
                     long? runtimeTicks = item.RunTimeTicks;
                     if (!runtimeTicks.HasValue || runtimeTicks.Value <= 0)
-                    {
-                        failed++;
-                        errors.Add(itemId + ": No runtime available");
-                        continue;
-                    }
+                        throw new InvalidOperationException("No runtime available");
 
                     long creditsStartTicks = runtimeTicks.Value - request.OffsetTicks;
                     if (creditsStartTicks < 0)
-                    {
                         creditsStartTicks = 0;
-                    }
 
                     WriteSegmentToEmby(internalId, MarkerTypes.CreditsStart, creditsStartTicks);
                     repo.UpdateSegmentTicks(itemId, MarkerTypes.CreditsStart, creditsStartTicks);
-                    succeeded++;
-                }
-                catch (Exception ex)
-                {
-                    failed++;
-                    errors.Add(itemId + ": " + ex.Message);
-                    _logger.Warn("BulkSetCreditsEnd: Failed for item {0}: {1}",
-                        itemId, ex.Message);
-                }
-            }
-
-            return new { succeeded, failed, errors };
+                    return true;
+                },
+                "BulkSetCreditsEnd");
         }
 
         public object Post(SyncNow request)
