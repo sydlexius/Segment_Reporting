@@ -2120,6 +2120,8 @@ entirely.
 | `build:restore` | `node scripts/build-js.mjs restore` | Restore originals from backup |
 | `build:chart` | `node scripts/build-js.mjs chart` | Rebuild the custom Chart.js bundle |
 | `build:thumb` | `node scripts/optimize-thumb.mjs` | Optimize the plugin thumbnail |
+| `lint:js` | `eslint Pages/*.js ...` | Lint JavaScript files |
+| `prepare` | `lefthook install` | Auto-install git hooks after `npm ci` |
 
 **Updating Chart.js:** To upgrade the bundled Chart.js version, bump the
 version in `package.json`, run `npm run build:chart`, and commit the resulting
@@ -2151,12 +2153,45 @@ The build enforces code quality through several layers:
 - **StyleCop.Analyzers** (NuGet package) -- C# style rules configured via
   `.editorconfig`. Documentation rules are disabled; naming and ordering rules
   are enforced.
+- **Roslynator.Analyzers** (NuGet package) -- additional C# analysis rules.
+- **IDisposableAnalyzers** (NuGet package) -- IDisposable pattern correctness.
+- **ESLint** (npm package) -- JavaScript linting with flat config
+  (`eslint.config.mjs`). Enforces `no-undef`, `no-redeclare`, `eqeqeq`, and
+  `no-unused-vars`. Run with `npm run lint:js --prefix segment_reporting`.
 - **`-warnaserror`** in CI -- any analyzer warning fails the build.
 - **`dotnet format --verify-no-changes`** -- enforces consistent formatting
   (indentation, spacing, brace style) against `.editorconfig` rules.
 - **`.editorconfig`** -- defines project-wide conventions: 4-space indentation,
   Allman-style braces, `_camelCase` for private fields, `PascalCase` for
   public members, `var` only when type is apparent.
+
+### Pre-commit Hooks (Lefthook)
+
+[Lefthook](https://github.com/evilmartians/lefthook) runs checks automatically
+before each commit. It is installed as a devDependency and its hooks are
+activated by the `prepare` script when you run `npm ci`.
+
+**Setup after cloning:**
+
+```bash
+cd segment_reporting
+npm ci          # installs dependencies AND activates lefthook hooks
+```
+
+**What it checks (in parallel):**
+
+| Check | Trigger | What it does |
+|-------|---------|-------------|
+| `dotnet-format` | Any `.cs` file staged | Verifies C# formatting matches `.editorconfig` |
+| `eslint` | Any `Pages/*.js` file staged | Lints JavaScript (skips `.min.js`) |
+| `whitespace` | Any staged file | Detects trailing whitespace, mixed line endings, and conflict markers |
+
+**Bypassing (discouraged):** `git commit --no-verify` skips all pre-commit
+hooks. Use this only for exceptional cases, not as a habit -- CI will still
+catch the issues.
+
+**Configuration:** The hook definitions live in `lefthook.yml` at the repo
+root.
 
 ### Releasing a New Version
 

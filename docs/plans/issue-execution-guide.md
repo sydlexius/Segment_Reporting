@@ -32,7 +32,7 @@ Set up analyzers and linting so they catch problems during all subsequent work.
 
 - [x] **Session 2A** — #76 Milestone 1 — C# analyzers: Roslynator, IDisposableAnalyzers (Medium)
 - [x] **Session 2B** — #76 Milestone 2 — ESLint for JavaScript (Medium)
-- [ ] **Session 2C** — #76 Milestone 3 — Lefthook pre-commit hooks (Small)
+- [x] **Session 2C** — #76 Milestone 3 — Lefthook pre-commit hooks (Small)
 
 ### Phase 3 — Backend Refactors
 

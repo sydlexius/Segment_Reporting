@@ -7,7 +7,8 @@
     "build:chart": "node scripts/build-js.mjs chart",
     "build:restore": "node scripts/build-js.mjs restore",
     "build:thumb": "node scripts/optimize-thumb.mjs",
-    "lint:js": "eslint Pages/*.js --ignore-pattern '*.min.js' --no-warn-ignored"
+    "lint:js": "eslint Pages/*.js --ignore-pattern '*.min.js' --no-warn-ignored",
+    "prepare": "cd .. && npx --prefix segment_reporting lefthook install && node segment_reporting/scripts/fix-hooks.mjs"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^16.0.3",
@@ -16,6 +17,7 @@
     "esbuild": "^0.27.3",
     "eslint": "^9.0.0",
     "eslint-plugin-no-unsanitized": "^4.1.4",
+    "lefthook": "^2.1.1",
     "rollup": "^4.57.1",
     "sharp": "^0.34.5"
   }

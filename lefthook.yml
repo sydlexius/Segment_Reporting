@@ -1,0 +1,12 @@
+pre-commit:
+  parallel: true
+  commands:
+    dotnet-format:
+      glob: "*.cs"
+      run: dotnet format segment_reporting/segment_reporting.csproj --verify-no-changes
+    eslint:
+      glob: "segment_reporting/Pages/*.js"
+      exclude: "*.min.js"
+      run: npx --prefix segment_reporting eslint {staged_files}
+    whitespace:
+      run: git diff --cached --check
