@@ -986,7 +986,7 @@ var SEGMENT_REPORTING_PLUGIN_VERSION = '__PLUGIN_VERSION__';
                 location.reload(true);
             }
         });
-    } catch (e) {
+    } catch (_e) {
         // Version check is best-effort
     }
 })();

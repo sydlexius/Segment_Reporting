@@ -2143,7 +2143,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             // Detect page background for sticky cell backgrounds
             var pageBg = getComputedStyle(view.closest('.page') || view).backgroundColor || '#1c1c1e';
-            var headerBg = 'rgba(128, 128, 128, 0.15)';
 
             // Checkbox column for row selection (when bulk delete is available)
             if (hasCheckboxes) {
