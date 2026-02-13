@@ -8,7 +8,7 @@ Recommended order of operations and session prompts for all open issues (excludi
 Read docs/plans/issue-execution-guide.md and execute the next unchecked session. After completing it, mark its checkbox as [x] and commit the updated guide alongside the code changes.
 ```
 
-**Before committing:** If the session involves behavioral changes (API, queries, UI interactions), perform manual acceptance testing by deploying the built DLL to Emby and verifying the changes work end-to-end. Build-only verification is not sufficient for sessions that change runtime behavior.
+**Before committing:** If the session involves behavioral changes (API, queries, UI interactions), perform manual acceptance testing by deploying the built DLL to Emby and verifying the changes work end-to-end. Build-only verification is not sufficient for sessions that change runtime behavior. Do not commit the code or mark the checkbox until acceptance testing passes. Do not close the related issue until the commit with the fix has been verified.
 
 ---
 
