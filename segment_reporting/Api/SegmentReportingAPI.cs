@@ -306,6 +306,7 @@ namespace segment_reporting.Api
         private readonly ITaskManager _taskManager;
 
         private const int MaxBulkItems = 500;
+        private static readonly char[] _commaSeparator = new[] { ',' };
 
         public SegmentReportingAPI(ILogManager logger,
             IServerConfigurationManager config,
@@ -342,7 +343,7 @@ namespace segment_reporting.Api
         {
             if (string.IsNullOrEmpty(input))
                 return Array.Empty<string>();
-            return input.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+            return input.Split(_commaSeparator, StringSplitOptions.RemoveEmptyEntries)
                         .Select(x => x.Trim())
                         .ToArray();
         }

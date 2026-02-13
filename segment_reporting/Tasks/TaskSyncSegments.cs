@@ -19,6 +19,7 @@ namespace segment_reporting.Tasks
     public class TaskSyncSegments : IScheduledTask
     {
         private const int ProgressReportInterval = 100;
+        private static readonly string[] _mediaItemTypes = new[] { "Episode", "Movie" };
 
         private readonly ILibraryManager _libraryManager;
         private readonly IItemRepository _itemRepository;
@@ -69,7 +70,7 @@ namespace segment_reporting.Tasks
 
             var items = _libraryManager.GetItemList(new InternalItemsQuery
             {
-                IncludeItemTypes = new[] { "Episode", "Movie" },
+                IncludeItemTypes = _mediaItemTypes,
                 Recursive = true,
                 IsVirtualItem = false
             });

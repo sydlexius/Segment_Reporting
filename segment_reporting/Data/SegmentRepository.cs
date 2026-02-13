@@ -7,14 +7,14 @@ using SQLitePCL.pretty;
 
 namespace segment_reporting.Data
 {
-    public class SegmentRepository : IDisposable
+    public sealed class SegmentRepository : IDisposable
     {
         public const string DbFileName = "segment_reporting.db";
 
         private static SegmentRepository _instance;
         private static readonly object _instanceLock = new object();
 
-        private readonly IDatabaseConnection _connection;
+        private readonly SQLiteDatabaseConnection _connection;
         private readonly object _dbLock = new object();
         private readonly ILogger _logger;
         private readonly string _dbPath;
@@ -25,6 +25,9 @@ namespace segment_reporting.Data
             if (_disposed)
                 throw new ObjectDisposedException(nameof(SegmentRepository));
         }
+
+        private static readonly char[] _pragmaNameDelimiters = new[] { '(', '=', ' ', '\t', '\n', '\r' };
+        private static readonly char[] _whitespaceDelimiters = new[] { ' ', '\t', '\n', '\r' };
 
         private static readonly string[] _dateFormats = new[]
         {
@@ -48,7 +51,9 @@ namespace segment_reporting.Data
             {
                 if (_instance == null || _instance._disposed)
                 {
+#pragma warning disable IDISP003 // Dispose previous before re-assigning - _disposed means already disposed
                     _instance = new SegmentRepository(dbPath, logger);
+#pragma warning restore IDISP003
                 }
                 else if (!string.Equals(_instance._dbPath, dbPath, StringComparison.OrdinalIgnoreCase))
                 {
@@ -58,7 +63,7 @@ namespace segment_reporting.Data
             }
         }
 
-        private IDatabaseConnection CreateConnection()
+        private SQLiteDatabaseConnection CreateConnection()
         {
             var flags = ConnectionFlags.Create | ConnectionFlags.ReadWrite |
                         ConnectionFlags.PrivateCache | ConnectionFlags.FullMutex;
@@ -1051,7 +1056,7 @@ namespace segment_reporting.Data
             }
 
             // Pragma name ends at '(', '=', space, or end of string
-            var nameEnd = afterPragma.IndexOfAny(new[] { '(', '=', ' ', '\t', '\n', '\r' });
+            var nameEnd = afterPragma.IndexOfAny(_pragmaNameDelimiters);
             var pragmaName = nameEnd >= 0 ? afterPragma.Substring(0, nameEnd) : afterPragma;
             pragmaName = pragmaName.Trim();
 
@@ -1071,7 +1076,7 @@ namespace segment_reporting.Data
             }
 
             var trimmed = sql.TrimStart();
-            var firstWord = trimmed.Split(new[] { ' ', '\t', '\n', '\r' }, 2)[0].ToUpperInvariant();
+            var firstWord = trimmed.Split(_whitespaceDelimiters, 2)[0].ToUpperInvariant();
             if (firstWord != "SELECT" && firstWord != "PRAGMA" && firstWord != "EXPLAIN")
             {
                 return new QueryResult
@@ -1333,10 +1338,12 @@ namespace segment_reporting.Data
 
             lock (_instanceLock)
             {
+#pragma warning disable IDISP003 // Dispose previous before re-assigning - clearing singleton reference, instance already disposed above
                 if (_instance == this)
                 {
                     _instance = null;
                 }
+#pragma warning restore IDISP003
             }
         }
     }

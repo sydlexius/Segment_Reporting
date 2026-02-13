@@ -207,5 +207,27 @@ dotnet_diagnostic.CA1062.severity = none
 # CA1822: Mark members as static (advisory only)
 dotnet_diagnostic.CA1822.severity = suggestion
 
+# CA1002: Use Collection<T> instead of List<T> (internal plugin API, not a public library)
+dotnet_diagnostic.CA1002.severity = none
+
+# CA1068: CancellationToken should be last parameter (changing order would break callers)
+dotnet_diagnostic.CA1068.severity = none
+
+# CA1305: Specify IFormatProvider (internal numeric IDs and log messages, locale irrelevant)
+dotnet_diagnostic.CA1305.severity = none
+
+# CA1707: Identifier should not contain underscores (project naming convention)
+dotnet_diagnostic.CA1707.severity = none
+
 # CA2007: Do not directly await a Task (not relevant for netstandard2.0 plugin)
 dotnet_diagnostic.CA2007.severity = none
+
+# CA2227: Collection properties should be read-only (DTOs need setters for JSON deserialization)
+dotnet_diagnostic.CA2227.severity = none
+
+###############################
+# IDisposableAnalyzers Rules  #
+###############################
+
+# IDISP025: Sealed via code fix (SegmentRepository is now sealed)
+dotnet_diagnostic.IDISP025.severity = warning

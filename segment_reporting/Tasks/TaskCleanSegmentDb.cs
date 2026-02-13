@@ -17,6 +17,7 @@ namespace segment_reporting.Tasks
     public class TaskCleanSegmentDb : IScheduledTask
     {
         private const double DivergenceThreshold = 5.0;
+        private static readonly string[] _mediaItemTypes = new[] { "Episode", "Movie" };
 
         private readonly ILibraryManager _libraryManager;
         private readonly ILogger _logger;
@@ -89,7 +90,7 @@ namespace segment_reporting.Tasks
                 // Step 3: Compare row count to Emby item count
                 var items = _libraryManager.GetItemList(new InternalItemsQuery
                 {
-                    IncludeItemTypes = new[] { "Episode", "Movie" },
+                    IncludeItemTypes = _mediaItemTypes,
                     Recursive = true,
                     IsVirtualItem = false
                 });

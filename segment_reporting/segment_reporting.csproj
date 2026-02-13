@@ -6,6 +6,7 @@
     <RootNamespace>segment_reporting</RootNamespace>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-All</AnalysisLevel>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,8 @@
 
   <ItemGroup>
     <PackageReference Include="StyleCop.Analyzers" Version="1.1.118" PrivateAssets="all" />
+    <PackageReference Include="Roslynator.Analyzers" Version="4.12.10" PrivateAssets="all" />
+    <PackageReference Include="IDisposableAnalyzers" Version="4.0.8" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
