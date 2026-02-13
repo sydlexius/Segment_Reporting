@@ -255,7 +255,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 // Season header (clickable)
                 var header = document.createElement('div');
                 header.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 0.75em 1em; background-color: rgba(255,255,255,0.05); border-radius: 4px; cursor: pointer; user-select: none;';
-                var seasonLabel = season.SeasonName || ('Season ' + (season.SeasonNumber || 1));
+                var seasonLabel = helpers.escHtml(season.SeasonName || ('Season ' + (season.SeasonNumber || 1)));
 
                 header.innerHTML =
                     '<div style="display: flex; align-items: center; gap: 1em;">' +

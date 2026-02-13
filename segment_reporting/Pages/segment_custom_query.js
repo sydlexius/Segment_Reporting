@@ -1,5 +1,5 @@
 /*
-Copyright(C) 2024
+Copyright(C) 2026
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -2358,6 +2358,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
             helpers.showSuccess('Results exported to CSV.');
         }

@@ -150,11 +150,6 @@ function segmentReportingGetQueryParam(name) {
     return null;
 }
 
-function segmentReportingClearNavParams() {
-    // Clean up legacy sessionStorage (params now live in the URL)
-    sessionStorage.removeItem('segment_reporting_nav_params');
-}
-
 function segmentReportingApiCall(endpoint, method, data) {
     method = method || 'GET';
     var url = ApiClient.getUrl('segment_reporting/' + endpoint);
@@ -923,7 +918,6 @@ function getSegmentReportingHelpers() {
         relativeTime: segmentReportingRelativeTime,
         navigate: segmentReportingNavigate,
         getQueryParam: segmentReportingGetQueryParam,
-        clearNavParams: segmentReportingClearNavParams,
         apiCall: segmentReportingApiCall,
         showLoading: segmentReportingShowLoading,
         hideLoading: segmentReportingHideLoading,
