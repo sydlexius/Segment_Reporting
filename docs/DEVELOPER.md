@@ -66,7 +66,14 @@ contributing to this project or using it as a reference for your own Emby plugin
    - [Manual Testing Workflow](#manual-testing-workflow)
    - [Bruno API Test Collection](#bruno-api-test-collection)
    - [What to Check After Changes](#what-to-check-after-changes)
-9. [Reference Links](#9-reference-links)
+9. [Screenshots](#9-screenshots)
+   - [Screenshot Inventory](#screenshot-inventory)
+   - [Automated Capture Script](#automated-capture-script)
+   - [Data Anonymization](#data-anonymization)
+   - [Emby SPA Gotchas](#emby-spa-gotchas)
+   - [ImageMagick Crop Commands](#imagemagick-crop-commands)
+   - [Retaking Screenshots](#retaking-screenshots)
+10. [Reference Links](#10-reference-links)
 
 ---
 
@@ -2359,7 +2366,160 @@ Depending on what was changed, verify the following:
 
 ---
 
-## 9. Reference Links
+## 9. Screenshots
+
+This section documents the screenshot capture process, anonymization patterns,
+and cropping commands used to produce the images in `Screenshots/`.
+
+### Screenshot Inventory
+
+| File | Viewport | Croppable | What it shows |
+|------|----------|-----------|---------------|
+| `dashboard.png` | 2561x1398 | Yes | Summary cards, coverage chart, library table |
+| `library-browse.png` | 2561x1398 | -- | Library drill-down with series/movie list |
+| `series-detail.png` | 1460x1000 | Yes | Episode table with Actions dropdown/submenu |
+| `custom-query.png` | 2561x1398 | -- | Custom query page overview |
+| `query-builder.png` | 2561x1398 | Yes | Visual query builder (Match through Limit) |
+| `query-autocomplete.png` | 2561x1398 | -- | Tag input autocomplete suggestions |
+| `query-results.png` | 1460x1000 | Yes | Results table with Actions dropdown |
+| `settings.png` | 2561x1398 | -- | Plugin settings page |
+| `about.png` | 2561x1398 | -- | About/info page |
+
+Full-page screenshots show the complete Emby interface (sidebar, header,
+content). Cropped variants (generated on demand via the commands in
+[ImageMagick Crop Commands](#imagemagick-crop-commands)) remove the sidebar and
+focus on a specific feature. Crop files are not committed -- generate them as
+needed and reference with a `*-crop.png` suffix.
+
+### Automated Capture Script
+
+`scripts/capture-screenshots.mjs` automates the full workflow: navigate to each
+plugin page, anonymize data, open menus for feature showcase, capture full-page
+screenshots, and crop.
+
+**Prerequisites:**
+
+```bash
+npm install --no-save playwright
+npx playwright install chromium
+```
+
+**Usage:**
+
+```bash
+export EMBY_API_KEY="your-admin-api-key"
+export EMBY_URL="http://localhost:8096"   # optional, this is the default
+node scripts/capture-screenshots.mjs
+```
+
+The script requires a running Emby server with the plugin installed and synced.
+ImageMagick (`magick` CLI) must be on PATH for cropping.
+
+### Data Anonymization
+
+Screenshots must never contain real media library names. The capture script
+applies DOM manipulation after each page loads to replace real data with
+fictional names.
+
+**Anonymization layers:**
+
+| Layer | Technique | Fictional data source |
+|-------|-----------|----------------------|
+| Library names | Replace table cells and Chart.js labels | TV Shows, Movies, Documentaries, Kids TV |
+| Series names | TreeWalker text replacement + consistent mapping | Crimson Meridian, Silver Horizon, Starfield Academy, ... |
+| Episode names | Table cell iteration (3rd column in episode tables) | The Awakening, Shadow Protocol, Convergence, ... |
+| Item IDs | Replace `data-itemid` attrs and table cells | Random 4-digit numbers |
+| Chart labels | `Chart.getChart(canvas)` → update labels → `chart.update('none')` | Same mappings as above |
+
+**Fictional series names:**
+
+```text
+Crimson Meridian, Silver Horizon, Azure Chronicle, The Phantom Gate,
+Starweaver, Obsidian Legacy, Neon Prism, Shadowfall,
+The Jade Compass, Iron Bloom, Crystal Vanguard, Stormlight,
+Starfield Academy, Night Circuit, The Amber Throne, Echoes of Dawn
+```
+
+**Fictional episode names:**
+
+```text
+The Awakening, Shadow Protocol, Convergence, Midnight Signal,
+The First Gate, Resonance, Fractured Light, Silent Accord,
+Descent, The Iron Path, Catalyst, Veil of Stars,
+Crossfire, The Ember Court, Undertow, Threshold,
+Reckoning, Parallax, The Quiet Storm, Meridian Line,
+Fulcrum, Aftermath, Obsidian Hour, The Last Signal,
+Solstice, Uncharted, The Forge, Twilight Run,
+Faultline, The Accord, Tempest, Zenith Point
+```
+
+### Emby SPA Gotchas
+
+These issues affect screenshot automation and manual Playwright MCP workflows:
+
+- **Multiple pages in DOM.** Emby's SPA keeps previously visited pages mounted.
+  Always scope selectors to the specific page element
+  (e.g., `#segmentDashboardPage canvas`) rather than using bare
+  `document.querySelector('canvas')`.
+
+- **Escape key triggers navigation.** Pressing Escape in the Emby SPA navigates
+  back rather than closing a dialog. Never use `page.keyboard.press('Escape')`
+  to dismiss dropdowns -- click outside the menu instead.
+
+- **Scroll container is the page element.** Scrolling the page content requires
+  targeting the page element itself (e.g., `#segmentSeriesPage`), not
+  `document.body` or `window`.
+
+- **Use `page.waitForTimeout()` in Playwright.** Within `browser_run_code` or
+  `page.evaluate` contexts, `setTimeout` does not work as expected. Use
+  Playwright's built-in `page.waitForTimeout(ms)` for delays between
+  interactions.
+
+- **`viewshow` fires after navigation.** After `page.goto()`, the plugin page
+  needs time for its `viewshow` lifecycle event to fire and load data. Wait for
+  the page element to be attached and add a 1--2 second delay before interacting
+  with the page content.
+
+### ImageMagick Crop Commands
+
+These are the crop geometries for each feature-highlight screenshot. Run from
+the repository root:
+
+```bash
+# Dashboard: coverage chart + library table (removes sidebar)
+magick Screenshots/dashboard.png -crop 2190x1210+370+55 +repage Screenshots/dashboard-crop.png
+
+# Series detail: episode table with Actions dropdown/submenu
+magick Screenshots/series-detail.png -crop 1220x450+240+240 +repage Screenshots/series-detail-crop.png
+
+# Query results: results table with Actions dropdown
+magick Screenshots/query-results.png -crop 1220x620+240+180 +repage Screenshots/query-results-crop.png
+
+# Query builder: Match conditions through Limit field
+magick Screenshots/query-builder.png -crop 2190x990+370+170 +repage Screenshots/query-builder-crop.png
+```
+
+Crop geometry format: `WxH+X+Y` where X,Y is the top-left corner offset. These
+values assume the viewport sizes listed in the Screenshot Inventory table above.
+If the Emby sidebar width changes (currently ~345px at 2561-wide viewport,
+~230px at 1460-wide), the X offset will need adjustment.
+
+### Retaking Screenshots
+
+When a UI change alters the appearance of a screenshot:
+
+1. **Automated (preferred):** Run the capture script. It handles anonymization
+   and cropping automatically.
+2. **Manual via Playwright MCP:** Navigate to the page, apply anonymization via
+   `browser_evaluate`, open any menus needed for the shot, then use
+   `browser_take_screenshot`. Apply crops with ImageMagick afterwards.
+3. **Update docs:** If the screenshot shows a feature that changed (new button,
+   renamed label, different layout), update the corresponding docs (see
+   Documentation Maintenance in `CLAUDE.md`).
+
+---
+
+## 10. Reference Links
 
 ### Upstream Projects
 

@@ -333,6 +333,7 @@ All timestamps use the format `HH:MM:SS.fff`:
 | `fff` | Milliseconds | `500` |
 
 Examples:
+
 - `00:01:23.500` — 1 minute and 23.5 seconds in
 - `00:00:45.000` — 45 seconds in
 - `01:05:30.250` — 1 hour, 5 minutes, 30.25 seconds in
@@ -586,6 +587,7 @@ Choose a color palette for all charts across the plugin. Options include:
 
 When you choose **Custom Colors**, four color pickers appear so you can set
 exact colors for:
+
 - Both Segments
 - Intro Only
 - Credits Only
