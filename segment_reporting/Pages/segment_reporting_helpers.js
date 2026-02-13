@@ -909,6 +909,179 @@ function segmentReportingIsLightBackground(bgColor) {
     return false;
 }
 
+// ── Shared inline editing ──
+
+function segmentReportingCreateInlineEditor(config) {
+    // config (required):
+    //   row             - the <tr> element to edit
+    //   getCellValue    - function(cell) returning current tick value for a .tick-cell
+    //   getItemId       - function() returning the ItemId for API calls
+    //   restoreCell     - function(cell) to restore a tick-cell's display content
+    //   restoreActions  - function(actionsCell) to restore action buttons
+    // config (optional):
+    //   allowDelete          - boolean, empty input = delete segment (default true)
+    //   actionsCellSelector  - CSS selector for the actions cell (default 'td:last-child')
+    //   getRowBackground     - function() returning background color for non-editing state
+    //   onStart              - function() called after edit UI is set up
+    //   onSaveComplete       - function(updates) called after API success
+    //   onCancel             - function() called after cancel completes
+
+    var row = config.row;
+    var active = false;
+
+    function getMarkerType(cell) {
+        var marker = cell.getAttribute('data-marker');
+        if (marker) return marker;
+        var col = cell.getAttribute('data-column');
+        if (col) return col.replace(/Ticks$/, '');
+        return '';
+    }
+
+    function getActionsCell() {
+        return row.querySelector(config.actionsCellSelector || 'td:last-child');
+    }
+
+    function restoreDisplay() {
+        active = false;
+        row.classList.remove('editing');
+        row.style.backgroundColor = config.getRowBackground ? config.getRowBackground() : '';
+
+        var tickCells = row.querySelectorAll('.tick-cell');
+        for (var i = 0; i < tickCells.length; i++) {
+            config.restoreCell(tickCells[i]);
+        }
+
+        var actionsCell = getActionsCell();
+        if (actionsCell) {
+            config.restoreActions(actionsCell);
+        }
+    }
+
+    function start() {
+        active = true;
+        row.classList.add('editing');
+        row.style.backgroundColor = 'rgba(255, 235, 59, 0.1)';
+
+        var tickCells = row.querySelectorAll('.tick-cell');
+        for (var i = 0; i < tickCells.length; i++) {
+            var cell = tickCells[i];
+            var currentTicks = config.getCellValue(cell);
+            var currentDisplay = segmentReportingTicksToTime(currentTicks);
+
+            cell.setAttribute('data-original-ticks', currentTicks || '');
+
+            var input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentTicks ? currentDisplay : '';
+            input.placeholder = '00:00:00.000';
+            input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
+
+            cell.innerHTML = '';
+            cell.appendChild(input);
+        }
+
+        var actionsCell = getActionsCell();
+        if (actionsCell) {
+            actionsCell.innerHTML =
+                '<button class="raised emby-button btn-save" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em; background-color: #4CAF50;">Save</button>' +
+                '<button class="raised button-cancel emby-button btn-cancel" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Cancel</button>';
+
+            actionsCell.querySelector('.btn-save').addEventListener('click', function (e) {
+                e.stopPropagation();
+                save();
+            });
+            actionsCell.querySelector('.btn-cancel').addEventListener('click', function (e) {
+                e.stopPropagation();
+                cancel();
+            });
+        }
+
+        if (config.onStart) config.onStart();
+    }
+
+    function save() {
+        var inputs = row.querySelectorAll('.tick-cell input');
+        var updates = [];
+        var allowDelete = config.allowDelete !== false;
+
+        for (var i = 0; i < inputs.length; i++) {
+            var input = inputs[i];
+            var cell = input.parentElement;
+            var originalTicks = parseInt(cell.getAttribute('data-original-ticks'), 10) || 0;
+            var newValue = input.value.trim();
+
+            if (!newValue) {
+                if (allowDelete && originalTicks > 0) {
+                    updates.push({ cell: cell, type: 'delete', marker: getMarkerType(cell) });
+                }
+                continue;
+            }
+
+            var newTicks = segmentReportingTimeToTicks(newValue);
+            if (newTicks === 0 && newValue !== '00:00:00.000') {
+                segmentReportingShowError('Invalid time format for ' + getMarkerType(cell) + '. Use HH:MM:SS.fff');
+                return;
+            }
+
+            if (newTicks !== originalTicks) {
+                updates.push({ cell: cell, type: 'update', marker: getMarkerType(cell), ticks: newTicks });
+            }
+        }
+
+        if (updates.length === 0) {
+            cancel();
+            return;
+        }
+
+        segmentReportingShowLoading();
+
+        var itemId = config.getItemId();
+        var chain = Promise.resolve();
+        for (var j = 0; j < updates.length; j++) {
+            (function (update) {
+                chain = chain.then(function () {
+                    if (update.type === 'delete') {
+                        return segmentReportingApiCall('delete_segment', 'POST', JSON.stringify({
+                            ItemId: itemId,
+                            MarkerType: update.marker
+                        }));
+                    }
+                    return segmentReportingApiCall('update_segment', 'POST', JSON.stringify({
+                        ItemId: itemId,
+                        MarkerType: update.marker,
+                        Ticks: update.ticks
+                    }));
+                });
+            })(updates[j]);
+        }
+
+        chain
+            .then(function () {
+                segmentReportingHideLoading();
+                segmentReportingShowSuccess('Segments updated successfully.');
+                if (config.onSaveComplete) config.onSaveComplete(updates);
+            })
+            .catch(function (error) {
+                segmentReportingHideLoading();
+                console.error('Failed to save segments:', error);
+                segmentReportingShowError('Failed to save segment changes.');
+            });
+    }
+
+    function cancel() {
+        restoreDisplay();
+        if (config.onCancel) config.onCancel();
+    }
+
+    return {
+        start: start,
+        save: save,
+        cancel: cancel,
+        restoreDisplay: restoreDisplay,
+        isActive: function () { return active; }
+    };
+}
+
 function getSegmentReportingHelpers() {
     return {
         ticksToTime: segmentReportingTicksToTime,
@@ -963,7 +1136,8 @@ function getSegmentReportingHelpers() {
         createSubmenuItem: segmentReportingCreateSubmenuItem,
         positionMenuBelowButton: segmentReportingPositionMenuBelowButton,
         attachMenuCloseHandler: segmentReportingAttachMenuCloseHandler,
-        createActionsMenu: segmentReportingCreateActionsMenu
+        createActionsMenu: segmentReportingCreateActionsMenu,
+        createInlineEditor: segmentReportingCreateInlineEditor
     };
 }
 

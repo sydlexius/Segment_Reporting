@@ -7,6 +7,6 @@ pre-commit:
     eslint:
       glob: "segment_reporting/Pages/*.js"
       exclude: "*.min.js"
-      run: npx --prefix segment_reporting eslint {staged_files}
+      run: npx --prefix segment_reporting eslint --config segment_reporting/eslint.config.mjs {staged_files}
     whitespace:
       run: git diff --cached --check
