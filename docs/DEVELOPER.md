@@ -334,9 +334,10 @@ exist, then calls `CheckMigration()`:
 2. Compare against a dictionary of required columns.
 3. For any missing column, execute `ALTER TABLE MediaSegments ADD COLUMN ...`.
 
-This approach is append-only -- columns can be added but not removed or renamed.
-If a destructive migration is ever needed, the `force_rescan` API endpoint drops
-and recreates the table.
+This approach is mostly append-only -- columns can be added via `ALTER TABLE ADD
+COLUMN`.  Column removal uses `ALTER TABLE DROP COLUMN` (SQLite 3.35+) with a
+fallback to nulling out values on older versions.  If a full schema reset is ever
+needed, the `force_rescan` API endpoint drops and recreates the table.
 
 ### Segment Types
 

@@ -39,7 +39,7 @@ Set up analyzers and linting so they catch problems during all subsequent work.
 Clean up C# code while no frontend work is in flight.
 
 - [x] **Session 3A** — #68 — Extract bulk operation helper (Small-Medium) `[plan first]`
-- [ ] **Session 3B** — #60 — Drop LastSyncDate column migration (Small-Medium)
+- [x] **Session 3B** — #60 — Drop LastSyncDate column migration (Small-Medium)
 
 ### Phase 4 — Frontend Refactors
 

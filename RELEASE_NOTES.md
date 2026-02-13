@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.2.0.16 - Drop LastSyncDate Column
+
+### Improved
+
+- **Removed the obsolete LastSyncDate column from the database** (#60) - The per-row sync timestamp column (deprecated in v1.0.4) is now fully dropped on databases running SQLite 3.35 or later. Older SQLite versions will continue to have the column's values cleared on startup as before.
+
+---
+
 ## [v1.2.0.4](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.2.0.4) - Unified Actions Dropdown
 
 ### Improved

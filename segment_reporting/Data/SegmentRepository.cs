@@ -185,14 +185,21 @@ namespace segment_reporting.Data
                 }
             }
 
-            // LastSyncDate was removed in v1.0.4 — sync timing is tracked in the
-            // SyncStatus table.  The column may still exist in databases created by
-            // older versions; null it out so it no longer wastes space.  A Force
-            // Rescan drops and recreates the table without it entirely.
+            // LastSyncDate was removed in v1.0.4 - sync timing is tracked in the
+            // SyncStatus table. Try to drop the column entirely; fall back to
+            // nulling it out on older SQLite versions that lack DROP COLUMN.
             if (existingColumns.Contains("LastSyncDate"))
             {
-                _logger.Info("SegmentRepository: Clearing obsolete LastSyncDate column");
-                _connection.Execute("UPDATE MediaSegments SET LastSyncDate = NULL WHERE LastSyncDate IS NOT NULL");
+                try
+                {
+                    _connection.Execute("ALTER TABLE MediaSegments DROP COLUMN LastSyncDate");
+                    _logger.Info("SegmentRepository: Dropped obsolete LastSyncDate column");
+                }
+                catch (Exception)
+                {
+                    _logger.Info("SegmentRepository: DROP COLUMN not supported, clearing LastSyncDate values");
+                    _connection.Execute("UPDATE MediaSegments SET LastSyncDate = NULL WHERE LastSyncDate IS NOT NULL");
+                }
             }
         }
 
