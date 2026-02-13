@@ -64,7 +64,7 @@ namespace segment_reporting.Tasks
 
             _logger.Info("TaskSyncSegments: Starting full segment sync");
 
-            string dbPath = Path.Combine(_appPaths.DataPath, "segment_reporting.db");
+            string dbPath = Path.Combine(_appPaths.DataPath, SegmentRepository.DbFileName);
             var repo = SegmentRepository.GetInstance(dbPath, _logger);
 
             var items = _libraryManager.GetItemList(new InternalItemsQuery

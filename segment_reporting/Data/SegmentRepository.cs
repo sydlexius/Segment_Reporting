@@ -9,6 +9,8 @@ namespace segment_reporting.Data
 {
     public class SegmentRepository : IDisposable
     {
+        public const string DbFileName = "segment_reporting.db";
+
         private static SegmentRepository _instance;
         private static readonly object _instanceLock = new object();
 

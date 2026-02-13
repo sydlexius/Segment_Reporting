@@ -305,7 +305,6 @@ namespace segment_reporting.Api
         private readonly IItemRepository _itemRepository;
         private readonly ITaskManager _taskManager;
 
-        private const string DbFileName = "segment_reporting.db";
         private const int MaxBulkItems = 500;
 
         public SegmentReportingAPI(ILogManager logger,
@@ -325,7 +324,7 @@ namespace segment_reporting.Api
 
         private string GetDbPath()
         {
-            return Path.Combine(_config.ApplicationPaths.DataPath, DbFileName);
+            return Path.Combine(_config.ApplicationPaths.DataPath, SegmentRepository.DbFileName);
         }
 
         private SegmentRepository GetRepository()

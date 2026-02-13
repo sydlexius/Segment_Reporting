@@ -60,7 +60,7 @@ namespace segment_reporting.Tasks
 
             _logger.Info("TaskCleanSegmentDb: Starting cache maintenance");
 
-            string dbPath = Path.Combine(_appPaths.DataPath, "segment_reporting.db");
+            string dbPath = Path.Combine(_appPaths.DataPath, SegmentRepository.DbFileName);
             var repo = SegmentRepository.GetInstance(dbPath, _logger);
 
             try
@@ -73,9 +73,11 @@ namespace segment_reporting.Tasks
 
                 // Step 2: Get cache health statistics
                 int rowCount = repo.GetRowCount();
-                var dbInfo = new FileInfo(dbPath);
-                long dbFileSizeBytes = dbInfo.Length;
-                long dbFileSizeKb = dbFileSizeBytes / 1024;
+                long dbFileSizeKb = 0;
+                if (File.Exists(dbPath))
+                {
+                    dbFileSizeKb = new FileInfo(dbPath).Length / 1024;
+                }
 
                 var syncStatus = repo.GetSyncStatus();
                 string lastSyncStr = syncStatus?.LastFullSync != null
