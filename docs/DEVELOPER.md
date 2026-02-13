@@ -1553,6 +1553,33 @@ helpers.ticksToTime(50000000);  // "00:00:05.000"
 | `invalidatePreferencesCache()` | Clears the cached preferences so the next `loadPreferences()` call re-fetches from the API. |
 | `getPreference(key)` | Returns a single preference value from the cache, or null. |
 
+#### Dropdown Menu Infrastructure
+
+These functions provide a shared, theme-aware dropdown menu system used by
+both the Series Detail and Custom Query pages. Menus detect the page's
+background color to render correctly on both light and dark Emby themes.
+
+| Function | Description |
+|----------|-------------|
+| `getMenuColors(viewEl)` | Returns a color set (background, border, hover, divider) by detecting the theme via DOM walking + luminance calculation. |
+| `createActionsMenu(colors)` | Creates the root dropdown `<div>` with absolute positioning, border, shadow, and auto-cleanup of the parent cell's z-index on removal. |
+| `createMenuItem(label, enabled, colors, onClick)` | Creates a single clickable menu item. Disabled items are dimmed and non-interactive. |
+| `createMenuDivider(colors)` | Creates a horizontal divider line between menu sections. |
+| `createSubmenuItem(label, subItems, anyEnabled, colors)` | Creates a menu item with a right-arrow indicator and a flyout submenu. Supports hover + click (for touch) toggling. Flips left/right if the submenu overflows the viewport. |
+| `positionMenuBelowButton(menu, buttonEl)` | Appends the menu to the button's parent cell and positions it below the button, right-aligned. Elevates the parent cell's z-index to escape sticky-column stacking contexts. |
+| `attachMenuCloseHandler(menu)` | Registers a click-away handler that removes the menu when clicking outside it. |
+| `detectDropdownBg(viewEl)` | Walks the DOM tree upward from the view element to find the first non-transparent background color. |
+| `isLightBackground(bgColor)` | Calculates relative luminance of an RGB color string to determine if the background is light (> 0.5 threshold). |
+
+#### Bulk Operations
+
+| Function | Description |
+|----------|-------------|
+| `showBulkResult(prefix, result)` | Formats and displays a success/error dialog from a bulk operation result object (`{ succeeded, failed, errors }`). |
+| `bulkDelete(itemIds, markerTypes)` | Prompts for confirmation, then calls `bulk_delete` with the given item IDs and marker types. Returns a Promise. |
+| `bulkSetCreditsEnd(itemIds, offsetTicks)` | Prompts for confirmation, then calls `bulk_set_credits_end`. Returns a Promise. |
+| `bulkDetectCredits(items)` | Sequentially calls EmbyCredits `ProcessEpisode` for each item. Returns a Promise with aggregate results. |
+
 #### External Plugin Integration
 
 | Function | Description |
@@ -1817,19 +1844,21 @@ episode tables inside each section.
 - Season coverage bar chart (intro % and credits % per season)
 - Collapsible season accordion (first season auto-expanded)
 - Episode tables with checkboxes for multi-select
-- Inline editing (Edit button transforms tick cells into text inputs)
-- Single-item delete with marker type selection menu
-- "Copy" button to mark an episode as the bulk source
-- Bulk source banner showing which episode is selected
-- Bulk operations: Apply Source, Delete All Intros, Delete All Credits,
-  Set All Credits to End, Detect All Credits
+- Unified **Actions** dropdown per episode row (Edit, Copy submenu, Delete
+  submenu, Set Credits to End, Detect Credits)
+- Copy submenu with type selection: Intros / Credits / Both
+- Delete submenu with grouped deletion: Intros / Credits / Both
+- Type-aware bulk source banner (e.g., "Copying intros from Episode 3")
+- Bulk operations: Apply Source (type-aware), Delete All Intros, Delete All
+  Credits, Set All Credits to End, Detect All Credits
 - Selection-aware bulk buttons (show count when items are checked)
 - Per-episode, per-season, and per-series credits detection (EmbyCredits)
 - Clickable timestamp links that launch playback at that position
 
 **Patterns demonstrated:** Lazy-loading data (episodes loaded on accordion
-expand), multi-select with select-all, bulk operations against the REST API,
-external plugin integration (EmbyCredits), row-level refresh after edits.
+expand), multi-select with select-all, unified Actions dropdown with
+hierarchical submenus, type-aware bulk copy, bulk operations against the REST
+API, external plugin integration (EmbyCredits), row-level refresh after edits.
 
 #### segment_custom_query -- Custom SQL Query Editor
 
@@ -1844,12 +1873,15 @@ A SQL editor with a visual query builder and saved query management.
 - Unified dropdown combining built-in (canned) queries and user-saved queries
 - Save / Delete / Overwrite saved queries
 - Query execution with results displayed in a dynamic table
+- Per-row **Actions** dropdown (Edit, Delete submenu, Set Credits to End,
+  Detect Credits) — shown whenever `ItemId` is present in the result columns
 - Tick columns automatically formatted as `HH:MM:SS.fff`
 - CSV export of query results
 - Clear button to reset the interface
 
 **Patterns demonstrated:** Recursive descent SQL parser, dynamic form
-generation (query builder), CSV blob export, `optgroup` usage in dropdowns.
+generation (query builder), shared Actions menu infrastructure from helpers,
+CSV blob export, `optgroup` usage in dropdowns.
 
 #### segment_settings -- Plugin Settings
 

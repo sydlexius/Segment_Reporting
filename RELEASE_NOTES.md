@@ -1,6 +1,20 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.2.0.4 - Unified Actions Dropdown
+
+### Improved
+
+- **Unified Actions dropdown menu** (#58) — Each episode and query result row now has a single "Actions ▼" button that opens a clean dropdown menu with Edit, Copy, Delete, and Set Credits to End options, replacing the previous row of individual buttons.
+- **Type-selective Copy and Delete** (#58) — The Copy and Delete menu items now expand into submenus letting you choose Intros, Credits, or Both, so you can copy or delete just the segment type you need.
+- **Shared dropdown menu infrastructure** (#58) — The menu system is built on reusable helpers in the shared library (theme-aware colors, submenu positioning, click-outside dismissal), keeping the code consistent across the Series and Custom Query pages.
+
+### Screenshots
+
+- Updated series detail and query results screenshots to reflect the new Actions dropdown UI.
+
+---
+
 ## [v1.1.0.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.1.0.0) - Autocomplete & Multi-Value Pill UI for Query Builder
 
 ### Added

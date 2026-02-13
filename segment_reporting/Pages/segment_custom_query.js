@@ -1120,17 +1120,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         function detectDropdownBg() {
             if (_dropdownBg) return _dropdownBg;
-            // Walk up from the page element to find a solid background
-            var el = view;
-            while (el) {
-                var bg = getComputedStyle(el).backgroundColor;
-                if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
-                    _dropdownBg = bg;
-                    return bg;
-                }
-                el = el.parentElement;
-            }
-            _dropdownBg = '#1a1a1a';
+            _dropdownBg = helpers.detectDropdownBg(view);
             return _dropdownBg;
         }
 
@@ -1837,11 +1827,159 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             var actionsCell = tr.querySelector('.actions-cell');
             if (actionsCell) {
-                actionsCell.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
+                actionsCell.innerHTML = '<button class="raised emby-button btn-actions" title="Episode actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
             }
 
             editingRow = null;
             setActionButtonsDisabled(false);
+        }
+
+        // ===== PER-ROW ACTIONS MENU =====
+
+        function showActionsMenu(tr, buttonEl) {
+            var existing = tr.querySelector('.actions-menu');
+            if (existing) {
+                existing.remove();
+                return;
+            }
+
+            var rowIndex = parseInt(tr.getAttribute('data-row-index'), 10);
+            var rowData = currentResults[rowIndex];
+            if (!rowData) return;
+
+            var colors = helpers.getMenuColors(view);
+            var menu = helpers.createActionsMenu(colors);
+
+            // Edit (only when tick columns are in the result set)
+            if (currentCapabilities && currentCapabilities.canEdit) {
+                menu.appendChild(helpers.createMenuItem('Edit', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    startRowEdit(tr);
+                }));
+                menu.appendChild(helpers.createMenuDivider(colors));
+            }
+
+            // ── Delete submenu ──
+            var cols = currentCapabilities ? currentCapabilities.editableColumns : [];
+            var hasIntroCols = cols.indexOf('IntroStartTicks') >= 0 || cols.indexOf('IntroEndTicks') >= 0;
+            var hasCreditCols = cols.indexOf('CreditsStartTicks') >= 0;
+            // If no tick columns in query, enable all delete options (backend handles gracefully)
+            var noTickCols = cols.length === 0;
+
+            var hasIntroData = noTickCols || (hasIntroCols && ((rowData['IntroStartTicks'] || 0) > 0 || (rowData['IntroEndTicks'] || 0) > 0));
+            var hasCreditData = noTickCols || (hasCreditCols && (rowData['CreditsStartTicks'] || 0) > 0);
+
+            menu.appendChild(helpers.createSubmenuItem('Delete', [
+                { label: 'Intros', enabled: hasIntroData, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(tr, rowData, 'intros'); } },
+                { label: 'Credits', enabled: hasCreditData, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(tr, rowData, 'credits'); } },
+                { label: 'Both', enabled: hasIntroData || hasCreditData, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(tr, rowData, 'both'); } }
+            ], hasIntroData || hasCreditData, colors));
+
+            // ── Other actions ──
+            menu.appendChild(helpers.createMenuDivider(colors));
+
+            menu.appendChild(helpers.createMenuItem('Set Credits to End', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                setRowCreditsToEnd(rowData);
+            }));
+
+            if (creditsDetectorAvailable) {
+                menu.appendChild(helpers.createMenuItem('Detect Credits', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    detectRowCredits(rowData);
+                }));
+            }
+
+            helpers.positionMenuBelowButton(menu, buttonEl);
+            helpers.attachMenuCloseHandler(menu);
+        }
+
+        function confirmDeleteGroup(tr, rowData, groupType) {
+            var markers = [];
+            if (groupType === 'intros' || groupType === 'both') {
+                markers.push('IntroStart');
+                markers.push('IntroEnd');
+            }
+            if (groupType === 'credits' || groupType === 'both') {
+                markers.push('CreditsStart');
+            }
+
+            if (markers.length === 0) return;
+
+            var label = groupType === 'intros' ? 'intro markers' : groupType === 'credits' ? 'credits marker' : 'all markers';
+            var itemName = rowData['ItemName'] || rowData['ItemId'] || 'this item';
+            var msg = 'Delete ' + label + ' from "' + itemName + '"?\n\nMarkers: ' + markers.join(', ');
+
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            var promise = Promise.resolve();
+            markers.forEach(function (markerType) {
+                promise = promise.then(function () {
+                    return helpers.apiCall('delete_segment', 'POST', JSON.stringify({
+                        ItemId: rowData['ItemId'],
+                        MarkerType: markerType
+                    }));
+                });
+            });
+
+            promise.then(function () {
+                helpers.hideLoading();
+                helpers.showSuccess(markers.length + ' marker(s) deleted successfully.');
+                executeQuery();
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Failed to delete segments:', error);
+                helpers.showError('Failed to delete segment(s).');
+            });
+        }
+
+        function setRowCreditsToEnd(rowData) {
+            var itemName = rowData['ItemName'] || rowData['ItemId'] || 'this item';
+            var msg = 'Set CreditsStart to end of "' + itemName + '"?';
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_set_credits_end', 'POST', JSON.stringify({
+                ItemIds: rowData['ItemId'],
+                OffsetTicks: 0
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                if (result.failed > 0) {
+                    helpers.showError('Failed: ' + (result.errors && result.errors.length > 0 ? result.errors[0] : 'Unknown error'));
+                } else {
+                    helpers.showSuccess('CreditsStart set to end.');
+                    executeQuery();
+                }
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Set credits to end failed:', error);
+                helpers.showError('Failed to set credits to end.');
+            });
+        }
+
+        function detectRowCredits(rowData) {
+            helpers.showLoading();
+
+            helpers.creditsDetectorCall('ProcessEpisode', { ItemId: rowData['ItemId'] })
+            .then(function () {
+                helpers.hideLoading();
+                var itemName = rowData['ItemName'] || rowData['ItemId'] || 'this item';
+                helpers.showSuccess('Credits detection queued for "' + itemName + '". Results will appear after the next sync.');
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Credits detection failed:', error);
+                helpers.showError('Credits detection failed.');
+            });
         }
 
         // ===== BULK ACTIONS =====
@@ -1992,7 +2130,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var columns = Object.keys(results[0]);
             currentCapabilities = detectCapabilities(columns);
             var hasCheckboxes = currentCapabilities.canDelete;
-            var hasActionsCol = currentCapabilities.canEdit;
+            var hasActionsCol = currentCapabilities.canEdit || currentCapabilities.canDelete;
             var thead = view.querySelector('#resultsTableHead');
             var tbody = view.querySelector('#resultsTableBody');
             var table = view.querySelector('#resultsTable');
@@ -2081,7 +2219,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     var actionsTd = document.createElement('td');
                     actionsTd.className = 'actions-cell col-sticky-right';
                     actionsTd.style.cssText = 'padding: 0.5em; border-bottom: 1px solid rgba(128, 128, 128, 0.1); text-align: center; white-space: nowrap; background: ' + rowBg + ';';
-                    actionsTd.innerHTML = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>';
+                    actionsTd.innerHTML = '<button class="raised emby-button btn-actions" title="Episode actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
                     tr.appendChild(actionsTd);
                 }
 
@@ -2285,11 +2423,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                             return;
                         }
 
-                        // Edit button
-                        if (target.classList.contains('btn-edit')) {
+                        // Actions button
+                        if (target.classList.contains('btn-actions')) {
                             e.stopPropagation();
-                            var editTr = target.closest('tr');
-                            if (editTr) startRowEdit(editTr);
+                            var actionsTr = target.closest('tr');
+                            if (actionsTr) showActionsMenu(actionsTr, target);
                             return;
                         }
 

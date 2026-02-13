@@ -746,6 +746,174 @@ function segmentReportingBulkDetectCredits(items) {
     });
 }
 
+// ── Dropdown menu infrastructure (shared by series + custom query pages) ──
+
+function segmentReportingGetMenuColors(viewEl) {
+    var bg = segmentReportingDetectDropdownBg(viewEl);
+    var isLight = segmentReportingIsLightBackground(bg);
+    return {
+        bg: bg,
+        border: isLight ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.15)',
+        hoverBg: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.1)',
+        dimmed: isLight ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)',
+        divider: isLight ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.1)'
+    };
+}
+
+function segmentReportingCreateMenuItem(label, enabled, colors, onClick) {
+    var item = document.createElement('div');
+    item.style.cssText = 'padding: 0.4em 1em; white-space: nowrap;' +
+        (enabled ? ' cursor: pointer;' : ' opacity: 0.4; cursor: default;');
+    item.textContent = label;
+    if (enabled) {
+        item.addEventListener('mouseenter', function () { this.style.backgroundColor = colors.hoverBg; });
+        item.addEventListener('mouseleave', function () { this.style.backgroundColor = ''; });
+        item.addEventListener('click', onClick);
+    }
+    return item;
+}
+
+function segmentReportingCreateMenuDivider(colors) {
+    var div = document.createElement('div');
+    div.style.cssText = 'height: 1px; margin: 0.3em 0; background-color: ' + colors.divider + ';';
+    return div;
+}
+
+function segmentReportingCreateSubmenuItem(label, subItems, anyEnabled, colors) {
+    var wrapper = document.createElement('div');
+    wrapper.style.cssText = 'position: relative;';
+
+    var item = document.createElement('div');
+    item.style.cssText = 'padding: 0.4em 1em; white-space: nowrap; display: flex; justify-content: space-between; align-items: center;' +
+        (anyEnabled ? ' cursor: pointer;' : ' opacity: 0.4; cursor: default;');
+
+    var labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+    item.appendChild(labelSpan);
+
+    var arrow = document.createElement('span');
+    arrow.textContent = ' \u25B6';
+    arrow.style.cssText = 'margin-left: 1.5em; font-size: 0.65em;';
+    item.appendChild(arrow);
+
+    wrapper.appendChild(item);
+
+    if (!anyEnabled) return wrapper;
+
+    var submenu = document.createElement('div');
+    submenu.style.cssText = 'position: absolute; right: 100%; top: -0.3em; background: ' + colors.bg +
+        '; border: 1px solid ' + colors.border +
+        '; border-radius: 4px; padding: 0.3em 0; z-index: 101; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); display: none;';
+
+    subItems.forEach(function (si) {
+        submenu.appendChild(segmentReportingCreateMenuItem(si.label, si.enabled, colors, si.onClick));
+    });
+
+    wrapper.appendChild(submenu);
+
+    var hideTimer = null;
+    function showSub() {
+        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+        submenu.style.display = 'block';
+        item.style.backgroundColor = colors.hoverBg;
+        // Flip to right if submenu overflows left edge of viewport
+        var rect = submenu.getBoundingClientRect();
+        if (rect.left < 0) {
+            submenu.style.right = 'auto';
+            submenu.style.left = '100%';
+        }
+    }
+    function scheduleSub() {
+        hideTimer = setTimeout(function () {
+            submenu.style.display = 'none';
+            item.style.backgroundColor = '';
+        }, 200);
+    }
+
+    item.addEventListener('mouseenter', showSub);
+    item.addEventListener('mouseleave', scheduleSub);
+    submenu.addEventListener('mouseenter', showSub);
+    submenu.addEventListener('mouseleave', scheduleSub);
+
+    // Toggle on click for touch
+    item.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (submenu.style.display === 'block') {
+            submenu.style.display = 'none';
+            item.style.backgroundColor = '';
+        } else {
+            showSub();
+        }
+    });
+
+    return wrapper;
+}
+
+function segmentReportingPositionMenuBelowButton(menu, buttonEl) {
+    var parent = buttonEl.parentNode;
+    parent.style.position = 'relative';
+    parent.style.zIndex = '10'; // Elevate above sibling sticky cells
+    parent.appendChild(menu);
+    var btnRect = buttonEl.getBoundingClientRect();
+    var parentRect = parent.getBoundingClientRect();
+    menu.style.top = (btnRect.bottom - parentRect.top) + 'px';
+    // Right-align the menu to the button to avoid overflowing the table
+    menu.style.right = (parentRect.right - btnRect.right) + 'px';
+}
+
+function segmentReportingAttachMenuCloseHandler(menu) {
+    var closeHandler = function (e) {
+        if (!menu.contains(e.target)) {
+            menu.remove();
+            document.removeEventListener('click', closeHandler);
+        }
+    };
+    setTimeout(function () {
+        document.addEventListener('click', closeHandler);
+    }, 0);
+}
+
+function segmentReportingCreateActionsMenu(colors) {
+    var menu = document.createElement('div');
+    menu.className = 'actions-menu';
+    menu.style.cssText = 'position: absolute; background: ' + colors.bg +
+        '; border: 1px solid ' + colors.border +
+        '; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 180px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+
+    // Override remove() so the parent cell's z-index is always restored,
+    // regardless of which code path closes the menu (toggle, click-away, action).
+    var origRemove = menu.remove.bind(menu);
+    menu.remove = function () {
+        if (menu.parentNode) menu.parentNode.style.zIndex = '';
+        origRemove();
+    };
+
+    return menu;
+}
+
+function segmentReportingDetectDropdownBg(viewEl) {
+    var el = viewEl;
+    while (el) {
+        var bg = getComputedStyle(el).backgroundColor;
+        if (bg && bg !== 'transparent' && bg !== 'rgba(0, 0, 0, 0)') {
+            return bg;
+        }
+        el = el.parentElement;
+    }
+    return '#1a1a1a';
+}
+
+function segmentReportingIsLightBackground(bgColor) {
+    var match = bgColor.match(/\d+/g);
+    if (match && match.length >= 3) {
+        var r = parseInt(match[0], 10);
+        var g = parseInt(match[1], 10);
+        var b = parseInt(match[2], 10);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+    }
+    return false;
+}
+
 function getSegmentReportingHelpers() {
     return {
         ticksToTime: segmentReportingTicksToTime,
@@ -792,6 +960,15 @@ function getSegmentReportingHelpers() {
         showBulkResult: segmentReportingShowBulkResult,
         bulkDelete: segmentReportingBulkDelete,
         bulkSetCreditsEnd: segmentReportingBulkSetCreditsEnd,
-        bulkDetectCredits: segmentReportingBulkDetectCredits
+        bulkDetectCredits: segmentReportingBulkDetectCredits,
+        detectDropdownBg: segmentReportingDetectDropdownBg,
+        isLightBackground: segmentReportingIsLightBackground,
+        getMenuColors: segmentReportingGetMenuColors,
+        createMenuItem: segmentReportingCreateMenuItem,
+        createMenuDivider: segmentReportingCreateMenuDivider,
+        createSubmenuItem: segmentReportingCreateSubmenuItem,
+        positionMenuBelowButton: segmentReportingPositionMenuBelowButton,
+        attachMenuCloseHandler: segmentReportingAttachMenuCloseHandler,
+        createActionsMenu: segmentReportingCreateActionsMenu
     };
 }

@@ -286,7 +286,7 @@ Inside each season accordion is a table listing every episode with columns for:
 | **Intro Start** | Timestamp where the intro begins |
 | **Intro End** | Timestamp where the intro ends |
 | **Credits Start** | Timestamp where the credits begin |
-| **Actions** | Edit, Delete, Copy, End, and Detect buttons |
+| **Actions** | An **Actions** dropdown menu for editing, deleting, copying, and more |
 
 Timestamp values appear as clickable links (see Playback Links below). A dash
 (`--:--:--.---`) means no marker is set.
@@ -307,11 +307,12 @@ the intro sequence.
 
 To edit an episode's segment timestamps:
 
-1. Click the **Edit** button (pencil icon) in the episode row.
-2. The timestamp cells turn into text input fields pre-filled with the current
+1. Click the **Actions** button in the episode row to open the dropdown menu.
+2. Select **Edit**.
+3. The timestamp cells turn into text input fields pre-filled with the current
    values. Empty markers show `00:00:00.000` as a placeholder.
-3. Type the new timestamp(s).
-4. Click **Save** to apply, or **Cancel** to discard.
+4. Type the new timestamp(s).
+5. Click **Save** to apply, or **Cancel** to discard.
 
 When you save, the plugin writes the change directly to Emby's chapter system.
 The edit takes effect immediately — if you play the episode, Emby will use the
@@ -340,23 +341,25 @@ If you enter an invalid format, the plugin will show an error and will not save.
 
 ### Deleting a Segment
 
-To remove a specific marker from an episode:
+To remove markers from an episode:
 
-1. Click the **Delete** button (trash icon) on the episode row.
-2. A dropdown menu appears with the available marker types: **Intro Start**,
-   **Intro End**, and **Credits Start**.
-3. Select the marker you want to remove.
-4. The marker is removed from Emby immediately.
+1. Click the **Actions** button on the episode row.
+2. Hover over **Delete** to open the submenu.
+3. Choose what to remove:
+   - **Intros** — removes Intro Start and Intro End markers
+   - **Credits** — removes the Credits Start marker
+   - **Both** — removes all markers from the episode
+4. Confirm the deletion when prompted.
 
 This is useful when a marker was detected incorrectly and you want to clear it
 rather than edit it to a new value.
 
 ### Setting Credits to End
 
-The **End** button on each episode row sets the Credits Start marker to the
-very end of the episode's runtime. This is primarily intended for episodes that
-have **no end credits at all** — by placing the marker at the end, you signal
-that the item has been accounted for. This prevents the
+The **Set Credits to End** option in the Actions menu sets the Credits Start
+marker to the very end of the episode's runtime. This is primarily intended for
+episodes that have **no end credits at all** — by placing the marker at the
+end, you signal that the item has been accounted for. This prevents the
 [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin from needlessly
 scanning these items for credits that do not exist.
 
@@ -389,16 +392,23 @@ This feature copies marker values from one episode to others — useful when
 multiple episodes share the same intro or credits timing.
 
 1. Find the episode whose timestamps you want to copy.
-2. Click the **Copy** button on that episode's row.
-3. A banner appears at the top confirming the source episode.
-4. Select the target episodes using checkboxes (or leave all unchecked to apply
+2. Click **Actions** on that episode's row.
+3. Hover over **Copy** to open the submenu, then choose what to copy:
+   - **Intros** — copies only Intro Start and Intro End
+   - **Credits** — copies only Credits Start
+   - **Both** — copies all markers
+4. A banner appears at the top confirming the source episode and the copy type
+   (e.g., "Copying intros from Episode 3").
+5. Select the target episodes using checkboxes (or leave all unchecked to apply
    to the entire season).
-5. Click **Apply Source to Selected** (or **Apply Source to All**).
+6. Click **Apply Intros to Selected**, **Apply Credits to Selected**, or
+   **Apply Source to Selected** (the button label reflects the copy type).
 
-The source episode's Intro Start, Intro End, and Credits Start values are
-copied to every target episode. Only markers that exist on the source are
-copied — if the source has no credits marker, the targets' credits markers
-are left unchanged.
+Only the marker types you chose are copied to the targets. For example, if you
+choose **Intros**, only the Intro Start and Intro End values are applied — any
+existing credits markers on the target episodes are left unchanged. This is
+especially useful when a series has consistent intro timing across a season but
+varying credits positions.
 
 ### Bulk Delete
 
@@ -513,12 +523,15 @@ libraries in a single condition.
 
 ![Query Results](../Screenshots/query-results.png)
 
-*Query results with checkboxes, inline editing, and bulk action buttons.*
+*Query results with checkboxes, per-row Actions menu, and bulk action buttons.*
 
 After running a query, results appear in a table below. The results table
 supports:
 
 - **Row checkboxes** — select rows for bulk operations
+- **Per-row Actions menu** — when the query includes an `ItemId` column, each
+  row shows an **Actions** button with options for Edit, Delete (with Intros /
+  Credits / Both submenu), Set Credits to End, and Detect Credits
 - **Inline editing** — if the results include segment timestamp columns, you
   can edit values directly in the results table
 - **Bulk actions** — delete or set credits to end for selected rows

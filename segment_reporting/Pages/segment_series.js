@@ -26,7 +26,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var seasonData = [];
         var loadedSeasons = {};  // seasonId -> episode array (lazy-load cache)
         var chart = null;
-        var bulkSource = null;  // { ItemId, ItemName, IntroStartTicks, IntroEndTicks, CreditsStartTicks }
+        var bulkSource = null;  // { ItemId, ItemName, IntroStartTicks, IntroEndTicks, CreditsStartTicks, copyMode }
         var editingRow = null;  // currently editing row element (only one at a time)
         var selectedItems = {};  // seasonId -> { itemId: true } for multi-select
         var listenersAttached = false;
@@ -453,56 +453,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             return row;
         }
 
-        function buildActionButtons(ep) {
-            var html = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>' +
-                   '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>' +
-                   '<button class="raised emby-button btn-copy" title="Mark as bulk copy source" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Copy</button>' +
-                   '<button class="raised emby-button btn-end-credits" title="Set CreditsStart to end of episode" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">End</button>';
-            if (creditsDetectorAvailable) {
-                html += '<button class="raised emby-button btn-detect-credits" title="Detect credits for this episode using EmbyCredits" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Detect</button>';
-            }
-            return html;
+        function buildActionButtons() {
+            return '<button class="raised emby-button btn-actions" title="Episode actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
         }
 
         function attachRowActions(row, ep) {
-            var btnEdit = row.querySelector('.btn-edit');
-            var btnDelete = row.querySelector('.btn-delete');
-            var btnCopy = row.querySelector('.btn-copy');
-
-            if (btnEdit) {
-                btnEdit.addEventListener('click', function (e) {
+            var btnActions = row.querySelector('.btn-actions');
+            if (btnActions) {
+                btnActions.addEventListener('click', function (e) {
                     e.stopPropagation();
-                    startEdit(row, ep);
-                });
-            }
-
-            if (btnDelete) {
-                btnDelete.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    showDeleteMenu(row, ep, this);
-                });
-            }
-
-            if (btnCopy) {
-                btnCopy.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    markAsCopySource(ep);
-                });
-            }
-
-            var btnEndCredits = row.querySelector('.btn-end-credits');
-            if (btnEndCredits) {
-                btnEndCredits.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    setCreditsToEnd(row, ep);
-                });
-            }
-
-            var btnDetect = row.querySelector('.btn-detect-credits');
-            if (btnDetect) {
-                btnDetect.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    detectCreditsForEpisode(row, ep);
+                    showActionsMenu(row, ep, this);
                 });
             }
         }
@@ -687,102 +647,127 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
         }
 
-        // ── Delete ──
+        // ── Actions Menu ──
 
-        function showDeleteMenu(row, ep, buttonEl) {
-            // Build a simple inline dropdown for segment type selection
-            var existing = row.querySelector('.delete-menu');
+        function showActionsMenu(row, ep, buttonEl) {
+            var existing = row.querySelector('.actions-menu');
             if (existing) {
                 existing.remove();
                 return;
             }
 
-            var menu = document.createElement('div');
-            menu.className = 'delete-menu';
-            menu.style.cssText = 'position: absolute; background: #333; border: 1px solid #555; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+            var colors = helpers.getMenuColors(view);
+            var menu = helpers.createActionsMenu(colors);
 
-            var types = [
-                { marker: 'IntroStart', label: 'IntroStart', ticks: ep.IntroStartTicks },
-                { marker: 'IntroEnd', label: 'IntroEnd', ticks: ep.IntroEndTicks },
-                { marker: 'CreditsStart', label: 'CreditsStart', ticks: ep.CreditsStartTicks }
-            ];
+            // Edit
+            menu.appendChild(helpers.createMenuItem('Edit', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                startEdit(row, ep);
+            }));
 
-            types.forEach(function (t) {
-                if (!t.ticks) return;  // Skip segments that don't exist
+            menu.appendChild(helpers.createMenuDivider(colors));
 
-                var item = document.createElement('div');
-                item.style.cssText = 'padding: 0.4em 1em; cursor: pointer;';
-                item.textContent = t.label;
-                item.addEventListener('mouseenter', function () { this.style.backgroundColor = 'rgba(255,255,255,0.1)'; });
-                item.addEventListener('mouseleave', function () { this.style.backgroundColor = ''; });
-                item.addEventListener('click', function (e) {
+            // ── Copy submenu ──
+            var hasIntro = ep.IntroStartTicks > 0 || ep.IntroEndTicks > 0;
+            var hasCredits = ep.CreditsStartTicks > 0;
+
+            menu.appendChild(helpers.createSubmenuItem('Copy', [
+                { label: 'Intros', enabled: hasIntro, onClick: function (e) { e.stopPropagation(); menu.remove(); markAsCopySource(ep, 'intros'); } },
+                { label: 'Credits', enabled: hasCredits, onClick: function (e) { e.stopPropagation(); menu.remove(); markAsCopySource(ep, 'credits'); } },
+                { label: 'Both', enabled: hasIntro && hasCredits, onClick: function (e) { e.stopPropagation(); menu.remove(); markAsCopySource(ep, 'both'); } }
+            ], hasIntro || hasCredits, colors));
+
+            // ── Delete submenu ──
+            var hasAnyIntroDelete = ep.IntroStartTicks > 0 || ep.IntroEndTicks > 0;
+            var hasAnyCreditDelete = ep.CreditsStartTicks > 0;
+
+            menu.appendChild(helpers.createSubmenuItem('Delete', [
+                { label: 'Intros', enabled: hasAnyIntroDelete, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(row, ep, 'intros'); } },
+                { label: 'Credits', enabled: hasAnyCreditDelete, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(row, ep, 'credits'); } },
+                { label: 'Both', enabled: hasAnyIntroDelete || hasAnyCreditDelete, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmDeleteGroup(row, ep, 'both'); } }
+            ], hasAnyIntroDelete || hasAnyCreditDelete, colors));
+
+            // ── Other actions ──
+            menu.appendChild(helpers.createMenuDivider(colors));
+
+            menu.appendChild(helpers.createMenuItem('Set Credits to End', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                setCreditsToEnd(row, ep);
+            }));
+
+            if (creditsDetectorAvailable) {
+                menu.appendChild(helpers.createMenuItem('Detect Credits', true, colors, function (e) {
                     e.stopPropagation();
                     menu.remove();
-                    confirmDelete(row, ep, t.marker);
-                });
-                menu.appendChild(item);
-            });
-
-            // If no segments exist to delete
-            if (menu.children.length === 0) {
-                helpers.showError('No segments to delete on this episode.');
-                return;
+                    detectCreditsForEpisode(row, ep);
+                }));
             }
 
-            // Position relative to button
-            buttonEl.style.position = 'relative';
-            buttonEl.parentNode.style.position = 'relative';
-            buttonEl.parentNode.appendChild(menu);
-
-            // Close menu when clicking elsewhere
-            var closeHandler = function (e) {
-                if (!menu.contains(e.target)) {
-                    menu.remove();
-                    document.removeEventListener('click', closeHandler);
-                }
-            };
-            setTimeout(function () {
-                document.addEventListener('click', closeHandler);
-            }, 0);
+            helpers.positionMenuBelowButton(menu, buttonEl);
+            helpers.attachMenuCloseHandler(menu);
         }
 
-        function confirmDelete(row, ep, markerType) {
-            var msg = 'Delete ' + markerType + ' segment from "' + (ep.ItemName || 'this episode') + '"?';
-            if (confirm(msg)) {
-                helpers.showLoading();
-                helpers.apiCall('delete_segment', 'POST', JSON.stringify({
-                    ItemId: ep.ItemId,
-                    MarkerType: markerType
-                }))
-                .then(function () {
-                    helpers.hideLoading();
-                    helpers.showSuccess(markerType + ' deleted successfully.');
-                    refreshRow(row, ep);
-                })
-                .catch(function (error) {
-                    helpers.hideLoading();
-                    console.error('Failed to delete segment:', error);
-                    helpers.showError('Failed to delete segment.');
-                });
+        function confirmDeleteGroup(row, ep, groupType) {
+            var markers = [];
+            if (groupType === 'intros' || groupType === 'both') {
+                if (ep.IntroStartTicks > 0) markers.push('IntroStart');
+                if (ep.IntroEndTicks > 0) markers.push('IntroEnd');
             }
+            if (groupType === 'credits' || groupType === 'both') {
+                if (ep.CreditsStartTicks > 0) markers.push('CreditsStart');
+            }
+
+            if (markers.length === 0) return;
+
+            var label = groupType === 'intros' ? 'intro markers' : groupType === 'credits' ? 'credits marker' : 'all markers';
+            var msg = 'Delete ' + label + ' from "' + (ep.ItemName || 'this episode') + '"?\n\nMarkers: ' + markers.join(', ');
+
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            var promise = Promise.resolve();
+            markers.forEach(function (markerType) {
+                promise = promise.then(function () {
+                    return helpers.apiCall('delete_segment', 'POST', JSON.stringify({
+                        ItemId: ep.ItemId,
+                        MarkerType: markerType
+                    }));
+                });
+            });
+
+            promise.then(function () {
+                helpers.hideLoading();
+                helpers.showSuccess(markers.length + ' marker(s) deleted successfully.');
+                refreshRow(row, ep);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Failed to delete segments:', error);
+                helpers.showError('Failed to delete segment(s).');
+            });
         }
 
         // ── Bulk Copy Source ──
 
-        function markAsCopySource(ep) {
+        function markAsCopySource(ep, copyMode) {
             bulkSource = {
                 ItemId: ep.ItemId,
                 ItemName: ep.ItemName,
                 EpisodeNumber: ep.EpisodeNumber,
                 IntroStartTicks: ep.IntroStartTicks,
                 IntroEndTicks: ep.IntroEndTicks,
-                CreditsStartTicks: ep.CreditsStartTicks
+                CreditsStartTicks: ep.CreditsStartTicks,
+                copyMode: copyMode
             };
 
             // Update banner
+            var modeLabel = copyMode === 'intros' ? 'intros' : copyMode === 'credits' ? 'credits' : 'intros + credits';
             var banner = view.querySelector('#bulkSourceBanner');
             var bannerText = view.querySelector('#bulkSourceText');
-            bannerText.textContent = 'Bulk source: Episode ' + (ep.EpisodeNumber || '?') + ' — ' + (ep.ItemName || 'Unknown');
+            bannerText.textContent = 'Copying ' + modeLabel + ' from Episode ' + (ep.EpisodeNumber || '?') + ' — ' + (ep.ItemName || 'Unknown');
             banner.style.display = 'block';
 
             // Re-highlight rows — refresh all visible tables
@@ -874,7 +859,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var btnApply = document.createElement('button');
             btnApply.className = 'raised emby-button btn-bulk-apply';
             btnApply.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;' + (bulkSource ? '' : ' display: none;');
-            btnApply.textContent = 'Apply Source to All';
+            btnApply.textContent = bulkSource ? getApplyButtonLabel(false, 0) : 'Apply Source to All';
             btnApply.addEventListener('click', function () {
                 executeBulkApply(seasonId, episodes, container);
             });
@@ -992,7 +977,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             if (selectedCount > 0) {
                 selectionInfo.textContent = selectedCount + ' of ' + episodes.length + ' selected';
                 if (btnApply) {
-                    btnApply.textContent = 'Apply Source to Selected (' + selectedCount + ')';
+                    btnApply.textContent = getApplyButtonLabel(true, selectedCount);
                     btnApply.style.display = bulkSource ? '' : 'none';
                 }
                 if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete Intros (' + selectedCount + ')';
@@ -1002,7 +987,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             } else {
                 selectionInfo.textContent = episodes.length + ' episodes';
                 if (btnApply) {
-                    btnApply.textContent = 'Apply Source to All';
+                    btnApply.textContent = getApplyButtonLabel(false, 0);
                     btnApply.style.display = bulkSource ? '' : 'none';
                 }
                 if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete All Intros';
@@ -1010,6 +995,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set All Credits to End';
                 if (btnDetect) btnDetect.textContent = 'Detect All Credits';
             }
+        }
+
+        function getApplyButtonLabel(hasSelection, count) {
+            var mode = bulkSource ? bulkSource.copyMode : 'both';
+            var typeLabel = mode === 'intros' ? 'Intros' : mode === 'credits' ? 'Credits' : 'Source';
+            if (hasSelection) {
+                return 'Apply ' + typeLabel + ' to Selected (' + count + ')';
+            }
+            return 'Apply ' + typeLabel + ' to All';
         }
 
         function updateAllBulkApplyButtons() {
@@ -1043,28 +1037,38 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
 
-            // Build confirmation message
+            // Build confirmation message based on copy mode
             var sourceLabel = 'E' + (bulkSource.EpisodeNumber || '?') + ' "' + (bulkSource.ItemName || 'Unknown') + '"';
+            var copyMode = bulkSource.copyMode || 'both';
             var segments = [];
-            if (bulkSource.IntroStartTicks) segments.push('IntroStart (' + helpers.ticksToTime(bulkSource.IntroStartTicks) + ')');
-            if (bulkSource.IntroEndTicks) segments.push('IntroEnd (' + helpers.ticksToTime(bulkSource.IntroEndTicks) + ')');
-            if (bulkSource.CreditsStartTicks) segments.push('CreditsStart (' + helpers.ticksToTime(bulkSource.CreditsStartTicks) + ')');
+            if (copyMode === 'intros' || copyMode === 'both') {
+                if (bulkSource.IntroStartTicks) segments.push('IntroStart (' + helpers.ticksToTime(bulkSource.IntroStartTicks) + ')');
+                if (bulkSource.IntroEndTicks) segments.push('IntroEnd (' + helpers.ticksToTime(bulkSource.IntroEndTicks) + ')');
+            }
+            if (copyMode === 'credits' || copyMode === 'both') {
+                if (bulkSource.CreditsStartTicks) segments.push('CreditsStart (' + helpers.ticksToTime(bulkSource.CreditsStartTicks) + ')');
+            }
 
             if (segments.length === 0) {
-                helpers.showError('Source episode has no segments to copy.');
+                helpers.showError('Source episode has no segments to copy for the selected type.');
                 return;
             }
 
-            var msg = 'Copy segments from ' + sourceLabel + ' to ' + targetEpisodes.length + ' episode(s)?\n\n' +
-                      'Segments: ' + segments.join(', ');
+            var modeLabel = copyMode === 'intros' ? 'intros' : copyMode === 'credits' ? 'credits' : 'segments';
+            var msg = 'Copy ' + modeLabel + ' from ' + sourceLabel + ' to ' + targetEpisodes.length + ' episode(s)?\n\n' +
+                      'Markers: ' + segments.join(', ');
 
             if (!confirm(msg)) return;
 
             var targetIds = targetEpisodes.map(function (ep) { return ep.ItemId; }).join(',');
             var markerTypes = [];
-            if (bulkSource.IntroStartTicks) markerTypes.push('IntroStart');
-            if (bulkSource.IntroEndTicks) markerTypes.push('IntroEnd');
-            if (bulkSource.CreditsStartTicks) markerTypes.push('CreditsStart');
+            if (copyMode === 'intros' || copyMode === 'both') {
+                if (bulkSource.IntroStartTicks) markerTypes.push('IntroStart');
+                if (bulkSource.IntroEndTicks) markerTypes.push('IntroEnd');
+            }
+            if (copyMode === 'credits' || copyMode === 'both') {
+                if (bulkSource.CreditsStartTicks) markerTypes.push('CreditsStart');
+            }
 
             helpers.showLoading();
 

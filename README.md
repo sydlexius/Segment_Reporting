@@ -13,8 +13,8 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 
 ### Editing & Bulk Operations
 
-- **Inline Editing** — Edit intro/credits timestamps directly in any table view (library, series, or query results)
-- **Bulk Operations** — Copy segments across episodes, bulk delete intros or credits, and set credits-to-end in bulk
+- **Inline Editing** — Edit intro/credits timestamps directly in any table view (library, series, or query results) via a unified Actions dropdown menu
+- **Bulk Operations** — Copy intros, credits, or both across episodes (type-selective), bulk delete intros or credits, and set credits-to-end in bulk
 - **EmbyCredits Integration** — When the [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin is installed, "Detect Credits" buttons appear on the dashboard, library, series, and custom query pages to trigger credits detection directly
 
 ### Custom Query
