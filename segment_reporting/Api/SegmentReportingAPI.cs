@@ -290,6 +290,13 @@ namespace segment_reporting.Api
         public long Id { get; set; }
     }
 
+    // http(s)://<host>:<port>/emby/segment_reporting/version
+    [Route("/segment_reporting/version", "GET", Summary = "Returns the plugin assembly version for cache validation")]
+    [Authenticated(Roles = "admin")]
+    public class GetPluginVersion : IReturn<object>
+    {
+    }
+
     public class SegmentReportingAPI : IService, IRequiresRequest
     {
         private readonly ILogger _logger;
@@ -352,6 +359,12 @@ namespace segment_reporting.Api
             }
 
             return null;
+        }
+
+        public object Get(GetPluginVersion request)
+        {
+            var v = GetType().Assembly.GetName().Version;
+            return new { version = v.ToString() };
         }
 
         public object Get(GetLibrarySummary request)

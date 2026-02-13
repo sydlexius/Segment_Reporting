@@ -92,6 +92,15 @@ function stripCacheBust() {
         );
         fs.writeFileSync(filePath, content);
     }
+
+    // Restore helpers.js plugin version placeholder
+    const helpersPath = path.join(pagesDir, 'segment_reporting_helpers.js');
+    let helpersContent = fs.readFileSync(helpersPath, 'utf8');
+    helpersContent = helpersContent.replace(
+        /SEGMENT_REPORTING_PLUGIN_VERSION = '[^']+'/,
+        "SEGMENT_REPORTING_PLUGIN_VERSION = '__PLUGIN_VERSION__'"
+    );
+    fs.writeFileSync(helpersPath, helpersContent);
 }
 
 /**
@@ -101,7 +110,7 @@ function stripCacheBust() {
  *
  * Always call stripCacheBust() first to remove stale tags from a previous failed build.
  */
-function patchCacheBust(tag) {
+function patchCacheBust(tag, version) {
     // Patch JS files: version all getConfigurationResourceUrl calls
     for (const file of CUSTOM_JS_FILES) {
         const filePath = path.join(pagesDir, file);
@@ -123,6 +132,15 @@ function patchCacheBust(tag) {
         );
         fs.writeFileSync(filePath, content);
     }
+
+    // Patch helpers.js: embed the plugin version for runtime staleness detection
+    const helpersPath = path.join(pagesDir, 'segment_reporting_helpers.js');
+    let helpersContent = fs.readFileSync(helpersPath, 'utf8');
+    helpersContent = helpersContent.replace(
+        "'__PLUGIN_VERSION__'",
+        `'${version}'`
+    );
+    fs.writeFileSync(helpersPath, helpersContent);
 }
 
 /**
@@ -182,7 +200,7 @@ async function minifyJS() {
     const version = readAssemblyVersion();
     const tag = cacheTag(version);
     console.log('  Cache tag: ' + tag + ' (from AssemblyVersion ' + version + ')');
-    patchCacheBust(tag);
+    patchCacheBust(tag, version);
 
     // Minify JS files (now containing versioned resource URLs)
     for (const file of CUSTOM_JS_FILES) {

@@ -1626,7 +1626,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                     if (response && response.Columns && response.Rows) {
                         if (response.Message && response.Message.startsWith('Error:')) {
-                            showError(response.Message);
+                            showError(response.Message.replace(/^Error:\s*/, ''));
                             return;
                         }
 

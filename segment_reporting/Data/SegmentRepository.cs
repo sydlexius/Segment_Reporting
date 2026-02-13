@@ -989,6 +989,63 @@ namespace segment_reporting.Data
             return 0;
         }
 
+        private static readonly HashSet<string> _allowedPragmas = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "table_info", "table_list", "table_xinfo",
+            "database_list", "index_list", "index_info",
+            "foreign_key_list", "compile_options", "integrity_check"
+        };
+
+        private static bool ContainsDangerousKeyword(string sql)
+        {
+            if (sql.Contains(";"))
+            {
+                return true;
+            }
+
+            var upper = sql.ToUpperInvariant();
+
+            // Word-boundary check: keyword must be preceded/followed by non-letter
+            foreach (var keyword in new[] { "ATTACH", "LOAD_EXTENSION" })
+            {
+                int idx = 0;
+                while ((idx = upper.IndexOf(keyword, idx, StringComparison.Ordinal)) >= 0)
+                {
+                    bool startOk = idx == 0 || !char.IsLetterOrDigit(upper[idx - 1]);
+                    int end = idx + keyword.Length;
+                    bool endOk = end >= upper.Length || !char.IsLetterOrDigit(upper[end]);
+                    if (startOk && endOk)
+                    {
+                        return true;
+                    }
+                    idx = end;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsAllowedPragma(string trimmedSql)
+        {
+            // Extract pragma name from "PRAGMA [schema.]name" or "PRAGMA [schema.]name(...)"
+            var afterPragma = trimmedSql.Substring(6).TrimStart();
+
+            // Remove optional schema prefix (e.g., "main.")
+            var dotIdx = afterPragma.IndexOf('.');
+            var parenIdx = afterPragma.IndexOf('(');
+            if (dotIdx >= 0 && (parenIdx < 0 || dotIdx < parenIdx))
+            {
+                afterPragma = afterPragma.Substring(dotIdx + 1);
+            }
+
+            // Pragma name ends at '(', '=', space, or end of string
+            var nameEnd = afterPragma.IndexOfAny(new[] { '(', '=', ' ', '\t', '\n', '\r' });
+            var pragmaName = nameEnd >= 0 ? afterPragma.Substring(0, nameEnd) : afterPragma;
+            pragmaName = pragmaName.Trim();
+
+            return _allowedPragmas.Contains(pragmaName);
+        }
+
         public QueryResult RunCustomQuery(string sql)
         {
             if (string.IsNullOrWhiteSpace(sql))
@@ -1009,7 +1066,27 @@ namespace segment_reporting.Data
                 {
                     Columns = new List<string>(),
                     Rows = new List<List<string>>(),
-                    Message = "Only SELECT, PRAGMA, and EXPLAIN queries are allowed"
+                    Message = "Error: Only SELECT, PRAGMA, and EXPLAIN queries are allowed"
+                };
+            }
+
+            if (ContainsDangerousKeyword(trimmed))
+            {
+                return new QueryResult
+                {
+                    Columns = new List<string>(),
+                    Rows = new List<List<string>>(),
+                    Message = "Error: Query contains disallowed keywords (semicolons, ATTACH, or load_extension)"
+                };
+            }
+
+            if (firstWord == "PRAGMA" && !IsAllowedPragma(trimmed))
+            {
+                return new QueryResult
+                {
+                    Columns = new List<string>(),
+                    Rows = new List<List<string>>(),
+                    Message = "Error: Only read-only PRAGMAs are allowed: " + string.Join(", ", _allowedPragmas)
                 };
             }
 

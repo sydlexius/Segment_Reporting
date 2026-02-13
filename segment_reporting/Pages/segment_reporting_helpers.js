@@ -972,3 +972,27 @@ function getSegmentReportingHelpers() {
         createActionsMenu: segmentReportingCreateActionsMenu
     };
 }
+
+// Build-patched version constant (scripts/build-js.mjs replaces this during Release builds)
+var SEGMENT_REPORTING_PLUGIN_VERSION = '__PLUGIN_VERSION__';
+
+// Auto-check for stale cached resources on every page load
+(function segmentReportingCheckPluginVersion() {
+    if (SEGMENT_REPORTING_PLUGIN_VERSION.indexOf('__') === 0) return; // dev build, skip check
+
+    var reloadKey = 'sr_version_reload';
+    var lastReload = sessionStorage.getItem(reloadKey);
+    if (lastReload === SEGMENT_REPORTING_PLUGIN_VERSION) return; // already reloaded for this version
+
+    try {
+        var url = ApiClient.getUrl('segment_reporting/version');
+        ApiClient.ajax({ type: 'GET', url: url, dataType: 'json' }).then(function (data) {
+            if (data && data.version && data.version !== SEGMENT_REPORTING_PLUGIN_VERSION) {
+                sessionStorage.setItem(reloadKey, SEGMENT_REPORTING_PLUGIN_VERSION);
+                location.reload(true);
+            }
+        });
+    } catch (e) {
+        // Version check is best-effort
+    }
+})();

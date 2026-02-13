@@ -55,6 +55,7 @@ This plugin follows the architecture pattern established by [playback_reporting]
 - Segment types: `IntroStart`, `IntroEnd`, `CreditsStart` (the three types Emby currently supports)
 - Time values stored as ticks (BIGINT), displayed as `HH:MM:SS.fff`
 - Shared utilities live in `Pages/segment_reporting_helpers.js` (tick conversion, chart navigation, API helpers, HTML escaping)
+- Avoid em-dashes (`—`) in user-facing strings (error messages, banners, labels). Use regular dashes, commas, or parentheses instead.
 
 ## CI/CD
 
