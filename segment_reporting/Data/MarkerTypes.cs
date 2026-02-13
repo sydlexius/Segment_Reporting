@@ -16,6 +16,10 @@ namespace segment_reporting.Data
 
         public static string GetColumnName(string markerType)
         {
+            if (!Valid.Contains(markerType))
+            {
+                throw new ArgumentException("Unknown marker type: " + markerType, nameof(markerType));
+            }
             return markerType + "Ticks";
         }
 
