@@ -20,7 +20,7 @@ Small, focused changes that reduce risk and clean up low-hanging fruit. Do these
 
 - [x] **Session 1A** — #64 — Custom query SQL hardening (Small)
 - [x] **Session 1B** — #65 — MarkerTypes.GetColumnName validation (Tiny)
-- [ ] **Session 1C** — #66 — Dispose lock ordering (Small)
+- [x] **Session 1C** — #66 — Dispose lock ordering (Small)
 - [ ] **Session 1D** — #71 + #74 + #75 — Three small JS fixes in one commit (Tiny bundle)
 - [ ] **Session 1E** — #72 + #73 — Two small C# fixes in one commit (Tiny bundle)
 

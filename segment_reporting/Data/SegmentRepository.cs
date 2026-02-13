@@ -77,58 +77,63 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
-                ThrowIfDisposed();
-                _logger.Info("SegmentRepository: Initializing database at {0}", _dbPath);
-
-                _connection.Execute(
-                    "CREATE TABLE IF NOT EXISTS MediaSegments (" +
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "ItemId TEXT NOT NULL, " +
-                    "ItemName TEXT, " +
-                    "ItemType TEXT, " +
-                    "SeriesName TEXT, " +
-                    "SeriesId TEXT, " +
-                    "SeasonName TEXT, " +
-                    "SeasonId TEXT, " +
-                    "SeasonNumber INT, " +
-                    "EpisodeNumber INT, " +
-                    "LibraryName TEXT, " +
-                    "LibraryId TEXT, " +
-                    "IntroStartTicks BIGINT, " +
-                    "IntroEndTicks BIGINT, " +
-                    "CreditsStartTicks BIGINT, " +
-                    "HasIntro INT, " +
-                    "HasCredits INT)");
-
-                _connection.Execute(
-                    "CREATE TABLE IF NOT EXISTS SyncStatus (" +
-                    "Id INTEGER PRIMARY KEY, " +
-                    "LastFullSync DATETIME, " +
-                    "ItemsScanned INT, " +
-                    "SyncDuration INT)");
-
-                _connection.Execute(
-                    "CREATE TABLE IF NOT EXISTS UserPreferences (" +
-                    "[Key] TEXT PRIMARY KEY, " +
-                    "[Value] TEXT)");
-
-                _connection.Execute(
-                    "CREATE TABLE IF NOT EXISTS SavedQueries (" +
-                    "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "QueryName TEXT NOT NULL, " +
-                    "QuerySql TEXT NOT NULL, " +
-                    "CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP)");
-
-                CheckMigration();
-
-                _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_library ON MediaSegments(LibraryId)");
-                _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_series ON MediaSegments(SeriesId)");
-                _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_season ON MediaSegments(SeasonId)");
-                _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_missing ON MediaSegments(HasIntro, HasCredits)");
-                _connection.Execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_segments_itemid ON MediaSegments(ItemId)");
-
-                _logger.Info("SegmentRepository: Database initialized");
+                InitializeUnlocked();
             }
+        }
+
+        private void InitializeUnlocked()
+        {
+            ThrowIfDisposed();
+            _logger.Info("SegmentRepository: Initializing database at {0}", _dbPath);
+
+            _connection.Execute(
+                "CREATE TABLE IF NOT EXISTS MediaSegments (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "ItemId TEXT NOT NULL, " +
+                "ItemName TEXT, " +
+                "ItemType TEXT, " +
+                "SeriesName TEXT, " +
+                "SeriesId TEXT, " +
+                "SeasonName TEXT, " +
+                "SeasonId TEXT, " +
+                "SeasonNumber INT, " +
+                "EpisodeNumber INT, " +
+                "LibraryName TEXT, " +
+                "LibraryId TEXT, " +
+                "IntroStartTicks BIGINT, " +
+                "IntroEndTicks BIGINT, " +
+                "CreditsStartTicks BIGINT, " +
+                "HasIntro INT, " +
+                "HasCredits INT)");
+
+            _connection.Execute(
+                "CREATE TABLE IF NOT EXISTS SyncStatus (" +
+                "Id INTEGER PRIMARY KEY, " +
+                "LastFullSync DATETIME, " +
+                "ItemsScanned INT, " +
+                "SyncDuration INT)");
+
+            _connection.Execute(
+                "CREATE TABLE IF NOT EXISTS UserPreferences (" +
+                "[Key] TEXT PRIMARY KEY, " +
+                "[Value] TEXT)");
+
+            _connection.Execute(
+                "CREATE TABLE IF NOT EXISTS SavedQueries (" +
+                "Id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "QueryName TEXT NOT NULL, " +
+                "QuerySql TEXT NOT NULL, " +
+                "CreatedDate DATETIME DEFAULT CURRENT_TIMESTAMP)");
+
+            CheckMigration();
+
+            _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_library ON MediaSegments(LibraryId)");
+            _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_series ON MediaSegments(SeriesId)");
+            _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_season ON MediaSegments(SeasonId)");
+            _connection.Execute("CREATE INDEX IF NOT EXISTS idx_segments_missing ON MediaSegments(HasIntro, HasCredits)");
+            _connection.Execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_segments_itemid ON MediaSegments(ItemId)");
+
+            _logger.Info("SegmentRepository: Database initialized");
         }
 
         private void CheckMigration()
@@ -851,14 +856,14 @@ namespace segment_reporting.Data
                     {
                         _logger.Info("SegmentRepository: RemoveOrphanedRows cancelled at chunk offset {0}, rolling back", offset);
                         _connection.Execute("ROLLBACK");
-                        DropValidItemsTable();
+                        DropValidItemsTableUnlocked();
                         throw;
                     }
                     catch (Exception ex)
                     {
                         _logger.ErrorException("SegmentRepository: RemoveOrphanedRows insert failed at chunk offset " + offset, ex);
                         _connection.Execute("ROLLBACK");
-                        DropValidItemsTable();
+                        DropValidItemsTableUnlocked();
                         throw;
                     }
                 }
@@ -892,14 +897,19 @@ namespace segment_reporting.Data
         {
             lock (_dbLock)
             {
-                try
-                {
-                    _connection.Execute("DROP TABLE IF EXISTS _valid_items");
-                }
-                catch (Exception ex)
-                {
-                    _logger.ErrorException("SegmentRepository: Failed to drop _valid_items temp table", ex);
-                }
+                DropValidItemsTableUnlocked();
+            }
+        }
+
+        private void DropValidItemsTableUnlocked()
+        {
+            try
+            {
+                _connection.Execute("DROP TABLE IF EXISTS _valid_items");
+            }
+            catch (Exception ex)
+            {
+                _logger.ErrorException("SegmentRepository: Failed to drop _valid_items temp table", ex);
             }
         }
 
@@ -911,7 +921,7 @@ namespace segment_reporting.Data
                 _logger.Info("SegmentRepository: Dropping and recreating MediaSegments table");
                 _connection.Execute("DROP TABLE IF EXISTS MediaSegments");
                 _connection.Execute("DROP TABLE IF EXISTS SyncStatus");
-                Initialize();
+                InitializeUnlocked();
             }
         }
 
@@ -1310,17 +1320,17 @@ namespace segment_reporting.Data
 
         public void Dispose()
         {
+            lock (_dbLock)
+            {
+                if (_disposed)
+                    return;
+
+                _disposed = true;
+                _connection?.Dispose();
+            }
+
             lock (_instanceLock)
             {
-                lock (_dbLock)
-                {
-                    if (_disposed)
-                        return;
-
-                    _disposed = true;
-                    _connection?.Dispose();
-                }
-
                 if (_instance == this)
                 {
                     _instance = null;
