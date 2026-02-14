@@ -624,15 +624,14 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         // ── Movie Delete ──
 
         function showMovieDeleteMenu(row, movie, buttonEl) {
-            var existing = row.querySelector('.delete-menu');
+            var existing = row.querySelector('.actions-menu');
             if (existing) {
                 existing.remove();
                 return;
             }
 
-            var menu = document.createElement('div');
-            menu.className = 'delete-menu';
-            menu.style.cssText = 'position: absolute; background: #333; border: 1px solid #555; border-radius: 4px; padding: 0.3em 0; z-index: 100; min-width: 140px; box-shadow: 0 2px 8px rgba(0,0,0,0.3);';
+            var colors = helpers.getMenuColors(view);
+            var menu = helpers.createActionsMenu(colors);
 
             var types = [
                 { marker: 'IntroStart', label: 'IntroStart', ticks: movie.IntroStartTicks },
@@ -643,17 +642,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             types.forEach(function (t) {
                 if (!t.ticks) return;
 
-                var item = document.createElement('div');
-                item.style.cssText = 'padding: 0.4em 1em; cursor: pointer;';
-                item.textContent = t.label;
-                item.addEventListener('mouseenter', function () { this.style.backgroundColor = 'rgba(255,255,255,0.1)'; });
-                item.addEventListener('mouseleave', function () { this.style.backgroundColor = ''; });
-                item.addEventListener('click', function (e) {
+                menu.appendChild(helpers.createMenuItem(t.label, true, colors, function (e) {
                     e.stopPropagation();
                     menu.remove();
                     confirmMovieDelete(row, movie, t.marker);
-                });
-                menu.appendChild(item);
+                }));
             });
 
             if (menu.children.length === 0) {
@@ -661,19 +654,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
 
-            buttonEl.style.position = 'relative';
-            buttonEl.parentNode.style.position = 'relative';
-            buttonEl.parentNode.appendChild(menu);
-
-            var closeHandler = function (e) {
-                if (!menu.contains(e.target)) {
-                    menu.remove();
-                    document.removeEventListener('click', closeHandler);
-                }
-            };
-            setTimeout(function () {
-                document.addEventListener('click', closeHandler);
-            }, 0);
+            helpers.positionMenuBelowButton(menu, buttonEl);
+            helpers.attachMenuCloseHandler(menu);
         }
 
         function confirmMovieDelete(row, movie, markerType) {
