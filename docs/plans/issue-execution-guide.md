@@ -55,7 +55,8 @@ Large JS refactors that touch shared files. Do these before feature work to avoi
 Build new functionality on the cleaned-up codebase.
 
 - [x] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
-- [ ] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
+- [x] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
+- [ ] **Session 5C** — #78 — Extend season Actions with bulk operations (Medium) `[plan first]`
 
 ### Phase 6 — Documentation (last)
 
@@ -453,6 +454,32 @@ Changes:
 Update docs/USER_GUIDE.md and docs/DEVELOPER.md for the new EmbyCredits integration pattern. Bump revision, build to verify.
 
 When done, mark Session 5B as [x] in docs/plans/issue-execution-guide.md and include the guide in the commit.
+```
+
+---
+
+### Session 5C — Extend Season Actions with Bulk Operations (#78)
+
+```
+Implement issue #78: Extend the season-level Actions dropdown to include bulk operations beyond credits detection.
+
+File: segment_reporting/Pages/segment_series.js
+
+Changes:
+1. Make the season Actions dropdown unconditional — it currently only renders when EmbyCredits is installed. The new menu items (Delete, Set Credits to End) don't depend on EmbyCredits. Detect items should still be conditionally included.
+
+2. Add menu items to showSeasonActionsMenu():
+   - Delete submenu (Intros / Credits / Both) — uses helpers.createSubmenuItem() pattern from per-episode Actions
+   - Set Credits to End — uses existing helpers.bulkSetCreditsEnd()
+   - Divider, then Detect All / Detect Missing (existing, conditional on creditsDetectorAvailable)
+
+3. The Delete and Set Credits to End operations need item IDs. If episodes are already cached (loadedSeasons[seasonId]), use them directly. If not loaded yet, load them first via the episode_list endpoint, then proceed.
+
+4. Follow the exact same submenu and menu item patterns as the per-episode showActionsMenu().
+
+Update docs/USER_GUIDE.md to document the expanded season Actions menu. Bump revision, build to verify.
+
+When done, mark Session 5C as [x] in docs/plans/issue-execution-guide.md and include the guide in the commit.
 ```
 
 ---

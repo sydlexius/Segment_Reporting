@@ -267,18 +267,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<div style="display: flex; align-items: center; gap: 1em;">' +
                         '<strong>Intros: ' + introPct + '</strong>' +
                         '<strong>Credits: ' + creditsPct + '</strong>' +
-                        (creditsDetectorAvailable
-                            ? '<button class="raised emby-button btn-season-detect" title="Detect credits for all episodes in this season" style="padding: 0.2em 0.6em; font-size: 0.8em;"><span>Detect</span></button>'
-                            : '') +
+                        '<button class="raised emby-button btn-season-actions" title="Season actions" style="padding: 0.2em 0.6em; font-size: 0.8em;"><span>Actions &#9660;</span></button>' +
                         '<span class="seasonToggle" style="font-size: 1.2em;">&#9654;</span>' +
                     '</div>';
 
-                // Season-level detect button handler
-                var btnSeasonDetect = header.querySelector('.btn-season-detect');
-                if (btnSeasonDetect) {
-                    btnSeasonDetect.addEventListener('click', function (e) {
+                // Season-level actions button handler
+                var btnSeasonActions = header.querySelector('.btn-season-actions');
+                if (btnSeasonActions) {
+                    btnSeasonActions.addEventListener('click', function (e) {
                         e.stopPropagation();
-                        detectCreditsForSeason(season.SeasonId, btnSeasonDetect);
+                        showSeasonActionsMenu(header, season, btnSeasonActions);
                     });
                 }
 
@@ -590,6 +588,100 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.attachMenuCloseHandler(menu);
         }
 
+        function ensureSeasonEpisodes(seasonId) {
+            if (loadedSeasons[seasonId]) {
+                return Promise.resolve(loadedSeasons[seasonId]);
+            }
+            var epEndpoint = 'episode_list?seasonId=' + encodeURIComponent(seasonId) +
+                '&seriesId=' + encodeURIComponent(seriesId);
+            return helpers.apiCall(epEndpoint, 'GET').then(function (episodes) {
+                episodes = (episodes || []).sort(function (a, b) {
+                    return (a.EpisodeNumber || 0) - (b.EpisodeNumber || 0);
+                });
+                loadedSeasons[seasonId] = episodes;
+                return episodes;
+            });
+        }
+
+        function getSeasonContainer(header) {
+            return header.nextElementSibling;
+        }
+
+        function showSeasonActionsMenu(header, season, buttonEl) {
+            var existing = header.querySelector('.actions-menu');
+            if (existing) {
+                existing.remove();
+                return;
+            }
+
+            var sid = season.SeasonId;
+            var container = getSeasonContainer(header);
+            var colors = helpers.getMenuColors(view);
+            var menu = helpers.createActionsMenu(colors);
+
+            // Delete submenu
+            menu.appendChild(helpers.createSubmenuItem('Delete', [
+                { label: 'Intros', enabled: true, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    ensureSeasonEpisodes(sid).then(function (eps) {
+                        executeBulkDelete(sid, eps, container, ['IntroStart', 'IntroEnd']);
+                    });
+                }},
+                { label: 'Credits', enabled: true, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    ensureSeasonEpisodes(sid).then(function (eps) {
+                        executeBulkDelete(sid, eps, container, ['CreditsStart']);
+                    });
+                }},
+                { label: 'Both', enabled: true, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    ensureSeasonEpisodes(sid).then(function (eps) {
+                        executeBulkDelete(sid, eps, container, ['IntroStart', 'IntroEnd', 'CreditsStart']);
+                    });
+                }}
+            ], true, colors));
+
+            // Set Credits to End
+            menu.appendChild(helpers.createMenuItem('Set Credits to End', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                ensureSeasonEpisodes(sid).then(function (eps) {
+                    executeBulkSetCreditsEnd(sid, eps, container);
+                });
+            }));
+
+            // Apply Source (only when a copy source is active)
+            if (bulkSource) {
+                menu.appendChild(helpers.createMenuItem('Apply Source', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    ensureSeasonEpisodes(sid).then(function (eps) {
+                        executeBulkApply(sid, eps, container);
+                    });
+                }));
+            }
+
+            // Detect items (only when EmbyCredits is available)
+            if (creditsDetectorAvailable) {
+                menu.appendChild(helpers.createMenuDivider(colors));
+
+                menu.appendChild(helpers.createMenuItem('Detect All', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    detectSeasonAll(season.SeasonNumber, buttonEl);
+                }));
+
+                menu.appendChild(helpers.createMenuItem('Detect Missing', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    detectSeasonMissing(season.SeasonNumber, buttonEl);
+                }));
+            }
+
+            helpers.positionMenuBelowButton(menu, buttonEl);
+            helpers.attachMenuCloseHandler(menu);
+        }
+
         function confirmDeleteGroup(row, ep, groupType) {
             var markers = [];
             if (groupType === 'intros' || groupType === 'both') {
@@ -696,29 +788,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             return episodes.slice();
         }
 
-        function filterForDetection(targetEpisodes) {
-            var withCredits = targetEpisodes.filter(function (ep) { return ep.CreditsStartTicks > 0; });
-            var withoutCredits = targetEpisodes.filter(function (ep) { return !ep.CreditsStartTicks || ep.CreditsStartTicks === 0; });
-
-            if (withCredits.length > 0 && withoutCredits.length > 0) {
-                var skipExisting = confirm(
-                    withCredits.length + ' of ' + targetEpisodes.length + ' episodes already have credits detected.\n\n' +
-                    'Click OK to skip these and detect only the remaining ' + withoutCredits.length + ' episodes.\n' +
-                    'Click Cancel to detect for all ' + targetEpisodes.length + ' episodes (overwrites existing).'
-                );
-                if (skipExisting) {
-                    return withoutCredits;
-                }
-                return targetEpisodes;
-            } else if (withCredits.length > 0 && withoutCredits.length === 0) {
-                if (!confirm('All ' + targetEpisodes.length + ' episodes already have credits detected. Re-detect for all of them?')) {
-                    return null;
-                }
-                return targetEpisodes;
-            }
-            return targetEpisodes;
-        }
-
         function createBulkActionRow(seasonId, episodes, container) {
             var row = document.createElement('div');
             row.className = 'bulk-action-row';
@@ -747,57 +816,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
             });
 
-            // Delete Intros button
-            var btnDeleteIntro = document.createElement('button');
-            btnDeleteIntro.className = 'raised emby-button btn-bulk-delete-intro';
-            btnDeleteIntro.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
-            btnDeleteIntro.textContent = 'Delete All Intros';
-            btnDeleteIntro.addEventListener('click', function () {
-                helpers.guardButton(btnDeleteIntro, function () {
-                    return executeBulkDelete(seasonId, episodes, container, ['IntroStart', 'IntroEnd']);
-                });
-            });
-
-            // Delete Credits button
-            var btnDeleteCredits = document.createElement('button');
-            btnDeleteCredits.className = 'raised emby-button btn-bulk-delete-credits';
-            btnDeleteCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
-            btnDeleteCredits.textContent = 'Delete All Credits';
-            btnDeleteCredits.addEventListener('click', function () {
-                helpers.guardButton(btnDeleteCredits, function () {
-                    return executeBulkDelete(seasonId, episodes, container, ['CreditsStart']);
-                });
-            });
-
-            // Set Credits to End button
-            var btnCreditsEnd = document.createElement('button');
-            btnCreditsEnd.className = 'raised emby-button btn-bulk-credits-end';
-            btnCreditsEnd.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
-            btnCreditsEnd.textContent = 'Set All Credits to End';
-            btnCreditsEnd.title = 'Set CreditsStart to runtime end for each episode';
-            btnCreditsEnd.addEventListener('click', function () {
-                helpers.guardButton(btnCreditsEnd, function () {
-                    return executeBulkSetCreditsEnd(seasonId, episodes, container);
-                });
-            });
-
-            // Detect Credits button (only visible when EmbyCredits is available)
-            var btnDetectCredits = document.createElement('button');
-            btnDetectCredits.className = 'raised emby-button btn-bulk-detect-credits';
-            btnDetectCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;' + (creditsDetectorAvailable ? '' : ' display: none;');
-            btnDetectCredits.textContent = 'Detect All Credits';
-            btnDetectCredits.title = 'Detect credits for episodes using EmbyCredits';
-            btnDetectCredits.addEventListener('click', function () {
-                helpers.guardButton(btnDetectCredits, function () {
-                    return executeBulkDetectCredits(seasonId, episodes);
-                });
-            });
-
             rightSide.appendChild(btnApply);
-            rightSide.appendChild(btnDeleteIntro);
-            rightSide.appendChild(btnDeleteCredits);
-            rightSide.appendChild(btnCreditsEnd);
-            rightSide.appendChild(btnDetectCredits);
 
             row.appendChild(leftSide);
             row.appendChild(rightSide);
@@ -860,10 +879,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var selectedCount = selectedItems[seasonId] ? Object.keys(selectedItems[seasonId]).length : 0;
             var selectionInfo = bulkRow.querySelector('.selection-info');
             var btnApply = bulkRow.querySelector('.btn-bulk-apply');
-            var btnDeleteIntro = bulkRow.querySelector('.btn-bulk-delete-intro');
-            var btnDeleteCredits = bulkRow.querySelector('.btn-bulk-delete-credits');
-            var btnCreditsEnd = bulkRow.querySelector('.btn-bulk-credits-end');
-            var btnDetect = bulkRow.querySelector('.btn-bulk-detect-credits');
 
             if (selectedCount > 0) {
                 selectionInfo.textContent = selectedCount + ' of ' + episodes.length + ' selected';
@@ -871,20 +886,12 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     btnApply.textContent = getApplyButtonLabel(true, selectedCount);
                     btnApply.style.display = bulkSource ? '' : 'none';
                 }
-                if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete Intros (' + selectedCount + ')';
-                if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete Credits (' + selectedCount + ')';
-                if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set Credits to End (' + selectedCount + ')';
-                if (btnDetect) btnDetect.textContent = 'Detect Credits (' + selectedCount + ')';
             } else {
                 selectionInfo.textContent = episodes.length + ' episodes';
                 if (btnApply) {
                     btnApply.textContent = getApplyButtonLabel(false, 0);
                     btnApply.style.display = bulkSource ? '' : 'none';
                 }
-                if (btnDeleteIntro) btnDeleteIntro.textContent = 'Delete All Intros';
-                if (btnDeleteCredits) btnDeleteCredits.textContent = 'Delete All Credits';
-                if (btnCreditsEnd) btnCreditsEnd.textContent = 'Set All Credits to End';
-                if (btnDetect) btnDetect.textContent = 'Detect All Credits';
             }
         }
 
@@ -1039,19 +1046,6 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
         }
 
-        function executeBulkDetectCredits(seasonId, episodes) {
-            var targetEpisodes = getTargetEpisodes(seasonId, episodes);
-            if (targetEpisodes.length === 0) {
-                helpers.showError('No episodes to detect credits for.');
-                return;
-            }
-
-            targetEpisodes = filterForDetection(targetEpisodes);
-            if (!targetEpisodes || targetEpisodes.length === 0) return;
-
-            return helpers.bulkDetectCredits(targetEpisodes);
-        }
-
         function refreshSeasonEpisodes(seasonId, container) {
             // Clear cache and selection, then reload
             delete loadedSeasons[seasonId];
@@ -1089,36 +1083,35 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             );
         }
 
-        function detectCreditsForSeason(seasonId, btn) {
-            var epEndpoint = 'episode_list?seasonId=' + encodeURIComponent(seasonId) +
-                '&seriesId=' + encodeURIComponent(seriesId);
-
-            // Load episodes if not cached, then run bulk detect
-            var episodesPromise = loadedSeasons[seasonId]
-                ? Promise.resolve(loadedSeasons[seasonId])
-                : helpers.apiCall(epEndpoint, 'GET').then(function (episodes) {
-                    episodes = (episodes || []).sort(function (a, b) {
-                        return (a.EpisodeNumber || 0) - (b.EpisodeNumber || 0);
-                    });
-                    loadedSeasons[seasonId] = episodes;
-                    return episodes;
-                });
-
+        function detectSeasonAll(seasonNumber, btn) {
             helpers.withButtonLoading(btn, '...',
-                episodesPromise.then(function (episodes) {
-                    if (!episodes || episodes.length === 0) {
-                        helpers.showError('No episodes found for this season.');
-                        return;
-                    }
-
-                    var targetEpisodes = filterForDetection(episodes);
-                    if (!targetEpisodes || targetEpisodes.length === 0) return;
-
-                    return helpers.bulkDetectCredits(targetEpisodes);
+                helpers.creditsDetectorCall('ProcessSeason', {
+                    SeriesId: seriesId,
+                    SeasonNumber: seasonNumber,
+                    SkipExistingMarkers: false
+                })
+                .then(function () {
+                    helpers.showSuccess('Credits detection queued for all episodes in this season. Results will appear after the next sync.');
                 })
                 .catch(function (error) {
-                    console.error('Failed to load episodes for detection:', error);
-                    helpers.showError('Failed to load episodes for this season.');
+                    console.error('Season credits detection failed:', error);
+                    helpers.showError('Credits detection failed for this season.');
+                })
+            );
+        }
+
+        function detectSeasonMissing(seasonNumber, btn) {
+            helpers.withButtonLoading(btn, '...',
+                helpers.creditsDetectorCall('ProcessSeasonMissingMarkers', {
+                    SeriesId: seriesId,
+                    SeasonNumber: seasonNumber
+                })
+                .then(function () {
+                    helpers.showSuccess('Credits detection queued for episodes missing credits. Results will appear after the next sync.');
+                })
+                .catch(function (error) {
+                    console.error('Season credits detection failed:', error);
+                    helpers.showError('Credits detection failed for this season.');
                 })
             );
         }

@@ -1,6 +1,14 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.2.0.23 - Season-Level Actions Dropdown
+
+### Improved
+
+- **Season-level Actions dropdown** (#63) - The season header now has an "Actions" dropdown that consolidates all season-level operations: Delete (Intros/Credits/Both), Set Credits to End, Apply Source, and - when EmbyCredits is installed - Detect All and Detect Missing. The detect options use EmbyCredits' native season-level endpoints for single-call processing. The previous row of standalone bulk buttons below the episode table has been replaced by this dropdown.
+
+---
+
 ## v1.2.0.21 - Split Dashboard Coverage by Type
 
 ### Improved

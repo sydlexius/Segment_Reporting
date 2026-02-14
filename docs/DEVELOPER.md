@@ -1595,6 +1595,16 @@ background color to render correctly on both light and dark Emby themes.
 | `checkCreditsDetector()` | Probes for the EmbyCredits plugin by calling its API. Returns a Promise resolving to `true` or `false`. Result is cached. |
 | `creditsDetectorCall(endpoint, queryParams)` | Calls an EmbyCredits API endpoint. Returns a Promise. |
 
+**EmbyCredits endpoints used:**
+
+| Endpoint | Method | Parameters | Used by |
+|----------|--------|------------|---------|
+| `CreditsDetector/GetAllSeries` | GET | - | `checkCreditsDetector()` (availability probe) |
+| `CreditsDetector/ProcessEpisode` | POST | `ItemId` | Per-episode detect, `bulkDetectCredits()` |
+| `CreditsDetector/ProcessSeries` | POST | `SeriesId` | Series-level detect button |
+| `CreditsDetector/ProcessSeason` | POST | `SeriesId`, `SeasonNumber`, `SkipExistingMarkers` | Season Actions > Detect All |
+| `CreditsDetector/ProcessSeasonMissingMarkers` | POST | `SeriesId`, `SeasonNumber` | Season Actions > Detect Missing |
+
 ---
 
 ### Chart Integration
@@ -1857,10 +1867,11 @@ episode tables inside each section.
 - Copy submenu with type selection: Intros / Credits / Both
 - Delete submenu with grouped deletion: Intros / Credits / Both
 - Type-aware bulk source banner (e.g., "Copying intros from Episode 3")
-- Bulk operations: Apply Source (type-aware), Delete All Intros, Delete All
-  Credits, Set All Credits to End, Detect All Credits
+- Season-level **Actions** dropdown (Delete submenu, Set Credits to End,
+  Apply Source, Detect All/Detect Missing via EmbyCredits `ProcessSeason`)
 - Selection-aware bulk buttons (show count when items are checked)
-- Per-episode, per-season, and per-series credits detection (EmbyCredits)
+- Per-episode, per-series, and season-level Actions dropdown credits detection
+  (EmbyCredits `ProcessSeason` / `ProcessSeasonMissingMarkers` endpoints)
 - Clickable timestamp links that launch playback at that position
 
 **Patterns demonstrated:** Lazy-loading data (episodes loaded on accordion

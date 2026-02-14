@@ -38,9 +38,7 @@ your media libraries.
 6. [Bulk Operations](#6-bulk-operations)
    - [Selecting Episodes](#selecting-episodes)
    - [Copy Segments from a Source Episode](#copy-segments-from-a-source-episode)
-   - [Bulk Delete](#bulk-delete)
-   - [Bulk Set Credits to End](#bulk-set-credits-to-end)
-   - [Bulk Detect Credits](#bulk-detect-credits)
+   - [Season-Level Actions Dropdown](#season-level-actions-dropdown)
 7. [Custom Queries](#7-custom-queries)
    - [Built-in and Saved Queries](#built-in-and-saved-queries)
    - [Visual Query Builder](#visual-query-builder)
@@ -370,8 +368,8 @@ end, you signal that the item has been accounted for. This prevents the
 [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin from needlessly
 scanning these items for credits that do not exist.
 
-> **Tip:** To apply this across many episodes at once, use the bulk version —
-> see [Bulk Set Credits to End](#bulk-set-credits-to-end).
+> **Tip:** To apply this across many episodes at once, use the season-level
+> **Actions** dropdown — see [Season-Level Actions Dropdown](#season-level-actions-dropdown).
 
 ---
 
@@ -417,43 +415,30 @@ existing credits markers on the target episodes are left unchanged. This is
 especially useful when a series has consistent intro timing across a season but
 varying credits positions.
 
-### Bulk Delete
+### Season-Level Actions Dropdown
 
-Two delete buttons let you remove markers in bulk:
+Each season header has an **Actions** dropdown that provides bulk operations
+for the entire season (or selected episodes within it):
 
-- **Delete All Intros** / **Delete Intros (N)** — removes Intro Start and Intro
-  End markers from the selected episodes (or all episodes in the season)
-- **Delete All Credits** / **Delete Credits (N)** — removes Credits Start
-  markers from the selected episodes (or all episodes in the season)
-
-A confirmation prompt appears before any deletions are made.
-
-### Bulk Set Credits to End
-
-**Set All Credits to End** / **Set Credits to End (N)** places the Credits
-Start marker at each episode's runtime endpoint.
-
-This is primarily useful for episodes that have **no end credits** — placing
-the marker at the end signals that the item has been accounted for, which
-prevents the EmbyCredits plugin from needlessly rescanning these items. It is
-also useful for series where credits always run to the very end of each
-episode file.
-
-### Bulk Detect Credits
-
-> **Requires:** The [EmbyCredits](https://github.com/faush01/EmbyCredits)
-> plugin must be installed on your Emby server.
-
-**Detect All Credits** / **Detect Credits (N)** queues the selected episodes
-for automatic credits detection by the EmbyCredits plugin. EmbyCredits uses
-audio fingerprinting to find where credits begin.
+- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+  markers from the selected episodes (or all episodes in the season). A
+  confirmation prompt appears before any deletions are made.
+- **Set Credits to End** — places the Credits Start marker at each episode's
+  runtime endpoint. This is primarily useful for episodes that have no end
+  credits, signaling that the item has been accounted for and preventing the
+  EmbyCredits plugin from needlessly rescanning these items.
+- **Apply Source** — only visible when a copy source is active (see Copy
+  Segments above). Applies the copied markers to the season's episodes.
+- **Detect All** — queues credits detection for all episodes in the season,
+  overwriting any existing markers. Only visible when
+  [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
+- **Detect Missing** — queues credits detection only for episodes that don't
+  have credits yet. Only visible when EmbyCredits is installed.
 
 Detection runs in the background. After it completes, run a sync (or wait for
 the nightly sync) to see the newly detected markers in Segment Reporting.
 
-> **Tip:** Detect buttons also appear at the series level (in the page header)
-> and at the season level (in each season's header), so you can detect credits
-> for an entire series or a single season in one click.
+> **Tip:** A detect button also appears at the series level in the page header.
 
 ---
 
