@@ -240,19 +240,19 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     if (!confirmed) {
                         return;
                     }
-                    helpers.showLoading();
-                    helpers.apiCall('force_rescan', 'POST').then(function (result) {
-                        helpers.hideLoading();
-                        if (result.error) {
-                            helpers.showError(result.error);
-                        } else {
-                            helpers.showSuccess('Cache dropped and rescan queued. Stats will update after the sync completes.');
-                            loadCacheStats();
-                        }
-                    }).catch(function () {
-                        helpers.hideLoading();
-                        helpers.showError('Failed to trigger force rescan.');
-                    });
+                    var btn = view.querySelector('#btnForceRescan');
+                    helpers.withButtonLoading(btn, 'Rescanning...',
+                        helpers.apiCall('force_rescan', 'POST').then(function (result) {
+                            if (result.error) {
+                                helpers.showError(result.error);
+                            } else {
+                                helpers.showSuccess('Cache dropped and rescan queued. Stats will update after the sync completes.');
+                                loadCacheStats();
+                            }
+                        }).catch(function () {
+                            helpers.showError('Failed to trigger force rescan.');
+                        })
+                    );
                 }
             );
         }

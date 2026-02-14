@@ -1532,7 +1532,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
 
             var payload = JSON.stringify({ name: name, sql: sql, id: existingQuery ? existingQuery.id : null });
-            helpers.apiCall('saved_queries', 'POST', payload)
+            return helpers.apiCall('saved_queries', 'POST', payload)
                 .then(function () {
                     loadQueries();
                 })
@@ -1551,7 +1551,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var name = selectedOption.textContent;
             if (!confirm('Delete saved query "' + name + '"?')) return;
 
-            helpers.apiCall('saved_queries/' + queryId, 'DELETE')
+            return helpers.apiCall('saved_queries/' + queryId, 'DELETE')
                 .then(function () {
                     dropdown.selectedIndex = 0;
                     view.querySelector('#btnDeleteQuery').style.display = 'none';
@@ -1934,7 +1934,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 btnDeleteIntro.disabled = count === 0;
                 if (count === 0) btnDeleteIntro.style.opacity = '0.5';
                 btnDeleteIntro.addEventListener('click', function () {
-                    executeBulkDelete(['IntroStart', 'IntroEnd']);
+                    helpers.guardButton(btnDeleteIntro, function () {
+                        return executeBulkDelete(['IntroStart', 'IntroEnd']);
+                    });
                 });
                 btnContainer.appendChild(btnDeleteIntro);
             }
@@ -1947,7 +1949,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 btnDeleteCredits.disabled = count === 0;
                 if (count === 0) btnDeleteCredits.style.opacity = '0.5';
                 btnDeleteCredits.addEventListener('click', function () {
-                    executeBulkDelete(['CreditsStart']);
+                    helpers.guardButton(btnDeleteCredits, function () {
+                        return executeBulkDelete(['CreditsStart']);
+                    });
                 });
                 btnContainer.appendChild(btnDeleteCredits);
             }
@@ -1960,7 +1964,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 btnDetectCredits.disabled = count === 0;
                 if (count === 0) btnDetectCredits.style.opacity = '0.5';
                 btnDetectCredits.addEventListener('click', function () {
-                    executeBulkDetectCredits();
+                    helpers.guardButton(btnDetectCredits, function () {
+                        return executeBulkDetectCredits();
+                    });
                 });
                 btnContainer.appendChild(btnDetectCredits);
             }
@@ -1985,7 +1991,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             });
 
-            helpers.bulkDelete(uniqueItemIds, markerTypes).then(function (result) {
+            return helpers.bulkDelete(uniqueItemIds, markerTypes).then(function (result) {
                 if (result) executeQuery();
             });
         }
@@ -2008,7 +2014,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             });
 
-            helpers.bulkDetectCredits(uniqueItemIds).then(function (result) {
+            return helpers.bulkDetectCredits(uniqueItemIds).then(function (result) {
                 if (result) executeQuery();
             });
         }
@@ -2284,12 +2290,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
                 var btnSaveQuery = view.querySelector('#btnSaveQuery');
                 if (btnSaveQuery) {
-                    btnSaveQuery.addEventListener('click', saveCurrentQuery);
+                    btnSaveQuery.addEventListener('click', function () {
+                        helpers.guardButton(btnSaveQuery, saveCurrentQuery);
+                    });
                 }
 
                 var btnDeleteQuery = view.querySelector('#btnDeleteQuery');
                 if (btnDeleteQuery) {
-                    btnDeleteQuery.addEventListener('click', deleteSelectedQuery);
+                    btnDeleteQuery.addEventListener('click', function () {
+                        helpers.guardButton(btnDeleteQuery, deleteSelectedQuery);
+                    });
                 }
 
                 var btnExecute = view.querySelector('#btnExecute');

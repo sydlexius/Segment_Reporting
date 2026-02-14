@@ -591,6 +591,26 @@ function segmentReportingWithButtonLoading(btn, workingText, promise) {
     });
 }
 
+function segmentReportingGuardButton(btn, asyncFn) {
+    if (btn.disabled) return Promise.resolve();
+    btn.disabled = true;
+    var result;
+    try {
+        result = asyncFn();
+    } catch (e) {
+        btn.disabled = false;
+        return Promise.reject(e);
+    }
+    if (result && typeof result.then === 'function') {
+        return result.then(
+            function (v) { btn.disabled = false; return v; },
+            function (e) { btn.disabled = false; throw e; }
+        );
+    }
+    btn.disabled = false;
+    return Promise.resolve(result);
+}
+
 function segmentReportingCreateSegmentChart(Chart, ctx, labels, segmentData, view, options) {
     options = options || {};
     var themeColors = segmentReportingGetThemeColors(view);
@@ -1000,6 +1020,9 @@ function segmentReportingCreateInlineEditor(config) {
     }
 
     function save() {
+        var saveBtn = row.querySelector('.btn-save');
+        if (saveBtn) saveBtn.disabled = true;
+
         var inputs = row.querySelectorAll('.tick-cell input');
         var updates = [];
         var allowDelete = config.allowDelete !== false;
@@ -1019,6 +1042,7 @@ function segmentReportingCreateInlineEditor(config) {
 
             var newTicks = segmentReportingTimeToTicks(newValue);
             if (newTicks === 0 && newValue !== '00:00:00.000') {
+                if (saveBtn) saveBtn.disabled = false;
                 segmentReportingShowError('Invalid time format for ' + getMarkerType(cell) + '. Use HH:MM:SS.fff');
                 return;
             }
@@ -1116,6 +1140,7 @@ function getSegmentReportingHelpers() {
         createEmptyRow: segmentReportingCreateEmptyRow,
         registerChartCleanup: segmentReportingRegisterChartCleanup,
         withButtonLoading: segmentReportingWithButtonLoading,
+        guardButton: segmentReportingGuardButton,
         createSegmentChart: segmentReportingCreateSegmentChart,
         checkCreditsDetector: segmentReportingCheckCreditsDetector,
         creditsDetectorCall: segmentReportingCreditsDetectorCall,

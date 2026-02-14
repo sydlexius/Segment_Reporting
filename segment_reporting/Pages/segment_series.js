@@ -742,7 +742,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             btnApply.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;' + (bulkSource ? '' : ' display: none;');
             btnApply.textContent = bulkSource ? getApplyButtonLabel(false, 0) : 'Apply Source to All';
             btnApply.addEventListener('click', function () {
-                executeBulkApply(seasonId, episodes, container);
+                helpers.guardButton(btnApply, function () {
+                    return executeBulkApply(seasonId, episodes, container);
+                });
             });
 
             // Delete Intros button
@@ -751,7 +753,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             btnDeleteIntro.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
             btnDeleteIntro.textContent = 'Delete All Intros';
             btnDeleteIntro.addEventListener('click', function () {
-                executeBulkDelete(seasonId, episodes, container, ['IntroStart', 'IntroEnd']);
+                helpers.guardButton(btnDeleteIntro, function () {
+                    return executeBulkDelete(seasonId, episodes, container, ['IntroStart', 'IntroEnd']);
+                });
             });
 
             // Delete Credits button
@@ -760,7 +764,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             btnDeleteCredits.style.cssText = 'padding: 0.3em 0.8em; font-size: 0.85em;';
             btnDeleteCredits.textContent = 'Delete All Credits';
             btnDeleteCredits.addEventListener('click', function () {
-                executeBulkDelete(seasonId, episodes, container, ['CreditsStart']);
+                helpers.guardButton(btnDeleteCredits, function () {
+                    return executeBulkDelete(seasonId, episodes, container, ['CreditsStart']);
+                });
             });
 
             // Set Credits to End button
@@ -770,7 +776,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             btnCreditsEnd.textContent = 'Set All Credits to End';
             btnCreditsEnd.title = 'Set CreditsStart to runtime end for each episode';
             btnCreditsEnd.addEventListener('click', function () {
-                executeBulkSetCreditsEnd(seasonId, episodes, container);
+                helpers.guardButton(btnCreditsEnd, function () {
+                    return executeBulkSetCreditsEnd(seasonId, episodes, container);
+                });
             });
 
             // Detect Credits button (only visible when EmbyCredits is available)
@@ -780,7 +788,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             btnDetectCredits.textContent = 'Detect All Credits';
             btnDetectCredits.title = 'Detect credits for episodes using EmbyCredits';
             btnDetectCredits.addEventListener('click', function () {
-                executeBulkDetectCredits(seasonId, episodes, container);
+                helpers.guardButton(btnDetectCredits, function () {
+                    return executeBulkDetectCredits(seasonId, episodes);
+                });
             });
 
             rightSide.appendChild(btnApply);
@@ -953,7 +963,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
             helpers.showLoading();
 
-            helpers.apiCall('bulk_apply', 'POST', JSON.stringify({
+            return helpers.apiCall('bulk_apply', 'POST', JSON.stringify({
                 SourceItemId: bulkSource.ItemId,
                 TargetItemIds: targetIds,
                 MarkerTypes: markerTypes.join(',')
@@ -986,7 +996,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
             var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; });
-            helpers.bulkDelete(itemIds, markerTypes).then(function (result) {
+            return helpers.bulkDelete(itemIds, markerTypes).then(function (result) {
                 if (result) refreshSeasonEpisodes(seasonId, container);
             });
         }
@@ -1024,7 +1034,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 return;
             }
             var itemIds = targetEpisodes.map(function (ep) { return ep.ItemId; });
-            helpers.bulkSetCreditsEnd(itemIds).then(function (result) {
+            return helpers.bulkSetCreditsEnd(itemIds).then(function (result) {
                 if (result) refreshSeasonEpisodes(seasonId, container);
             });
         }
@@ -1039,7 +1049,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             targetEpisodes = filterForDetection(targetEpisodes);
             if (!targetEpisodes || targetEpisodes.length === 0) return;
 
-            helpers.bulkDetectCredits(targetEpisodes);
+            return helpers.bulkDetectCredits(targetEpisodes);
         }
 
         function refreshSeasonEpisodes(seasonId, container) {
