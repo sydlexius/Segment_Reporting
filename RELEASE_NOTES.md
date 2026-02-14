@@ -1,37 +1,35 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
-## v1.2.0.24 - Library Page Actions Dropdowns
+## [v1.3.0.0](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.3.0.0) - Theme-Aware Palettes and Actions Overhaul
 
 ### Improved
 
-- **Series-level Actions dropdown** (#78) - Each series row on the library page now has an "Actions" dropdown with Delete (Intros/Credits/Both), Set Credits to End, and - when EmbyCredits is installed - Detect All and Detect Missing. Menu items are greyed out when the series has no markers of that type.
-- **Movie Actions dropdown** (#78) - The separate Edit, Delete, and Detect buttons on movie rows have been consolidated into a single "Actions" dropdown matching the pattern used throughout the rest of the plugin. The dropdown adds Set Credits to End and a grouped Delete submenu (Intros/Credits/Both).
+- **Theme-aware chart palettes** (#77) - All five built-in color palettes now adapt to your Emby theme automatically. Light themes get darker, high-contrast colors while dark themes get vibrant ones. The old palettes (Ocean Breeze, Sunshine Blue Dream, etc.) are replaced by five new palettes named after their accent color: Green (Default), Blue, Red, Pink, and Purple. Each palette was designed to pass WCAG AA contrast requirements on both light and dark backgrounds.
+- **Actions dropdown menus everywhere** (#63, #69, #78) - Series rows, movie rows, and season headers throughout the Library and Series pages now use a single "Actions" dropdown that consolidates Edit, Delete (Intros/Credits/Both), Set Credits to End, Apply Source, and EmbyCredits detection into one tidy menu. Menu items are greyed out when the item has no markers of that type. The previous standalone bulk buttons on the season header have been replaced by the dropdown.
+- **Separate Intro % and Credits % on the Dashboard** (#61) - The library table now shows independent percentage columns for intro and credits coverage instead of a single combined value, making it clear at a glance which segment type needs attention.
+- **Shared inline editor** (#67) - All three editing pages (Series, Library, Custom Query) now use a single inline editing component from the shared helpers, removing about 360 lines of duplicated code while ensuring consistent save/cancel behavior everywhere.
+- **Shared bulk operation helpers** (#68) - Bulk delete, set-credits-to-end, and detect-credits logic extracted into reusable server-side helpers with shared ID parsing, count validation, and error handling.
+- **Auto-reload on plugin update** (#64) - The web UI now detects when the plugin DLL has been updated and prompts to reload, preventing stale cached JavaScript from running against a newer backend.
 
----
+### Fixed
 
-## v1.2.0.23 - Season-Level Actions Dropdown
+- **Action buttons no longer fire twice** (#70) - All action buttons across every page are now guarded against double-submission during async operations.
+- **Database deadlock prevention** (#66) - Reorganized internal lock ordering in SegmentRepository so Dispose(), RemoveOrphanedRows(), and DeleteAllData() can no longer deadlock under concurrent access.
+- **Hardened custom query endpoint** (#64) - Added defense-in-depth keyword rejection (semicolons, ATTACH, load_extension) and a PRAGMA whitelist limiting queries to safe read-only pragmas.
+- **Marker type whitelist validation** (#65) - Column name lookups now reject unexpected marker type strings, preventing arbitrary values from reaching SQL queries.
+- **Movie delete menu now theme-aware** (#69) - Replaced hardcoded dark-theme colors with the shared menu helper infrastructure so the dropdown adapts to light Emby themes.
+- **HTML escaping for season labels** (#71) - Season names are now escaped before innerHTML insertion.
+- **Memory leak in CSV export** (#75) - Blob URLs are now revoked after CSV download completes.
+- **Database filename centralized** (#72) - Removed duplicate filename constants across API and task files.
+- **First-run guard for cleanup task** (#73) - The weekly cleanup task no longer errors if the database file hasn't been created yet.
+- **Dead code removal** (#74) - Removed unused navigation function and fixed copyright year.
 
-### Improved
+### Internal
 
-- **Season-level Actions dropdown** (#63) - The season header now has an "Actions" dropdown that consolidates all season-level operations: Delete (Intros/Credits/Both), Set Credits to End, Apply Source, and - when EmbyCredits is installed - Detect All and Detect Missing. The detect options use EmbyCredits' native season-level endpoints for single-call processing. The previous row of standalone bulk buttons below the episode table has been replaced by this dropdown.
-
----
-
-## v1.2.0.21 - Split Dashboard Coverage by Type
-
-### Improved
-
-- **Separate Intro % and Credits % columns on the Dashboard** (#61) - The library table now shows independent percentage columns for intro and credits coverage instead of a single combined "Coverage" value, making it easy to see at a glance which segment type needs attention in each library.
-- **Per-library Detect button relabeled** (#61) - The per-library detection button now reads "Detect Credits" to match the global "Detect All Credits" button and clarify what it does.
-
----
-
-## v1.2.0.16 - Drop LastSyncDate Column
-
-### Improved
-
-- **Removed the obsolete LastSyncDate column from the database** (#60) - The per-row sync timestamp column (deprecated in v1.0.4) is now fully dropped on databases running SQLite 3.35 or later. Older SQLite versions will continue to have the column's values cleared on startup as before.
+- **Dropped obsolete LastSyncDate column** (#60) - The per-row sync timestamp (deprecated in v1.0.4) is now fully removed from the database on SQLite 3.35+. Older SQLite versions continue to have the column's values cleared on startup.
+- **Code quality tooling** (#76) - Added Roslynator and IDisposableAnalyzers for C#, ESLint with no-unsanitized plugin for JavaScript, and Lefthook pre-commit hooks that run formatting, linting, and whitespace checks automatically.
+- **Automated screenshot capture** (#59) - Added a Playwright-based screenshot script with data anonymization for developer documentation.
 
 ---
 

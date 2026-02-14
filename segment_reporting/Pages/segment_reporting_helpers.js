@@ -317,11 +317,11 @@ function segmentReportingDetectAccentColor(view) {
 
 // Chart color palettes sourced from https://coolors.co
 var segmentReportingChartPalettes = [
-    { name: 'Refreshing Ocean Breeze',    accent: '#4CAF50', hue: 122, both: '#003366', intro: '#87CEEB', credits: '#F5F5DC', none: '#d90429' },
-    { name: 'Sunshine Blue Dream',         accent: '#2196F3', hue: 207, both: '#003459', intro: '#f4a44e', credits: '#bfdbf7', none: '#d90429' },
-    { name: 'Deep Sea Carnival',           accent: '#F44336', hue:   4, both: '#002a3a', intro: '#216f8d', credits: '#eaaa00', none: '#d90429' },
-    { name: 'Pastel Dreamland Adventure',  accent: '#F200A1', hue: 322, both: '#cdb4db', intro: '#ffafcc', credits: '#a2d2ff', none: '#d90429' },
-    { name: 'Bold Hues',                   accent: '#683AB7', hue: 271, both: '#f72585', intro: '#7209b7', credits: '#3a0ca3', none: '#d90429' }
+    { name: 'Green (Default)',  accent: '#4CAF50', hue: 122, both: { light: '#087f23', dark: '#4caf50' }, intro: { light: '#003366', dark: '#2196f3' }, credits: { light: '#0069c0', dark: '#f26419' }, none: '#d90429' },
+    { name: 'Blue',             accent: '#2196F3', hue: 207, both: { light: '#0061b0', dark: '#2196f3' }, intro: { light: '#1e88e5', dark: '#187ec7' }, credits: { light: '#151e2b', dark: '#bbdefb' }, none: '#d90429' },
+    { name: 'Red',              accent: '#F44336', hue:   4, both: '#1565c0', intro: { light: '#ad1457', dark: '#ff9800' }, credits: { light: '#00796b', dark: '#8bc34a' }, none: '#d90429' },
+    { name: 'Pink',             accent: '#F200A1', hue: 320, both: { light: '#e0115f', dark: '#fc0fc0' }, intro: { light: '#ff69b4', dark: '#ff66cc' }, credits: { light: '#ff0090', dark: '#ffa6c9' }, none: '#d90429' },
+    { name: 'Purple',           accent: '#683AB7', hue: 271, both: { light: '#5b21b6', dark: '#a78bfa' }, intro: { light: '#b5179e', dark: '#f472b6' }, credits: { light: '#0e7490', dark: '#22d3ee' }, none: '#d90429' }
 ];
 
 function segmentReportingGetPaletteByName(name) {
@@ -385,6 +385,12 @@ function segmentReportingGetThemeColors(view) {
     } else {
         palette = segmentReportingGenerateChartPalette(accentColor);
     }
+
+    var isLight = segmentReportingIsLightTheme(view);
+    palette.bothSegments = segmentReportingResolveColor(palette.bothSegments, isLight);
+    palette.introOnly = segmentReportingResolveColor(palette.introOnly, isLight);
+    palette.creditsOnly = segmentReportingResolveColor(palette.creditsOnly, isLight);
+    palette.noSegments = segmentReportingResolveColor(palette.noSegments, isLight);
 
     var textColor = getComputedStyle(view).color || '#fff';
 
@@ -929,6 +935,26 @@ function segmentReportingIsLightBackground(bgColor) {
     return false;
 }
 
+function segmentReportingIsLightTheme(view) {
+    var bg = segmentReportingDetectDropdownBg(view);
+    if (bg.charAt(0) === '#') {
+        var hex = bg.replace('#', '');
+        var r = parseInt(hex.substr(0, 2), 16);
+        var g = parseInt(hex.substr(2, 2), 16);
+        var b = parseInt(hex.substr(4, 2), 16);
+        return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.5;
+    }
+    return segmentReportingIsLightBackground(bg);
+}
+
+function segmentReportingResolveColor(color, isLight) {
+    if (typeof color === 'string') return color;
+    if (color && typeof color === 'object') {
+        return isLight ? (color.light || color.dark) : (color.dark || color.light);
+    }
+    return '#888888';
+}
+
 // ── Shared inline editing ──
 
 function segmentReportingCreateInlineEditor(config) {
@@ -1155,6 +1181,8 @@ function getSegmentReportingHelpers() {
         bulkDetectCredits: segmentReportingBulkDetectCredits,
         detectDropdownBg: segmentReportingDetectDropdownBg,
         isLightBackground: segmentReportingIsLightBackground,
+        isLightTheme: segmentReportingIsLightTheme,
+        resolveColor: segmentReportingResolveColor,
         getMenuColors: segmentReportingGetMenuColors,
         createMenuItem: segmentReportingCreateMenuItem,
         createMenuDivider: segmentReportingCreateMenuDivider,

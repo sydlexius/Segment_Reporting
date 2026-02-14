@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Segment Reporting - Palette Designer</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f5f5f5; color: #333; }
+h1 { margin-bottom: 4px; font-size: 1.5em; }
+h2 { margin: 24px 0 12px; font-size: 1.15em; border-bottom: 2px solid #ddd; padding-bottom: 4px; }
+h3 { margin: 12px 0 8px; font-size: 0.95em; color: #666; }
+
+.input-section { background: #fff; padding: 16px; border-radius: 8px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.input-row { display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+.input-group { display: flex; flex-direction: column; gap: 4px; }
+.input-group label { font-size: 0.8em; font-weight: 600; color: #555; }
+.input-group input, .input-group select { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9em; }
+.input-group input[type="text"] { width: 420px; font-family: monospace; }
+.input-group input[type="text"].name-input { width: 200px; font-family: inherit; }
+.input-group input[type="number"] { width: 70px; }
+.input-group input[type="color"] { width: 50px; height: 32px; padding: 2px; cursor: pointer; }
+button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85em; font-weight: 600; }
+button.primary { background: #2196F3; color: #fff; }
+button.primary:hover { background: #1976D2; }
+button.secondary { background: #e0e0e0; color: #333; }
+button.secondary:hover { background: #ccc; }
+button.copy-btn { background: #4CAF50; color: #fff; font-size: 0.8em; padding: 6px 12px; }
+button.copy-btn:hover { background: #388E3C; }
+.copied { background: #333 !important; }
+
+.role-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 10px 0; }
+.role-card { border: 2px solid #ddd; border-radius: 6px; padding: 8px; text-align: center; cursor: pointer; transition: all 0.15s; }
+.role-card:hover { border-color: #999; }
+.role-card.selected { border-color: #2196F3; background: #e3f2fd; }
+.role-card .swatch { width: 100%; height: 30px; border-radius: 3px; margin-bottom: 4px; }
+.role-card .hex { font-family: monospace; font-size: 0.75em; color: #666; }
+.role-card select { margin-top: 4px; font-size: 0.8em; width: 100%; }
+.role-card .scope-select { margin-top: 2px; font-size: 0.75em; }
+.role-card .scope-badge { display: inline-block; font-size: 0.65em; padding: 1px 6px; border-radius: 8px; margin-top: 3px; font-weight: 600; }
+.scope-badge-light { background: #fff3cd; color: #856404; }
+.scope-badge-dark { background: #343a40; color: #f8f9fa; }
+.scope-badge-both { background: #e2e3e5; color: #6c757d; }
+
+.preview-container { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 12px 0; }
+.theme-panel { border-radius: 8px; padding: 16px; }
+.theme-panel.light { background: #f0f0f0; color: #333; border: 1px solid #ddd; }
+.theme-panel.dark { background: #1a1a1a; color: #eee; border: 1px solid #333; }
+.theme-label { font-size: 0.75em; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; opacity: 0.6; }
+
+.card-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+.summary-card { flex: 1; min-width: 100px; padding: 10px; border-radius: 6px; text-align: center; }
+.theme-panel.light .summary-card { background: rgba(128,128,128,0.1); }
+.theme-panel.dark .summary-card { background: rgba(128,128,128,0.1); }
+.summary-card .card-value { font-size: 1.5em; font-weight: 700; }
+.summary-card .card-label { font-size: 0.7em; opacity: 0.7; margin-top: 2px; }
+
+.chart-mock { display: flex; align-items: flex-end; gap: 3px; height: 120px; padding: 8px; border-radius: 6px; margin-bottom: 8px; }
+.theme-panel.light .chart-mock { background: rgba(128,128,128,0.05); }
+.theme-panel.dark .chart-mock { background: rgba(128,128,128,0.05); }
+.bar-group { display: flex; flex-direction: column; justify-content: flex-end; flex: 1; height: 100%; gap: 1px; }
+.bar-segment { border-radius: 2px 2px 0 0; min-height: 4px; }
+
+.legend-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.75em; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 2px; }
+
+.contrast-table { width: 100%; border-collapse: collapse; margin: 8px 0; font-size: 0.8em; }
+.contrast-table th, .contrast-table td { padding: 6px 8px; text-align: center; border: 1px solid #ddd; }
+.contrast-table th { background: #f9f9f9; font-weight: 600; }
+.contrast-table .swatch-cell { width: 36px; }
+.contrast-table .swatch-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-block; border: 1px solid rgba(0,0,0,0.15); }
+.contrast-table .src-tag { font-size: 0.7em; opacity: 0.6; display: block; }
+.pass { color: #2e7d32; font-weight: 700; }
+.ok31 { color: #f57f17; font-weight: 600; }
+.fail { color: #c62828; font-weight: 700; }
+
+.pairwise-grid { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.pair-badge { font-size: 0.75em; padding: 3px 8px; border-radius: 12px; font-family: monospace; }
+.pair-badge.good { background: #e8f5e9; color: #2e7d32; }
+.pair-badge.low { background: #ffebee; color: #c62828; }
+
+.output-section { background: #263238; color: #aed581; padding: 12px 16px; border-radius: 6px; font-family: monospace; font-size: 0.8em; white-space: pre-wrap; position: relative; margin: 8px 0; line-height: 1.5; }
+.output-section .copy-btn { position: absolute; top: 8px; right: 8px; }
+
+.presets { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.presets button { font-size: 0.75em; padding: 4px 10px; }
+
+.adjust-row { display: flex; gap: 16px; align-items: center; margin: 8px 0; font-size: 0.85em; }
+.adjust-row label { display: flex; align-items: center; gap: 6px; }
+.adjust-row input[type="range"] { width: 120px; }
+</style>
+</head>
+<body>
+
+<h1>Palette Designer</h1>
+<p style="font-size:0.85em;color:#666;margin-bottom:16px;">Design and test color palettes for the Segment Reporting plugin. Mockups show how colors appear as dashboard card text and chart segments on both light and dark Emby themes.</p>
+
+<div class="input-section">
+  <div class="input-row">
+    <div class="input-group">
+      <label>Accent Color</label>
+      <select id="accentSelect" onchange="onAccentSelect()">
+        <option value="#4CAF50">Green - #4CAF50</option>
+        <option value="#2196F3">Blue - #2196F3</option>
+        <option value="#F44336">Red - #F44336</option>
+        <option value="#F200A1">Pink - #F200A1</option>
+        <option value="#683AB7">Purple - #683AB7</option>
+        <option value="custom">Custom...</option>
+      </select>
+      <div style="display:flex;gap:6px;align-items:center;margin-top:2px;">
+        <input type="color" id="accentColor" value="#4CAF50" onchange="onAccentColorPick()">
+        <span id="accentHexLabel" style="font-family:monospace;font-size:0.8em;color:#666;cursor:pointer;" onclick="copyInline(this)" title="Click to copy">#4CAF50</span>
+      </div>
+    </div>
+    <div class="input-group">
+      <label>Palette Name</label>
+      <input type="text" id="paletteName" class="name-input" value="Green (Default)" placeholder="e.g. Green (Default)">
+    </div>
+    <div class="input-group">
+      <label>Color Array (JSON) - both, intro, credits</label>
+      <input type="text" id="colorInput" value='["#52b54b","#344047","#127dbc"]' placeholder='["#both","#intro","#credits"]'>
+    </div>
+    <div class="input-group">
+      <label>None (No Segments)</label>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <input type="color" id="noneColor" value="#d90429" onchange="onNoneColorChange()">
+        <span id="noneHexLabel" style="font-family:monospace;font-size:0.8em;color:#666;cursor:pointer;" onclick="copyInline(this)" title="Click to copy">#d90429</span>
+      </div>
+    </div>
+    <button class="primary" onclick="loadColors()">Load</button>
+  </div>
+
+  <div class="presets">
+    <span style="font-size:0.8em;color:#888;line-height:2;">Presets:</span>
+    <button class="secondary" onclick="loadPreset('green')">Green (Default)</button>
+    <button class="secondary" onclick="loadPreset('ocean')">Ocean Breeze (old)</button>
+    <button class="secondary" onclick="loadPreset('sunshine')">Sunshine Blue Dream (old)</button>
+    <button class="secondary" onclick="loadPreset('deepsea')">Deep Sea Carnival (old)</button>
+    <button class="secondary" onclick="loadPreset('pastel')">Pastel Dreamland (old)</button>
+    <button class="secondary" onclick="loadPreset('bold')">Bold Hues (old)</button>
+  </div>
+
+  <div id="roleAssignment"></div>
+
+  <div class="adjust-row">
+    <label>Light theme darken: <input type="range" id="darkenPct" min="0" max="60" value="35" oninput="this.nextElementSibling.textContent=this.value+'%';render()"><span>35%</span></label>
+    <label>Dark theme lighten: <input type="range" id="lightenPct" min="0" max="60" value="40" oninput="this.nextElementSibling.textContent=this.value+'%';render()"><span>40%</span></label>
+    <label><input type="checkbox" id="themeAware" checked onchange="render()"> Theme-aware adjust</label>
+  </div>
+</div>
+
+<h2>Preview</h2>
+<div class="preview-container" id="preview"></div>
+
+<h2>Contrast Analysis</h2>
+<div id="contrastAnalysis"></div>
+
+<h2>Pairwise Distinguishability</h2>
+<div id="pairwise"></div>
+
+<h2>Output</h2>
+<div id="outputSection"></div>
+
+<script>
+var LIGHT_BG = '#F0F0F0';
+var DARK_BG = '#1A1A1A';
+var ROLES = ['both', 'intro', 'credits', 'none'];
+var ROLE_LABELS = { both: 'Both Segments', intro: 'Intro Only', credits: 'Credits Only', none: 'No Segments' };
+var ROLE_VALUES = { both: '72.4%', intro: '15.1%', credits: '8.3%', none: '4.2%' };
+var CHART_DATA = [
+  [65,20,10,5], [40,30,15,15], [10,15,25,50], [55,25,12,8], [30,35,20,15]
+];
+var CHART_LABELS = ['TV Shows','Anime','Docs','Movies','Kids'];
+
+var currentColors = [];
+var roleMap = {};
+var themeMap = {};
+
+var PRESETS = {
+  green:    { name: 'Green (Default)', accent: '#4CAF50', none: '#d90429', colors: ['#52b54b','#344047','#127dbc'], roles: {0:'both',1:'intro',2:'credits'} },
+  ocean:    { name: 'Refreshing Ocean Breeze', accent: '#4CAF50', none: '#d90429', colors: ['#003366','#87CEEB','#F5F5DC'], roles: {0:'both',1:'intro',2:'credits'} },
+  sunshine: { name: 'Sunshine Blue Dream', accent: '#2196F3', none: '#d90429', colors: ['#003459','#f4a44e','#bfdbf7'], roles: {0:'both',1:'intro',2:'credits'} },
+  deepsea:  { name: 'Deep Sea Carnival', accent: '#F44336', none: '#d90429', colors: ['#002a3a','#216f8d','#eaaa00'], roles: {0:'both',1:'intro',2:'credits'} },
+  pastel:   { name: 'Pastel Dreamland Adventure', accent: '#F200A1', none: '#d90429', colors: ['#cdb4db','#ffafcc','#a2d2ff'], roles: {0:'both',1:'intro',2:'credits'} },
+  bold:     { name: 'Bold Hues', accent: '#683AB7', none: '#d90429', colors: ['#f72585','#7209b7','#3a0ca3'], roles: {0:'both',1:'intro',2:'credits'} },
+};
+
+// -- Color math utilities --
+
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  return { r: parseInt(hex.substr(0,2),16), g: parseInt(hex.substr(2,2),16), b: parseInt(hex.substr(4,2),16) };
+}
+function rgbToHex(r,g,b) {
+  return '#' + [r,g,b].map(function(x){ var h=x.toString(16); return h.length===1?'0'+h:h; }).join('');
+}
+function linearize(c) {
+  var s = c/255; return s <= 0.03928 ? s/12.92 : Math.pow((s+0.055)/1.055, 2.4);
+}
+function luminance(r,g,b) {
+  return 0.2126*linearize(r) + 0.7152*linearize(g) + 0.0722*linearize(b);
+}
+function contrastRatio(hex1, hex2) {
+  var c1=hexToRgb(hex1), c2=hexToRgb(hex2);
+  var L1=luminance(c1.r,c1.g,c1.b), L2=luminance(c2.r,c2.g,c2.b);
+  return (Math.max(L1,L2)+0.05)/(Math.min(L1,L2)+0.05);
+}
+function darken(hex, pct) {
+  var c=hexToRgb(hex), f=1-pct/100;
+  return rgbToHex(Math.max(0,Math.round(c.r*f)), Math.max(0,Math.round(c.g*f)), Math.max(0,Math.round(c.b*f)));
+}
+function lighten(hex, pct) {
+  var c=hexToRgb(hex), f=pct/100;
+  return rgbToHex(Math.min(255,Math.round(c.r+(255-c.r)*f)), Math.min(255,Math.round(c.g+(255-c.g)*f)), Math.min(255,Math.round(c.b+(255-c.b)*f)));
+}
+function ratingClass(cr) { return cr >= 4.5 ? 'pass' : cr >= 3.0 ? 'ok31' : 'fail'; }
+function ratingLabel(cr) { return cr >= 4.5 ? 'PASS' : cr >= 3.0 ? '~3:1' : 'FAIL'; }
+
+// -- Palette building and resolution --
+// Palette entries are objects: { base?: '#hex', light?: '#hex', dark?: '#hex' }
+//   base  = color assigned to "Both themes" (darken/lighten sliders apply)
+//   light = color explicitly assigned to light theme (used as-is)
+//   dark  = color explicitly assigned to dark theme (used as-is)
+
+function getPalette() {
+  var palette = { none: { base: getNoneColor() } };
+  for (var i = 0; i < currentColors.length; i++) {
+    var role = roleMap[i];
+    var scope = themeMap[i] || 'both';
+    if (!role || role === 'unused' || role === 'none') continue;
+    if (!palette[role]) palette[role] = {};
+    if (scope === 'both') {
+      palette[role].base = currentColors[i];
+    } else {
+      palette[role][scope] = currentColors[i];
+    }
+  }
+  return palette;
+}
+
+// Resolve the final display color for a palette entry on a given theme.
+// Explicit per-theme colors are used directly (no adjustment).
+// Base colors get darken/lighten when theme-aware is checked.
+function resolveColor(entry, theme) {
+  if (!entry) return '#888888';
+  // Explicit per-theme color takes priority - no adjustment applied
+  if (entry[theme]) return entry[theme];
+  // Base color with optional darken/lighten
+  if (entry.base) {
+    if (!document.getElementById('themeAware').checked) return entry.base;
+    var dk = parseInt(document.getElementById('darkenPct').value);
+    var lt = parseInt(document.getElementById('lightenPct').value);
+    return theme === 'light' ? darken(entry.base, dk) : lighten(entry.base, lt);
+  }
+  // Only have the opposite theme's color - return it as fallback
+  var other = theme === 'light' ? 'dark' : 'light';
+  if (entry[other]) return entry[other];
+  return '#888888';
+}
+
+// Get the representative base color for display (contrast table base column, etc.)
+function getBaseColor(entry) {
+  if (!entry) return '#888888';
+  return entry.base || entry.light || entry.dark || '#888888';
+}
+
+// Check if a role has any explicit per-theme color assignments
+function hasExplicitTheme(entry) {
+  return entry && !!(entry.light || entry.dark);
+}
+
+// Describe the source of the resolved color for a given theme
+function colorSource(entry, theme) {
+  if (!entry) return 'none';
+  if (entry[theme]) return 'explicit';
+  if (entry.base) return document.getElementById('themeAware').checked ? 'adjusted' : 'base';
+  var other = theme === 'light' ? 'dark' : 'light';
+  if (entry[other]) return 'fallback';
+  return 'none';
+}
+
+// -- Preset and input handling --
+
+function loadPreset(key) {
+  var p = PRESETS[key];
+  document.getElementById('paletteName').value = p.name;
+  document.getElementById('accentColor').value = p.accent;
+  document.getElementById('accentHexLabel').textContent = p.accent;
+  syncAccentDropdown(p.accent);
+  document.getElementById('noneColor').value = p.none || '#d90429';
+  document.getElementById('noneHexLabel').textContent = p.none || '#d90429';
+  document.getElementById('colorInput').value = JSON.stringify(p.colors);
+  currentColors = p.colors.slice();
+  roleMap = {};
+  themeMap = {};
+  for (var k in p.roles) {
+    roleMap[k] = p.roles[k];
+    themeMap[k] = (p.themes && p.themes[k]) || 'both';
+  }
+  buildRoleUI();
+  render();
+}
+
+function onNoneColorChange() {
+  var hex = document.getElementById('noneColor').value;
+  document.getElementById('noneHexLabel').textContent = hex;
+  render();
+}
+
+function getNoneColor() {
+  return document.getElementById('noneColor').value;
+}
+
+function syncAccentDropdown(hex) {
+  var sel = document.getElementById('accentSelect');
+  var matched = false;
+  for (var i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value.toLowerCase() === hex.toLowerCase()) {
+      sel.selectedIndex = i;
+      matched = true;
+      break;
+    }
+  }
+  if (!matched) sel.value = 'custom';
+}
+
+function onAccentSelect() {
+  var sel = document.getElementById('accentSelect');
+  if (sel.value === 'custom') return;
+  document.getElementById('accentColor').value = sel.value;
+  document.getElementById('accentHexLabel').textContent = sel.value;
+  render();
+}
+
+function onAccentColorPick() {
+  var hex = document.getElementById('accentColor').value;
+  document.getElementById('accentHexLabel').textContent = hex;
+  syncAccentDropdown(hex);
+  render();
+}
+
+function copyInline(el) {
+  navigator.clipboard.writeText(el.textContent).then(function() {
+    var orig = el.textContent;
+    el.textContent = 'Copied!';
+    setTimeout(function(){ el.textContent = orig; }, 1000);
+  });
+}
+
+function loadColors() {
+  try {
+    var raw = document.getElementById('colorInput').value.trim();
+    currentColors = JSON.parse(raw);
+    roleMap = {};
+    themeMap = {};
+    if (currentColors.length === 3) {
+      roleMap = {0:'both', 1:'intro', 2:'credits'};
+      themeMap = {0:'both', 1:'both', 2:'both'};
+    } else {
+      for (var i = 0; i < currentColors.length; i++) {
+        roleMap[i] = 'unused';
+        themeMap[i] = 'both';
+      }
+    }
+    buildRoleUI();
+    render();
+  } catch(e) {
+    alert('Invalid JSON array. Use format: ["#hex1","#hex2",...]');
+  }
+}
+
+// -- Role assignment UI --
+
+function onRoleChange(idx, value) {
+  roleMap[idx] = value;
+  // Update theme dropdown visibility
+  var ts = document.getElementById('ts' + idx);
+  if (ts) ts.style.display = (value === 'unused') ? 'none' : '';
+  render();
+}
+
+function onThemeChange(idx, value) {
+  themeMap[idx] = value;
+  // Update badge
+  var badge = document.getElementById('badge' + idx);
+  if (badge) {
+    badge.className = 'scope-badge scope-badge-' + value;
+    badge.textContent = value === 'both' ? 'both' : value === 'light' ? 'light' : 'dark';
+  }
+  render();
+}
+
+function buildRoleUI() {
+  var container = document.getElementById('roleAssignment');
+  var html = '<h3>Assign Roles and Theme Scope</h3><div class="role-grid">';
+  currentColors.forEach(function(color, i) {
+    var role = roleMap[i] || 'unused';
+    var scope = themeMap[i] || 'both';
+    html += '<div class="role-card" id="rc' + i + '">';
+    html += '<div class="swatch" style="background:' + color + ';border:1px solid rgba(0,0,0,0.15)"></div>';
+    html += '<div class="hex">' + color + '</div>';
+    // Role dropdown
+    html += '<select onchange="onRoleChange(' + i + ',this.value)">';
+    html += '<option value="unused"' + (role === 'unused' ? ' selected' : '') + '>-- unused --</option>';
+    ['both','intro','credits'].forEach(function(r) {
+      html += '<option value="' + r + '"' + (role === r ? ' selected' : '') + '>' + r + '</option>';
+    });
+    html += '</select>';
+    // Theme scope dropdown (hidden when unused)
+    html += '<select id="ts' + i + '" class="scope-select" onchange="onThemeChange(' + i + ',this.value)"' + (role === 'unused' ? ' style="display:none"' : '') + '>';
+    ['both','light','dark'].forEach(function(t) {
+      var label = t === 'both' ? 'Both themes' : t === 'light' ? 'Light only' : 'Dark only';
+      html += '<option value="' + t + '"' + (scope === t ? ' selected' : '') + '>' + label + '</option>';
+    });
+    html += '</select>';
+    // Scope badge (hidden when unused)
+    if (role !== 'unused') {
+      html += '<span id="badge' + i + '" class="scope-badge scope-badge-' + scope + '">' + scope + '</span>';
+    } else {
+      html += '<span id="badge' + i + '" class="scope-badge scope-badge-both" style="display:none">both</span>';
+    }
+    html += '</div>';
+  });
+  // Always show the "none" color as a locked card at the end
+  var noneColor = getNoneColor();
+  html += '<div class="role-card" style="border-color:#aaa;background:#f9f9f9;">';
+  html += '<div class="swatch" style="background:' + noneColor + ';border:1px solid rgba(0,0,0,0.15)"></div>';
+  html += '<div class="hex">' + noneColor + '</div>';
+  html += '<select disabled style="opacity:0.6"><option selected>none (locked)</option></select></div>';
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// -- Rendering --
+
+function render() {
+  var palette = getPalette();
+  renderPreview(palette);
+  renderContrast(palette);
+  renderPairwise(palette);
+  renderOutput(palette);
+}
+
+function renderPreview(palette) {
+  var container = document.getElementById('preview');
+  var html = '';
+  ['light','dark'].forEach(function(theme) {
+    var bg = theme === 'light' ? LIGHT_BG : DARK_BG;
+    var textCol = theme === 'light' ? '#333' : '#eee';
+    html += '<div class="theme-panel ' + theme + '">';
+    html += '<div class="theme-label">' + theme.toUpperCase() + ' THEME (' + bg + ')</div>';
+
+    // Summary cards
+    html += '<div class="card-row">';
+    ROLES.forEach(function(role) {
+      var effectiveColor = resolveColor(palette[role], theme);
+      var cr = contrastRatio(effectiveColor, bg);
+      var badge = '<span class="' + ratingClass(cr) + '" style="font-size:0.65em;"> ' + cr.toFixed(1) + ':1</span>';
+      html += '<div class="summary-card">';
+      html += '<div class="card-value" style="color:' + effectiveColor + '">' + ROLE_VALUES[role] + badge + '</div>';
+      html += '<div class="card-label" style="color:' + textCol + '">' + ROLE_LABELS[role] + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Chart
+    html += '<div class="chart-mock">';
+    CHART_DATA.forEach(function(group) {
+      html += '<div class="bar-group">';
+      ROLES.forEach(function(role, ri) {
+        var effectiveColor = resolveColor(palette[role], theme);
+        var borderColor = darken(effectiveColor, 20);
+        var h = group[ri];
+        html += '<div class="bar-segment" style="height:' + h + '%;background:' + effectiveColor + ';border:1px solid ' + borderColor + ';border-bottom:none;"></div>';
+      });
+      html += '</div>';
+    });
+    html += '</div>';
+
+    // Legend
+    html += '<div class="legend-row">';
+    ROLES.forEach(function(role) {
+      var effectiveColor = resolveColor(palette[role], theme);
+      html += '<div class="legend-item"><div class="legend-swatch" style="background:' + effectiveColor + ';border:1px solid ' + darken(effectiveColor, 20) + '"></div><span style="color:' + textCol + '">' + ROLE_LABELS[role] + '</span></div>';
+    });
+    html += '</div>';
+
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function renderContrast(palette) {
+  var container = document.getElementById('contrastAnalysis');
+  var ta = document.getElementById('themeAware').checked;
+  var html = '<table class="contrast-table"><tr><th>Role</th><th>Base Color</th>';
+  html += '<th>Light Color</th><th>vs #F0F0F0</th><th>Dark Color</th><th>vs #1A1A1A</th>';
+  html += '</tr>';
+
+  ROLES.forEach(function(role) {
+    var entry = palette[role];
+    if (!entry) return;
+    var base = getBaseColor(entry);
+    var lightColor = resolveColor(entry, 'light');
+    var darkColor = resolveColor(entry, 'dark');
+    var crL = contrastRatio(lightColor, LIGHT_BG);
+    var crD = contrastRatio(darkColor, DARK_BG);
+    var lightSrc = colorSource(entry, 'light');
+    var darkSrc = colorSource(entry, 'dark');
+
+    html += '<tr>';
+    html += '<td><strong>' + role + '</strong></td>';
+    html += '<td class="swatch-cell"><span class="swatch-dot" style="background:' + base + '"></span> ' + base + '</td>';
+    html += '<td class="swatch-cell"><span class="swatch-dot" style="background:' + lightColor + '"></span> ' + lightColor + '<span class="src-tag">' + lightSrc + '</span></td>';
+    html += '<td class="' + ratingClass(crL) + '">' + crL.toFixed(2) + ':1 ' + ratingLabel(crL) + '</td>';
+    html += '<td class="swatch-cell"><span class="swatch-dot" style="background:' + darkColor + '"></span> ' + darkColor + '<span class="src-tag">' + darkSrc + '</span></td>';
+    html += '<td class="' + ratingClass(crD) + '">' + crD.toFixed(2) + ':1 ' + ratingLabel(crD) + '</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+  container.innerHTML = html;
+}
+
+function renderPairwise(palette) {
+  var container = document.getElementById('pairwise');
+  var roles = ROLES.filter(function(r) { return palette[r]; });
+
+  // Base colors (unadjusted)
+  var html = '<h3>Base colors (unadjusted)</h3><div class="pairwise-grid">';
+  for (var i = 0; i < roles.length; i++) {
+    for (var j = i+1; j < roles.length; j++) {
+      var cr = contrastRatio(getBaseColor(palette[roles[i]]), getBaseColor(palette[roles[j]]));
+      var cls = cr >= 3.0 ? 'good' : 'low';
+      html += '<span class="pair-badge ' + cls + '">' + roles[i] + '/' + roles[j] + ' ' + cr.toFixed(1) + ':1</span>';
+    }
+  }
+  html += '</div>';
+
+  // Per-theme resolved colors
+  ['light','dark'].forEach(function(theme) {
+    html += '<h3>' + theme.charAt(0).toUpperCase() + theme.slice(1) + ' theme (resolved)</h3><div class="pairwise-grid">';
+    for (var i = 0; i < roles.length; i++) {
+      for (var j = i+1; j < roles.length; j++) {
+        var c1 = resolveColor(palette[roles[i]], theme);
+        var c2 = resolveColor(palette[roles[j]], theme);
+        var cr = contrastRatio(c1, c2);
+        var cls = cr >= 3.0 ? 'good' : 'low';
+        html += '<span class="pair-badge ' + cls + '">' + roles[i] + '/' + roles[j] + ' ' + cr.toFixed(1) + ':1</span>';
+      }
+    }
+    html += '</div>';
+  });
+
+  container.innerHTML = html;
+}
+
+function renderOutput(palette) {
+  var container = document.getElementById('outputSection');
+  var name = document.getElementById('paletteName').value || 'Unnamed';
+  var accent = document.getElementById('accentColor').value;
+
+  // Compute hue from accent
+  var ac = hexToRgb(accent);
+  var r=ac.r/255, g=ac.g/255, b=ac.b/255;
+  var max=Math.max(r,g,b), min=Math.min(r,g,b), h=0;
+  if (max!==min) {
+    var d=max-min;
+    if (max===r) h=((g-b)/d+(g<b?6:0))/6;
+    else if (max===g) h=((b-r)/d+2)/6;
+    else h=((r-g)/d+4)/6;
+  }
+  var hue = Math.round(h*360);
+
+  // Check if any role has explicit per-theme colors
+  var anyPerTheme = false;
+  var segRoles = ['both','intro','credits','none'];
+  for (var ri = 0; ri < segRoles.length; ri++) {
+    if (hasExplicitTheme(palette[segRoles[ri]])) { anyPerTheme = true; break; }
+  }
+
+  // Standard output: single color per role (base, or light if only light, etc.)
+  var stdBoth = getBaseColor(palette.both);
+  var stdIntro = getBaseColor(palette.intro);
+  var stdCredits = getBaseColor(palette.credits);
+  var stdNone = getBaseColor(palette.none);
+
+  var html = '';
+
+  if (anyPerTheme) {
+    // When per-theme colors exist, show the per-theme output as the primary format
+    var ptOutput = "{ name: '" + name + "',\n";
+    ptOutput += "  accent: '" + accent + "', hue: " + hue + ",\n";
+    segRoles.forEach(function(role, idx) {
+      var entry = palette[role];
+      if (!entry) return;
+      var pad = (role + ':').length < 9 ? '         '.substring(0, 9 - (role + ':').length) : ' ';
+      var lightVal = resolveColor(entry, 'light');
+      var darkVal = resolveColor(entry, 'dark');
+      var trailing = idx < segRoles.length - 1 ? ',' : ' }';
+      if (entry.light && entry.dark && !entry.base) {
+        // Both themes explicitly assigned, no base
+        ptOutput += "  " + role + ":" + pad + "{ light: '" + lightVal + "', dark: '" + darkVal + "' }" + trailing + "\n";
+      } else if (entry.base && (entry.light || entry.dark)) {
+        // Base plus some overrides
+        ptOutput += "  " + role + ":" + pad + "{ base: '" + entry.base + "', light: '" + lightVal + "', dark: '" + darkVal + "' }" + trailing + "\n";
+      } else if (entry.light && !entry.dark) {
+        ptOutput += "  " + role + ":" + pad + "{ light: '" + lightVal + "', dark: '" + darkVal + "' }" + trailing + "  // dark is fallback\n";
+      } else if (entry.dark && !entry.light) {
+        ptOutput += "  " + role + ":" + pad + "{ light: '" + lightVal + "', dark: '" + darkVal + "' }" + trailing + "  // light is fallback\n";
+      } else {
+        // Base only
+        ptOutput += "  " + role + ":" + pad + "'" + getBaseColor(entry) + "'" + trailing + "\n";
+      }
+    });
+
+    html += '<h3>Per-theme palette entry</h3>';
+    html += '<div class="output-section" id="ptOutput">' + escHtml(ptOutput);
+    html += '<button class="copy-btn" onclick="copyText(\'ptOutput\', this)">Copy</button></div>';
+
+    // Also show the flat standard output (using base colors only)
+    var stdOutput = "{ name: '" + name + "',";
+    stdOutput += " accent: '" + accent + "',";
+    stdOutput += " hue: " + hue + ",";
+    stdOutput += " both: '" + stdBoth + "',";
+    stdOutput += " intro: '" + stdIntro + "',";
+    stdOutput += " credits: '" + stdCredits + "',";
+    stdOutput += " none: '" + stdNone + "' }";
+
+    html += '<h3>Flat palette entry (base colors only)</h3>';
+    html += '<div class="output-section" id="stdOutput">' + escHtml(stdOutput);
+    html += '<button class="copy-btn" onclick="copyText(\'stdOutput\', this)">Copy</button></div>';
+  } else {
+    // No per-theme overrides - show standard format as primary
+    var stdOutput = "{ name: '" + name + "',";
+    stdOutput += " accent: '" + accent + "',";
+    stdOutput += " hue: " + hue + ",";
+    stdOutput += " both: '" + stdBoth + "',";
+    stdOutput += " intro: '" + stdIntro + "',";
+    stdOutput += " credits: '" + stdCredits + "',";
+    stdOutput += " none: '" + stdNone + "' }";
+
+    html += '<h3>Standard palette entry</h3>';
+    html += '<div class="output-section" id="stdOutput">' + escHtml(stdOutput);
+    html += '<button class="copy-btn" onclick="copyText(\'stdOutput\', this)">Copy</button></div>';
+  }
+
+  // Theme-aware resolved output (always show when checkbox is on)
+  if (document.getElementById('themeAware').checked) {
+    var dk = parseInt(document.getElementById('darkenPct').value);
+    var lt = parseInt(document.getElementById('lightenPct').value);
+
+    var taOutput = "{ name: '" + name + "',\n";
+    taOutput += "  accent: '" + accent + "', hue: " + hue + ",\n";
+    segRoles.forEach(function(role, idx) {
+      var entry = palette[role];
+      if (!entry) return;
+      var pad = (role + ':').length < 9 ? '         '.substring(0, 9 - (role + ':').length) : ' ';
+      var lightVal = resolveColor(entry, 'light');
+      var darkVal = resolveColor(entry, 'dark');
+      var trailing = idx < segRoles.length - 1 ? ',' : ' }';
+      taOutput += "  " + role + ":" + pad + "{ light: '" + lightVal + "', dark: '" + darkVal + "' }" + trailing + "\n";
+    });
+
+    var label = anyPerTheme ? 'Resolved colors (explicit + adjusted)' : 'Theme-aware resolved (darken ' + dk + '% / lighten ' + lt + '%)';
+    html += '<h3>' + label + '</h3>';
+    html += '<div class="output-section" id="taOutput">' + escHtml(taOutput);
+    html += '<button class="copy-btn" onclick="copyText(\'taOutput\', this)">Copy</button></div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function copyText(elId, btn) {
+  var el = document.getElementById(elId);
+  var text = el.textContent.replace('Copy','').trim();
+  navigator.clipboard.writeText(text).then(function() {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(function(){ btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+}
+
+// Init
+loadPreset('green');
+</script>
+</body>
+</html>

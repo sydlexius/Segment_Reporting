@@ -12,6 +12,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         function getPreviewPalette() {
             var selected = view.querySelector('#prefChartPalette').value;
+            var palette;
             if (selected === 'custom') {
                 return {
                     name: 'Custom',
@@ -22,10 +23,16 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 };
             } else if (selected === 'auto') {
                 var accent = helpers.detectAccentColor(view);
-                return helpers.generateChartPalette(accent);
+                palette = helpers.generateChartPalette(accent);
             } else {
-                return helpers.getPaletteByName(selected);
+                palette = helpers.getPaletteByName(selected);
             }
+            var isLight = helpers.isLightTheme(view);
+            palette.bothSegments = helpers.resolveColor(palette.bothSegments, isLight);
+            palette.introOnly = helpers.resolveColor(palette.introOnly, isLight);
+            palette.creditsOnly = helpers.resolveColor(palette.creditsOnly, isLight);
+            palette.noSegments = helpers.resolveColor(palette.noSegments, isLight);
+            return palette;
         }
 
         function renderPreviewChart() {
