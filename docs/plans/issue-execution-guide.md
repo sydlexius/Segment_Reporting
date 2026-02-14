@@ -54,7 +54,7 @@ Large JS refactors that touch shared files. Do these before feature work to avoi
 
 Build new functionality on the cleaned-up codebase.
 
-- [ ] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
+- [x] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
 - [ ] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
 
 ### Phase 6 — Documentation (last)

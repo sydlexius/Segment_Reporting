@@ -163,8 +163,14 @@ Click any bar in the chart to navigate directly into that library.
 ### Library Table
 
 Below the chart is a table listing each library with columns for total items,
-intro count, credits count, both count, and no-segments count. Hover over a row
-to highlight it, and click anywhere on the row to drill into that library.
+intro count, credits count, both count, no-segments count, **Intro %**, and
+**Credits %**. The two percentage columns show how much of each library has intro
+and credits markers, respectively. Hover over a row to highlight it, and click
+anywhere on the row to drill into that library.
+
+If the [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin is
+installed, each row also has a **Detect Credits** button that finds all items
+missing credits in that library and queues detection for them.
 
 ### Sync Status and Actions
 

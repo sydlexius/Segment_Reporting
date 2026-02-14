@@ -191,7 +191,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             }
 
             if (libraryData.length === 0) {
-                tbody.appendChild(helpers.createEmptyRow('No library data available. Click "Sync Now" to populate the cache.', creditsDetectorAvailable ? 8 : 7));
+                tbody.appendChild(helpers.createEmptyRow('No library data available. Click "Sync Now" to populate the cache.', creditsDetectorAvailable ? 9 : 8));
                 return;
             }
 
@@ -205,7 +205,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var withCredits = lib.WithCredits || 0;
                 var withBoth = lib.WithBoth || 0;
                 var withNeither = lib.WithNeither || 0;
-                var coveragePct = helpers.percentage(withIntro + withCredits - withBoth, totalItems);
+                var introPct = helpers.percentage(withIntro, totalItems);
+                var creditsPct = helpers.percentage(withCredits, totalItems);
 
                 var html =
                     '<td>' + helpers.escHtml(lib.LibraryName || 'Unknown') + '</td>' +
@@ -214,10 +215,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     '<td>' + withCredits.toLocaleString() + '</td>' +
                     '<td>' + withBoth.toLocaleString() + '</td>' +
                     '<td>' + withNeither.toLocaleString() + '</td>' +
-                    '<td><strong>' + coveragePct + '</strong></td>';
+                    '<td><strong>' + introPct + '</strong></td>' +
+                    '<td><strong>' + creditsPct + '</strong></td>';
 
                 if (creditsDetectorAvailable) {
-                    html += '<td style="text-align: center;"><button class="raised emby-button btn-detect-library" style="padding: 0.3em 0.8em; font-size: 0.85em;">Detect</button></td>';
+                    html += '<td style="text-align: center;"><button class="raised emby-button btn-detect-library" style="padding: 0.3em 0.8em; font-size: 0.85em;">Detect Credits</button></td>';
                 }
 
                 row.innerHTML = html;

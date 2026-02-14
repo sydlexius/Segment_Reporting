@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.2.0.21 - Split Dashboard Coverage by Type
+
+### Improved
+
+- **Separate Intro % and Credits % columns on the Dashboard** (#61) - The library table now shows independent percentage columns for intro and credits coverage instead of a single combined "Coverage" value, making it easy to see at a glance which segment type needs attention in each library.
+- **Per-library Detect button relabeled** (#61) - The per-library detection button now reads "Detect Credits" to match the global "Detect All Credits" button and clarify what it does.
+
+---
+
 ## v1.2.0.16 - Drop LastSyncDate Column
 
 ### Improved
