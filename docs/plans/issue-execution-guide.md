@@ -56,7 +56,7 @@ Build new functionality on the cleaned-up codebase.
 
 - [x] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
 - [x] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
-- [ ] **Session 5C** — #78 — Extend season Actions with bulk operations (Medium) `[plan first]`
+- [x] **Session 5C** — #78 — Extend season Actions with bulk operations (Medium) `[plan first]`
 
 ### Phase 6 — Documentation (last)
 
