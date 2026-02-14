@@ -36,6 +36,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         var listenersAttached = false;
         var libraryName = null;
         var creditsDetectorAvailable = false;
+        var loadedSeriesEpisodes = {};  // seriesId -> episode array (lazy-load cache)
 
         // ── Data Loading ──
 
@@ -373,15 +374,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var tbody = view.querySelector('#seriesTableBody');
             tbody.innerHTML = '';
 
-            var thActions = view.querySelector('#thSeriesActions');
-            if (thActions) {
-                thActions.style.display = creditsDetectorAvailable ? '' : 'none';
-            }
-
-            var colSpan = creditsDetectorAvailable ? 8 : 7;
-
             if (filteredSeriesData.length === 0) {
-                tbody.appendChild(helpers.createEmptyRow('No series found. Try adjusting your filters.', colSpan));
+                tbody.appendChild(helpers.createEmptyRow('No series found. Try adjusting your filters.', 8));
                 return;
             }
 
@@ -400,34 +394,27 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var introPct = helpers.percentage(withIntro, totalItems);
                 var creditsPct = helpers.percentage(withCredits, totalItems);
 
-                var html =
+                row.innerHTML =
                     '<td>' + helpers.escHtml(item.SeriesName || 'Unknown') + '</td>' +
                     '<td>' + totalItems.toLocaleString() + '</td>' +
                     '<td>' + withIntro.toLocaleString() + '</td>' +
                     '<td>' + withCredits.toLocaleString() + '</td>' +
                     '<td>' + withBoth.toLocaleString() + '</td>' +
                     '<td><strong>' + introPct + '</strong></td>' +
-                    '<td><strong>' + creditsPct + '</strong></td>';
-
-                if (creditsDetectorAvailable) {
-                    html += '<td style="text-align: center;"><button class="raised emby-button btn-detect-series" style="padding: 0.3em 0.8em; font-size: 0.85em;">Detect</button></td>';
-                }
-
-                row.innerHTML = html;
+                    '<td><strong>' + creditsPct + '</strong></td>' +
+                    '<td style="text-align: center;"><button class="raised emby-button btn-series-actions" title="Series actions" style="padding: 0.2em 0.6em; font-size: 0.85em;">Actions &#9660;</button></td>';
 
                 row.addEventListener('click', function (e) {
-                    if (e.target.closest('.btn-detect-series')) return;
+                    if (e.target.closest('.btn-series-actions')) return;
                     helpers.navigate('segment_series', { seriesId: item.SeriesId, libraryId: libraryId, libraryName: libraryName });
                 });
 
-                if (creditsDetectorAvailable) {
-                    var btnDetect = row.querySelector('.btn-detect-series');
-                    if (btnDetect) {
-                        btnDetect.addEventListener('click', function (e) {
-                            e.stopPropagation();
-                            detectCreditsForSeries(item, btnDetect);
-                        });
-                    }
+                var btnActions = row.querySelector('.btn-series-actions');
+                if (btnActions) {
+                    btnActions.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        showSeriesActionsMenu(row, item, btnActions);
+                    });
                 }
 
                 helpers.attachHoverEffect(row);
@@ -438,21 +425,124 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             helpers.applyTableStyles(view.querySelector('#seriesTable'));
         }
 
-        // ── Series Detect Credits ──
+        // ── Series Actions Menu ──
 
-        function detectCreditsForSeries(series, btn) {
-            var seriesName = series.SeriesName || 'this series';
-            var missingCount = (series.TotalEpisodes || 0) - (series.WithCredits || 0);
+        function ensureSeriesEpisodes(seriesId) {
+            if (loadedSeriesEpisodes[seriesId]) {
+                return Promise.resolve(loadedSeriesEpisodes[seriesId]);
+            }
+            return helpers.apiCall('episode_list?seriesId=' + encodeURIComponent(seriesId), 'GET')
+                .then(function (episodes) {
+                    episodes = episodes || [];
+                    loadedSeriesEpisodes[seriesId] = episodes;
+                    return episodes;
+                });
+        }
 
-            if (missingCount <= 0) {
-                helpers.showSuccess('No episodes missing credits in "' + seriesName + '".');
+        function showSeriesActionsMenu(row, series, buttonEl) {
+            var existing = row.querySelector('.actions-menu');
+            if (existing) {
+                existing.remove();
                 return;
             }
 
+            var colors = helpers.getMenuColors(view);
+            var menu = helpers.createActionsMenu(colors);
+            var hasIntro = (series.WithIntro || 0) > 0;
+            var hasCredits = (series.WithCredits || 0) > 0;
+
+            // Delete submenu
+            menu.appendChild(helpers.createSubmenuItem('Delete', [
+                { label: 'Intros', enabled: hasIntro, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    executeSeriesBulkDelete(series, ['IntroStart', 'IntroEnd']);
+                }},
+                { label: 'Credits', enabled: hasCredits, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    executeSeriesBulkDelete(series, ['CreditsStart']);
+                }},
+                { label: 'Both', enabled: hasIntro || hasCredits, onClick: function (e) {
+                    e.stopPropagation(); menu.remove();
+                    executeSeriesBulkDelete(series, ['IntroStart', 'IntroEnd', 'CreditsStart']);
+                }}
+            ], hasIntro || hasCredits, colors));
+
+            // Set Credits to End
+            menu.appendChild(helpers.createMenuItem('Set Credits to End', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                executeSeriesSetCreditsEnd(series);
+            }));
+
+            // Detect items (only when EmbyCredits available)
+            if (creditsDetectorAvailable) {
+                menu.appendChild(helpers.createMenuDivider(colors));
+
+                menu.appendChild(helpers.createMenuItem('Detect All', true, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    detectSeriesAll(series, buttonEl);
+                }));
+
+                var missingCount = (series.TotalEpisodes || 0) - (series.WithCredits || 0);
+                menu.appendChild(helpers.createMenuItem('Detect Missing', missingCount > 0, colors, function (e) {
+                    e.stopPropagation();
+                    menu.remove();
+                    detectSeriesMissing(series, buttonEl);
+                }));
+            }
+
+            helpers.positionMenuBelowButton(menu, buttonEl);
+            helpers.attachMenuCloseHandler(menu);
+        }
+
+        function executeSeriesBulkDelete(series, markerTypes) {
+            ensureSeriesEpisodes(series.SeriesId).then(function (episodes) {
+                var itemIds = episodes.map(function (ep) { return ep.ItemId; });
+                helpers.bulkDelete(itemIds, markerTypes).then(function (result) {
+                    if (result) {
+                        delete loadedSeriesEpisodes[series.SeriesId];
+                        loadLibraryData();
+                    }
+                });
+            });
+        }
+
+        function executeSeriesSetCreditsEnd(series) {
+            ensureSeriesEpisodes(series.SeriesId).then(function (episodes) {
+                var itemIds = episodes.map(function (ep) { return ep.ItemId; });
+                helpers.bulkSetCreditsEnd(itemIds).then(function (result) {
+                    if (result) {
+                        delete loadedSeriesEpisodes[series.SeriesId];
+                        loadLibraryData();
+                    }
+                });
+            });
+        }
+
+        function detectSeriesAll(series, btn) {
+            var seriesName = series.SeriesName || 'this series';
+            if (!confirm('Detect credits for all episodes in "' + seriesName + '"? This runs in the background and may take a while.')) {
+                return;
+            }
+            helpers.withButtonLoading(btn, '...',
+                helpers.creditsDetectorCall('ProcessSeries', { SeriesId: series.SeriesId })
+                    .then(function () {
+                        helpers.showSuccess('Credits detection queued for "' + seriesName + '". Results will appear after the next sync.');
+                    })
+                    .catch(function (error) {
+                        console.error('Credits detection failed for series:', error);
+                        helpers.showError('Credits detection failed for "' + seriesName + '".');
+                    })
+            );
+        }
+
+        function detectSeriesMissing(series, btn) {
+            var seriesName = series.SeriesName || 'this series';
+            var missingCount = (series.TotalEpisodes || 0) - (series.WithCredits || 0);
             if (!confirm('Detect credits for ' + missingCount + ' episodes missing credits in "' + seriesName + '"? This runs in the background and may take a while.')) {
                 return;
             }
-
             helpers.withButtonLoading(btn, '...',
                 helpers.creditsDetectorCall('ProcessSeries', { SeriesId: series.SeriesId })
                     .then(function () {
@@ -536,37 +626,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function buildMovieActionButtons() {
-            var html = '<button class="raised emby-button btn-edit" title="Edit segments" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Edit</button>' +
-                   '<button class="raised emby-button btn-delete" title="Delete a segment" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Delete</button>';
-            if (creditsDetectorAvailable) {
-                html += '<button class="raised emby-button btn-detect-movie" title="Detect credits" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Detect</button>';
-            }
-            return html;
+            return '<button class="raised emby-button btn-actions" title="Movie actions" style="margin: 0 0.2em; padding: 0.3em 0.6em; font-size: 0.85em;">Actions &#9660;</button>';
         }
 
         function attachMovieRowActions(row, movie) {
-            var btnEdit = row.querySelector('.btn-edit');
-            var btnDelete = row.querySelector('.btn-delete');
-            var btnDetect = row.querySelector('.btn-detect-movie');
-
-            if (btnEdit) {
-                btnEdit.addEventListener('click', function (e) {
+            var btnActions = row.querySelector('.btn-actions');
+            if (btnActions) {
+                btnActions.addEventListener('click', function (e) {
                     e.stopPropagation();
-                    startMovieEdit(row, movie);
-                });
-            }
-
-            if (btnDelete) {
-                btnDelete.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    showMovieDeleteMenu(row, movie, this);
-                });
-            }
-
-            if (btnDetect) {
-                btnDetect.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    detectCreditsForMovie(movie, btnDetect);
+                    showMovieActionsMenu(row, movie, btnActions);
                 });
             }
         }
@@ -621,9 +689,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 });
         }
 
-        // ── Movie Delete ──
+        // ── Movie Actions Menu ──
 
-        function showMovieDeleteMenu(row, movie, buttonEl) {
+        function showMovieActionsMenu(row, movie, buttonEl) {
             var existing = row.querySelector('.actions-menu');
             if (existing) {
                 existing.remove();
@@ -633,50 +701,112 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var colors = helpers.getMenuColors(view);
             var menu = helpers.createActionsMenu(colors);
 
-            var types = [
-                { marker: 'IntroStart', label: 'IntroStart', ticks: movie.IntroStartTicks },
-                { marker: 'IntroEnd', label: 'IntroEnd', ticks: movie.IntroEndTicks },
-                { marker: 'CreditsStart', label: 'CreditsStart', ticks: movie.CreditsStartTicks }
-            ];
+            // Edit
+            menu.appendChild(helpers.createMenuItem('Edit', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                startMovieEdit(row, movie);
+            }));
 
-            types.forEach(function (t) {
-                if (!t.ticks) return;
+            menu.appendChild(helpers.createMenuDivider(colors));
 
-                menu.appendChild(helpers.createMenuItem(t.label, true, colors, function (e) {
+            // Delete submenu
+            var hasIntro = movie.IntroStartTicks > 0 || movie.IntroEndTicks > 0;
+            var hasCredits = movie.CreditsStartTicks > 0;
+
+            menu.appendChild(helpers.createSubmenuItem('Delete', [
+                { label: 'Intros', enabled: hasIntro, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmMovieDeleteGroup(row, movie, 'intros'); } },
+                { label: 'Credits', enabled: hasCredits, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmMovieDeleteGroup(row, movie, 'credits'); } },
+                { label: 'Both', enabled: hasIntro || hasCredits, onClick: function (e) { e.stopPropagation(); menu.remove(); confirmMovieDeleteGroup(row, movie, 'both'); } }
+            ], hasIntro || hasCredits, colors));
+
+            // Set Credits to End
+            menu.appendChild(helpers.createMenuItem('Set Credits to End', true, colors, function (e) {
+                e.stopPropagation();
+                menu.remove();
+                setMovieCreditsToEnd(row, movie);
+            }));
+
+            // Detect Credits (only when EmbyCredits available)
+            if (creditsDetectorAvailable) {
+                menu.appendChild(helpers.createMenuDivider(colors));
+
+                menu.appendChild(helpers.createMenuItem('Detect Credits', true, colors, function (e) {
                     e.stopPropagation();
                     menu.remove();
-                    confirmMovieDelete(row, movie, t.marker);
+                    detectCreditsForMovie(movie, buttonEl);
                 }));
-            });
-
-            if (menu.children.length === 0) {
-                helpers.showError('No segments to delete on this movie.');
-                return;
             }
 
             helpers.positionMenuBelowButton(menu, buttonEl);
             helpers.attachMenuCloseHandler(menu);
         }
 
-        function confirmMovieDelete(row, movie, markerType) {
-            var msg = 'Delete ' + markerType + ' segment from "' + (movie.ItemName || 'this movie') + '"?';
-            if (confirm(msg)) {
-                helpers.showLoading();
-                helpers.apiCall('delete_segment', 'POST', JSON.stringify({
-                    ItemId: movie.ItemId,
-                    MarkerType: markerType
-                }))
-                .then(function () {
-                    helpers.hideLoading();
-                    helpers.showSuccess(markerType + ' deleted successfully.');
-                    refreshMovieRow(row, movie);
-                })
-                .catch(function (error) {
-                    helpers.hideLoading();
-                    console.error('Failed to delete segment:', error);
-                    helpers.showError('Failed to delete segment.');
-                });
+        function confirmMovieDeleteGroup(row, movie, groupType) {
+            var markers = [];
+            if (groupType === 'intros' || groupType === 'both') {
+                if (movie.IntroStartTicks > 0) markers.push('IntroStart');
+                if (movie.IntroEndTicks > 0) markers.push('IntroEnd');
             }
+            if (groupType === 'credits' || groupType === 'both') {
+                if (movie.CreditsStartTicks > 0) markers.push('CreditsStart');
+            }
+
+            if (markers.length === 0) return;
+
+            var label = groupType === 'intros' ? 'intro markers' : groupType === 'credits' ? 'credits marker' : 'all markers';
+            var msg = 'Delete ' + label + ' from "' + (movie.ItemName || 'this movie') + '"?\n\nMarkers: ' + markers.join(', ');
+
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            var promise = Promise.resolve();
+            markers.forEach(function (markerType) {
+                promise = promise.then(function () {
+                    return helpers.apiCall('delete_segment', 'POST', JSON.stringify({
+                        ItemId: movie.ItemId,
+                        MarkerType: markerType
+                    }));
+                });
+            });
+
+            promise.then(function () {
+                helpers.hideLoading();
+                helpers.showSuccess(markers.length + ' marker(s) deleted successfully.');
+                refreshMovieRow(row, movie);
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Failed to delete segments:', error);
+                helpers.showError('Failed to delete segment(s).');
+            });
+        }
+
+        function setMovieCreditsToEnd(row, movie) {
+            var msg = 'Set CreditsStart to end of "' + (movie.ItemName || 'this movie') + '"?';
+            if (!confirm(msg)) return;
+
+            helpers.showLoading();
+
+            helpers.apiCall('bulk_set_credits_end', 'POST', JSON.stringify({
+                ItemIds: movie.ItemId,
+                OffsetTicks: 0
+            }))
+            .then(function (result) {
+                helpers.hideLoading();
+                if (result.failed > 0) {
+                    helpers.showError('Failed: ' + (result.errors && result.errors.length > 0 ? result.errors[0] : 'Unknown error'));
+                } else {
+                    helpers.showSuccess('CreditsStart set to end of movie.');
+                    refreshMovieRow(row, movie);
+                }
+            })
+            .catch(function (error) {
+                helpers.hideLoading();
+                console.error('Set credits to end failed:', error);
+                helpers.showError('Failed to set credits to end.');
+            });
         }
 
         // ── View Lifecycle ──

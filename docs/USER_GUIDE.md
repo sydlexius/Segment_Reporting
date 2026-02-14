@@ -226,31 +226,46 @@ For libraries containing TV shows, you will see:
 
 - A **stacked bar chart** showing coverage per series
 - A **series table** with columns for series name, total episodes, intros,
-  credits, and coverage percentages
+  credits, coverage percentages, and an Actions column
 
 Click a series name or chart bar to drill into the Series Detail view.
 
 Column headers in the table are sortable — click any header to sort by that
 column. Click again to reverse the order.
 
+Each series row has an **Actions** dropdown with the following operations:
+
+- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+  markers from all episodes in the series. Greyed out when the series has no
+  markers of that type.
+- **Set Credits to End** — places the Credits Start marker at each episode's
+  runtime endpoint across the entire series.
+- **Detect All** — queues credits detection for all episodes in the series,
+  overwriting any existing markers. Only visible when
+  [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
+- **Detect Missing** — queues credits detection only for episodes that don't
+  have credits yet. Greyed out when all episodes already have credits. Only
+  visible when EmbyCredits is installed.
+
 ### Movie Libraries
 
 For movie-only libraries, the view shows a flat table of movies with their
-segment timestamps displayed directly. You can edit timestamps inline and
-delete individual markers without leaving the page.
+segment timestamps displayed directly. Each movie row has an **Actions**
+dropdown with the following operations:
 
-> **Note:** There is currently no automated way to detect intros or credits for
-> movies. Tools like EmbyCredits only support TV episodes. Movie and mixed
-> libraries are primarily useful for **reporting** — you can see which movies
-> have markers and which do not. If you need to add markers to movies, you
-> must enter the timestamps manually using inline editing.
+- **Edit** — opens inline editing for the movie's timestamps
+- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+  markers. Greyed out when the movie has no markers of that type.
+- **Set Credits to End** — places the Credits Start marker at the movie's
+  runtime endpoint.
+- **Detect Credits** — queues credits detection for the movie. Only visible
+  when [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
 
 ### Mixed Libraries
 
 Libraries that contain both TV shows and movies display two separate sections —
 a series table and a movie table — so you can work with each type independently.
-TV shows in mixed libraries have full support for bulk operations and credits
-detection, while movie items are limited to reporting and manual editing.
+Both sections include the full Actions dropdown described above.
 
 ---
 

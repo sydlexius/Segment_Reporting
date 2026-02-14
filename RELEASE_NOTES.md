@@ -1,6 +1,15 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## v1.2.0.24 - Library Page Actions Dropdowns
+
+### Improved
+
+- **Series-level Actions dropdown** (#78) - Each series row on the library page now has an "Actions" dropdown with Delete (Intros/Credits/Both), Set Credits to End, and - when EmbyCredits is installed - Detect All and Detect Missing. Menu items are greyed out when the series has no markers of that type.
+- **Movie Actions dropdown** (#78) - The separate Edit, Delete, and Detect buttons on movie rows have been consolidated into a single "Actions" dropdown matching the pattern used throughout the rest of the plugin. The dropdown adds Set Credits to End and a grouped Delete submenu (Intros/Credits/Both).
+
+---
+
 ## v1.2.0.23 - Season-Level Actions Dropdown
 
 ### Improved
