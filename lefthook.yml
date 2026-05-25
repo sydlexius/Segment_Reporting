@@ -10,3 +10,16 @@ pre-commit:
       run: npx --prefix segment_reporting eslint --config segment_reporting/eslint.config.mjs {staged_files}
     whitespace:
       run: git diff --cached --check
+    gitleaks:
+      run: gitleaks protect --staged --no-banner
+      fail_text: |
+        gitleaks found staged secrets. Install gitleaks if missing:
+          brew install gitleaks   (macOS)
+          https://github.com/gitleaks/gitleaks (other platforms)
+    actionlint:
+      glob: ".github/workflows/*.{yml,yaml}"
+      run: actionlint {staged_files}
+      fail_text: |
+        actionlint found workflow problems. Install if missing:
+          brew install actionlint   (macOS)
+          https://github.com/rhysd/actionlint (other platforms)
