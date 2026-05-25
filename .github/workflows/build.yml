@@ -88,7 +88,7 @@ jobs:
         run: dotnet build Segment_Reporting.sln --configuration Release --no-restore
 
       - name: Download artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: segment_reporting-dll
           path: ./release-assets
