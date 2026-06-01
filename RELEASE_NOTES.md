@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
-## [v1.3.0.2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.3.0.2) - Security Fix and Repo Hardening
+## v1.3.0.2 - Security Fix and Repo Hardening
 
 Maintenance release. No changes to shipped plugin behavior.
 

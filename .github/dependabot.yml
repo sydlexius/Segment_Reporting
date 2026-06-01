@@ -32,6 +32,9 @@ updates:
       actions-all:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
 
   - package-ecosystem: npm
     directory: /segment_reporting
