@@ -348,10 +348,21 @@ function copyInline(el) {
   });
 }
 
+// Accept only hex colors (#rgb, #rrggbb, or #rrggbbaa). Rejecting anything
+// else keeps untrusted text from reaching the innerHTML sinks below.
+function isHexColor(c) {
+  return typeof c === 'string' && /^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3}(?:[0-9a-fA-F]{2})?)?$/.test(c);
+}
+
 function loadColors() {
   try {
     var raw = document.getElementById('colorInput').value.trim();
-    currentColors = JSON.parse(raw);
+    var parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0 || !parsed.every(isHexColor)) {
+      alert('Invalid color list. Use hex colors only, e.g. ["#52b54b","#344047","#127dbc"]');
+      return;
+    }
+    currentColors = parsed;
     roleMap = {};
     themeMap = {};
     if (currentColors.length === 3) {
