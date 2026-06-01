@@ -42,7 +42,7 @@ namespace segment_reporting
 
             var pages = new List<PluginPageInfo>
             {
-                // HTML pages — stable, unversioned names (entry points for navigation)
+                // HTML pages - stable, unversioned names (entry points for navigation)
                 new PluginPageInfo
                 {
                     Name = "segment_dashboard",
@@ -59,7 +59,7 @@ namespace segment_reporting
                 new PluginPageInfo { Name = "segment_about", EmbeddedResourcePath = ns + ".Pages.segment_about.html" }
             };
 
-            // JS resources — register both unversioned (dev/fallback) and versioned (cache-busted release builds).
+            // JS resources - register both unversioned (dev/fallback) and versioned (cache-busted release builds).
             // The build script patches HTML data-controller attrs and JS getConfigurationResourceUrl() calls
             // to reference versioned names. The unversioned name remains for dev builds and cached-HTML compat.
             var jsFiles = new[]
@@ -78,7 +78,7 @@ namespace segment_reporting
             {
                 var resourcePath = ns + ".Pages." + js;
 
-                // Unversioned name (always registered — used by dev builds and as fallback for cached HTML)
+                // Unversioned name (always registered - used by dev builds and as fallback for cached HTML)
                 pages.Add(new PluginPageInfo { Name = js, EmbeddedResourcePath = resourcePath });
 
                 // Versioned name (used by release builds where HTML/JS are patched with the cache tag)
