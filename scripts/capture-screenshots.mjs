@@ -14,8 +14,11 @@
  *   node scripts/capture-screenshots.mjs
  *
  * Environment variables:
- *   EMBY_URL      Emby server URL (default: http://localhost:8096)
- *   EMBY_API_KEY  Admin API key for authentication (required)
+ *   EMBY_URL       Emby server URL (default: http://localhost:8096)
+ *   EMBY_API_KEY   Admin API key (lets non-SPA asset requests through)
+ *   EMBY_USER      Admin username (required; the plugin pages use ApiClient,
+ *                  which needs an authenticated user session)
+ *   EMBY_PASSWORD  Admin password
  *
  * Output: docs/Screenshots/ directory (full-page and *-crop.png variants)
  */
@@ -31,9 +34,9 @@ const SCREENSHOTS_DIR = path.resolve(__dirname, '..', 'docs', 'Screenshots');
 const EMBY_URL = process.env.EMBY_URL || 'http://localhost:8096';
 const API_KEY = process.env.EMBY_API_KEY;
 
-if (!API_KEY) {
-    console.error('Error: EMBY_API_KEY environment variable is required.');
-    console.error('Find your API key in Emby under Settings > API Keys.');
+if (!process.env.EMBY_USER) {
+    console.error('Error: EMBY_USER (and EMBY_PASSWORD) are required for SPA login.');
+    console.error('The plugin pages use Emby ApiClient, which needs an authenticated user session.');
     process.exit(1);
 }
 
@@ -68,6 +71,33 @@ const FICTIONAL_LIBRARIES = {
     defaults: ['TV Shows', 'Movies', 'Documentaries', 'Kids TV']
 };
 
+/** Larger pool of fictional library names (the prod server has many). */
+const FICTIONAL_LIBRARY_POOL = [
+    'TV Shows', 'Movies', 'Documentaries', 'Kids TV', 'Classic Films',
+    'Anime Collection', 'Indie Cinema', 'Nature Series', 'Comedy Vault',
+    'Drama Archive', 'Sci-Fi Shows', 'Family Movies', 'Mini-Series',
+    'World Cinema', 'Animated Features', 'Holiday Specials', 'Concert Films',
+    'Short Films', 'Travel Series', 'Cooking Shows'
+];
+
+/** Pool of fictional movie titles for movie-type items. */
+const FICTIONAL_MOVIES = [
+    'The Last Horizon', 'Echo Valley', 'Northern Lights', 'Glass City',
+    'The Quiet Mile', 'Paper Moon Rising', 'Driftwood', 'The Hollow Crown',
+    'Silver Lining', 'Open Road', 'The Long Winter', 'Coastline',
+    'Midsummer', 'The Far Shore', 'Lantern Festival', 'Stone & Sky'
+];
+
+/**
+ * Generic fallback pool. Any name/title column the heuristics do not recognize
+ * is anonymized from this pool, so a NEW name-bearing field added to the API
+ * later still fails safe (gets a fictional value) instead of leaking real data.
+ */
+const FICTIONAL_GENERIC = [
+    'Sample One', 'Sample Two', 'Sample Three', 'Sample Four',
+    'Sample Five', 'Sample Six', 'Sample Seven', 'Sample Eight'
+];
+
 // ---------------------------------------------------------------------------
 // Viewport and crop geometry
 // ---------------------------------------------------------------------------
@@ -97,12 +127,202 @@ function pluginPageUrl(pageName) {
     return `${EMBY_URL}/web/configurationpage?name=${pageName}`;
 }
 
-/** Navigate to a plugin page and wait for the view to initialize. */
+/**
+ * Install a network route that anonymizes the plugin's JSON API responses
+ * BEFORE the page consumes them. This is the authoritative anonymization layer:
+ * because both the tables AND the Chart.js charts are built from these
+ * responses, rewriting the data at the network boundary guarantees no real
+ * library/series/season/episode name (or internal id) can leak into either the
+ * DOM or a chart canvas. The chart instance itself is held in a page-module
+ * closure and cannot be reached cross-module, so DOM/chart scrubbing alone is
+ * insufficient; this layer closes that gap.
+ *
+ * Mappings are deterministic per real name, so the same real name maps to the
+ * same fictional name across every endpoint (table, chart, detail pages).
+ */
+function installAnonymizingRoute(context) {
+    const libMap = new Map();
+    const seriesMap = new Map();
+    const movieMap = new Map();
+    const episodeMap = new Map();
+    const genMap = new Map();
+    let libI = 0, serI = 0, movI = 0, epI = 0, genI = 0;
+
+    const mapName = (real, map, pool, counterRef) => {
+        if (!real) return real;
+        if (!map.has(real)) { map.set(real, pool[counterRef.i % pool.length]); counterRef.i++; }
+        return map.get(real);
+    };
+    const libRef = { get i() { return libI; }, set i(v) { libI = v; } };
+    const serRef = { get i() { return serI; }, set i(v) { serI = v; } };
+    const movRef = { get i() { return movI; }, set i(v) { movI = v; } };
+    const epRef = { get i() { return epI; }, set i(v) { epI = v; } };
+    const genRef = { get i() { return genI; }, set i(v) { genI = v; } };
+
+    // Pick the fictional pool for a name-bearing column by key heuristic, so the
+    // same entity kind maps consistently. Unrecognized name columns fall back to
+    // the generic pool (fail-safe: a new *Name field is still anonymized).
+    const poolForKey = (key, row) => {
+        const k = key.toLowerCase();
+        if (k.includes('library')) return { map: libMap, pool: FICTIONAL_LIBRARY_POOL, ref: libRef };
+        if (k.includes('series')) return { map: seriesMap, pool: FICTIONAL_SERIES, ref: serRef };
+        if (k.includes('movie')) return { map: movieMap, pool: FICTIONAL_MOVIES, ref: movRef };
+        if (k === 'itemname' || k === 'name' || k.includes('episode') || k.includes('title')) {
+            const isMovie = row && row.ItemType === 'Movie';
+            return isMovie ? { map: movieMap, pool: FICTIONAL_MOVIES, ref: movRef }
+                : { map: episodeMap, pool: FICTIONAL_EPISODES, ref: epRef };
+        }
+        return { map: genMap, pool: FICTIONAL_GENERIC, ref: genRef };
+    };
+
+    // Anonymize one record by COLUMN, not by value: any string field whose key
+    // looks like a name/title (and is not an opaque *Id) is replaced regardless
+    // of its contents. This is fail-safe - a name field the API adds later is
+    // anonymized automatically instead of leaking. Non-string values, *Id keys,
+    // and everything else (ticks/counts/types/booleans) are preserved, because
+    // the page round-trips ids for drill-down navigation.
+    const anonRow = (row) => {
+        if (!row || typeof row !== 'object') return row;
+        for (const key of Object.keys(row)) {
+            const val = row[key];
+            if (typeof val !== 'string' || !val) continue;
+            if (/id$/i.test(key)) continue;
+            if (/season/i.test(key) && /name$/i.test(key)) {
+                row[key] = 'Season ' + (row.SeasonNumber || 1);
+                continue;
+            }
+            if (/(name|title)$/i.test(key)) {
+                const p = poolForKey(key, row);
+                row[key] = mapName(val, p.map, p.pool, p.ref);
+            }
+        }
+        return row;
+    };
+
+    const anonPayload = (data) => {
+        if (Array.isArray(data)) return data.map(anonRow);
+        if (data && typeof data === 'object') {
+            // Wrapped collections, e.g. { series: [...] }
+            ['series', 'seasons', 'episodes', 'libraries', 'rows', 'results', 'items', 'data'].forEach(k => {
+                if (Array.isArray(data[k])) data[k] = data[k].map(anonRow);
+            });
+            // Custom query result: { columns: [...], rows: [[...]] } handled separately by caller.
+            return anonRow(data);
+        }
+        return data;
+    };
+
+    return context.route(/segment_reporting\//i, async (route) => {
+        const req = route.request();
+        const url = req.url();
+        // Never touch non-data endpoints or script assets.
+        if (/\.js(\?|$)/i.test(url) || /\/(version|preferences|sync_status)(\?|$)/i.test(url)) {
+            return route.fallback();
+        }
+        let response;
+        try {
+            response = await route.fetch();
+        } catch (e) {
+            return route.fallback();
+        }
+        const ct = (response.headers()['content-type'] || '').toLowerCase();
+        if (!ct.includes('json')) {
+            return route.fulfill({ response });
+        }
+        let body;
+        try {
+            body = await response.json();
+        } catch (e) {
+            return route.fulfill({ response });
+        }
+
+        let out;
+        // Custom query returns a column/row matrix. The endpoint uses
+        // PascalCase keys (Columns/Rows); accept both casings defensively.
+        const colsKey = (body && Array.isArray(body.Columns)) ? 'Columns'
+            : (body && Array.isArray(body.columns)) ? 'columns' : null;
+        const rowsKey = (body && Array.isArray(body.Rows)) ? 'Rows'
+            : (body && Array.isArray(body.rows)) ? 'rows' : null;
+        if (body && colsKey && rowsKey) {
+            const cols = body[colsKey].map(c => (typeof c === 'string' ? c : (c && c.name) || ''));
+            const typeIdx = cols.indexOf('ItemType');
+            const seaNumIdx = cols.indexOf('SeasonNumber');
+            body[rowsKey] = body[rowsKey].map(r => {
+                const row = Array.isArray(r) ? r.slice() : r;
+                if (!Array.isArray(row)) return anonRow(row);
+                // Anonymize by COLUMN HEADER pattern - the same fail-safe rule as
+                // anonRow: any *Name/*Title column that is not an *Id column,
+                // regardless of the underlying cell value.
+                cols.forEach((colName, i) => {
+                    const cell = row[i];
+                    if (typeof cell !== 'string' || !cell) return;
+                    if (/id$/i.test(colName)) return;
+                    if (/season/i.test(colName) && /name$/i.test(colName)) {
+                        row[i] = 'Season ' + (seaNumIdx >= 0 ? (row[seaNumIdx] || 1) : 1);
+                    } else if (/(name|title)$/i.test(colName)) {
+                        const isMovie = typeIdx >= 0 && row[typeIdx] === 'Movie';
+                        const p = /library/i.test(colName) ? { map: libMap, pool: FICTIONAL_LIBRARY_POOL, ref: libRef }
+                            : /series/i.test(colName) ? { map: seriesMap, pool: FICTIONAL_SERIES, ref: serRef }
+                                : isMovie ? { map: movieMap, pool: FICTIONAL_MOVIES, ref: movRef }
+                                    : { map: episodeMap, pool: FICTIONAL_EPISODES, ref: epRef };
+                        row[i] = mapName(cell, p.map, p.pool, p.ref);
+                    }
+                });
+                return row;
+            });
+            out = body;
+        } else {
+            out = anonPayload(body);
+        }
+
+        return route.fulfill({
+            response,
+            body: JSON.stringify(out),
+            headers: { ...response.headers(), 'content-type': 'application/json; charset=utf-8' }
+        });
+    });
+}
+
+/**
+ * Navigate to a plugin page WITHIN the Emby SPA via the hash route.
+ *
+ * Loading the bare `/web/configurationpage` URL directly produces an
+ * unstyled, unauthenticated page whose API calls never resolve. Driving the
+ * SPA through its hash route keeps the Emby app shell (sidebar, theme) and the
+ * authenticated ApiClient session, so the plugin's data loads correctly.
+ */
 async function navigateTo(page, pageName, pageId) {
-    await page.goto(pluginPageUrl(pageName), { waitUntil: 'networkidle' });
-    await page.waitForSelector(`#${pageId}`, { state: 'attached', timeout: 15000 });
-    // Wait for viewshow lifecycle to complete
-    await page.waitForTimeout(1500);
+    await page.evaluate((name) => {
+        window.location.hash = '#!/configurationpage?name=' + name;
+    }, pageName);
+    await page.waitForSelector(`#${pageId}`, { state: 'attached', timeout: 20000 });
+    // Wait for viewshow lifecycle + async data loads to complete
+    await page.waitForTimeout(3500);
+}
+
+/** Log in to the Emby SPA so ApiClient has an authenticated session. */
+async function login(page) {
+    const user = process.env.EMBY_USER;
+    const pw = process.env.EMBY_PASSWORD || '';
+    if (!user) {
+        throw new Error('EMBY_USER environment variable is required for SPA login.');
+    }
+    await page.goto(`${EMBY_URL}/web/index.html`, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => typeof window.ApiClient !== 'undefined', null, { timeout: 15000 });
+    const result = await page.evaluate(async ({ user, pw }) => {
+        try {
+            await ApiClient.authenticateUserByName(user, pw);
+            return { ok: true, uid: ApiClient.getCurrentUserId() };
+        } catch (e) {
+            return { ok: false, err: String(e) };
+        }
+    }, { user, pw });
+    if (!result.ok) {
+        throw new Error('Emby login failed: ' + result.err);
+    }
+    console.log(`Logged in (userId ${result.uid}).`);
+    // Let the app shell settle after authentication
+    await page.waitForTimeout(2000);
 }
 
 /** Save a full-page screenshot and optionally a cropped version. */
@@ -126,185 +346,6 @@ async function saveScreenshot(page, name) {
 }
 
 // ---------------------------------------------------------------------------
-// Anonymization functions (run inside page.evaluate)
-// ---------------------------------------------------------------------------
-
-/**
- * Anonymize the dashboard page.
- * Replaces library names in the chart and table, randomizes item IDs.
- */
-function anonymizeDashboard(libraryNames) {
-    // Build mapping of real library names to fictional ones
-    const mapping = {};
-    const realNames = [];
-    document.querySelectorAll('#segmentDashboardPage .detailTableContainer td:first-child')
-        .forEach(td => {
-            const name = td.textContent.trim();
-            if (name && !realNames.includes(name)) realNames.push(name);
-        });
-    realNames.forEach((name, i) => { mapping[name] = libraryNames[i] || `Library ${i + 1}`; });
-
-    // Replace table cells
-    document.querySelectorAll('#segmentDashboardPage .detailTableContainer td').forEach(td => {
-        const text = td.textContent.trim();
-        if (mapping[text]) td.textContent = mapping[text];
-    });
-
-    // Replace chart labels
-    const canvas = document.querySelector('#segmentDashboardPage canvas');
-    if (canvas) {
-        const chart = Chart.getChart(canvas);
-        if (chart) {
-            chart.data.labels = chart.data.labels.map(l => mapping[l] || l);
-            chart.update('none');
-        }
-    }
-    return mapping;
-}
-
-/**
- * Anonymize a series detail page.
- * Replaces the series name in headings, season labels, and episode names
- * in the episode table.
- */
-function anonymizeSeriesDetail(fictionalSeriesName, episodeNames) {
-    const page = document.querySelector('#segmentSeriesPage');
-    if (!page) return;
-
-    // Replace series name in headings and breadcrumbs
-    page.querySelectorAll('h2, .breadcrumbItem, .sectionTitle').forEach(el => {
-        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) {
-            // Replace any non-generic text that looks like a series name (not
-            // "Dashboard", "Season", or navigation labels)
-            if (node.textContent.trim() &&
-                !node.textContent.includes('Dashboard') &&
-                !node.textContent.includes('Season') &&
-                !node.textContent.includes('Segment Reporting')) {
-                node.textContent = node.textContent.replace(
-                    node.textContent.trim(), fictionalSeriesName
-                );
-            }
-        }
-    });
-
-    // Replace episode names in table cells (3rd column: Episode Name)
-    let epIdx = 0;
-    page.querySelectorAll('table tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-        // Episode Name is typically the 3rd cell (index 2) after checkbox and #
-        if (cells.length >= 3) {
-            const nameCell = cells[2];
-            if (nameCell && nameCell.textContent.trim()) {
-                nameCell.textContent = episodeNames[epIdx % episodeNames.length];
-                epIdx++;
-            }
-        }
-    });
-
-    // Randomize item IDs displayed in any visible elements
-    page.querySelectorAll('[data-itemid]').forEach(el => {
-        el.setAttribute('data-itemid', Math.floor(1000 + Math.random() * 9000));
-    });
-}
-
-/**
- * Anonymize query results table.
- * Replaces series names, episode names, and item IDs.
- */
-function anonymizeQueryResults(seriesNames, episodeNames) {
-    const page = document.querySelector('#segmentCustomQueryPage');
-    if (!page) return;
-
-    // Find column indices from header row
-    const headers = [];
-    page.querySelectorAll('.queryResultTable thead th').forEach((th, i) => {
-        headers[i] = th.textContent.trim();
-    });
-
-    const seriesCol = headers.indexOf('SeriesName');
-    const itemNameCol = headers.indexOf('ItemName');
-    const itemIdCol = headers.indexOf('ItemId');
-    const seasonNameCol = headers.indexOf('SeasonName');
-
-    const seriesMapping = {};
-    let seriesIdx = 0;
-    let epIdx = 0;
-
-    page.querySelectorAll('.queryResultTable tbody tr').forEach(row => {
-        const cells = row.querySelectorAll('td');
-
-        // Map series names consistently
-        if (seriesCol >= 0 && cells[seriesCol]) {
-            const real = cells[seriesCol].textContent.trim();
-            if (real && !seriesMapping[real]) {
-                seriesMapping[real] = seriesNames[seriesIdx % seriesNames.length];
-                seriesIdx++;
-            }
-            if (seriesMapping[real]) cells[seriesCol].textContent = seriesMapping[real];
-        }
-
-        // Replace episode/item names
-        if (itemNameCol >= 0 && cells[itemNameCol]) {
-            cells[itemNameCol].textContent = episodeNames[epIdx % episodeNames.length];
-            epIdx++;
-        }
-
-        // Randomize item IDs
-        if (itemIdCol >= 0 && cells[itemIdCol]) {
-            cells[itemIdCol].textContent = String(Math.floor(1000 + Math.random() * 9000));
-        }
-
-        // Normalize season names
-        if (seasonNameCol >= 0 && cells[seasonNameCol]) {
-            cells[seasonNameCol].textContent = 'Season 1';
-        }
-    });
-}
-
-/**
- * Anonymize the library browse page.
- * Replaces series and movie names in the library table and chart.
- */
-function anonymizeLibrary(seriesNames, libraryDisplayName) {
-    const page = document.querySelector('#segmentLibraryPage');
-    if (!page) return;
-
-    // Replace library name in heading/breadcrumbs
-    page.querySelectorAll('.breadcrumbItem').forEach(el => {
-        if (!el.textContent.includes('Dashboard') &&
-            !el.textContent.includes('Segment Reporting')) {
-            el.textContent = libraryDisplayName;
-        }
-    });
-
-    // Replace series names in table and chart
-    let idx = 0;
-    page.querySelectorAll('table tbody tr td:first-child a, table tbody tr td:first-child')
-        .forEach(el => {
-            const text = el.textContent.trim();
-            if (text && text !== 'Loading...') {
-                el.textContent = seriesNames[idx % seriesNames.length];
-                idx++;
-            }
-        });
-
-    // Update chart labels
-    const canvas = page.querySelector('canvas');
-    if (canvas) {
-        const chart = Chart.getChart(canvas);
-        if (chart) {
-            idx = 0;
-            chart.data.labels = chart.data.labels.map(() =>
-                seriesNames[idx++ % seriesNames.length]
-            );
-            chart.update('none');
-        }
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Page capture functions
 // ---------------------------------------------------------------------------
 
@@ -313,7 +354,7 @@ async function captureDashboard(page) {
     await page.setViewportSize(VIEWPORT_FULL);
     await navigateTo(page, 'segment_dashboard', 'segmentDashboardPage');
 
-    await page.evaluate(anonymizeDashboard, FICTIONAL_LIBRARIES.defaults);
+    // Names are anonymized at the network layer; no DOM pass needed.
     await page.waitForTimeout(500);
     await saveScreenshot(page, 'dashboard');
 }
@@ -322,19 +363,20 @@ async function captureLibraryBrowse(page) {
     console.log('Capturing library-browse...');
     await page.setViewportSize(VIEWPORT_FULL);
 
-    // Navigate to dashboard first to find a library to browse
+    // Navigate to dashboard first to find a library to browse.
     await navigateTo(page, 'segment_dashboard', 'segmentDashboardPage');
-    // Click the first library row to navigate to library page
-    const firstRow = await page.$('#segmentDashboardPage .detailTableContainer tbody tr');
+    // Library rows carry data-library-id and a pointer cursor; click the first.
+    const firstRow = await page.$('#segmentDashboardPage table tbody tr');
     if (firstRow) {
         await firstRow.click();
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('#segmentLibraryPage', { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(3500);
     } else {
         console.warn('  No library rows found, skipping library-browse');
         return;
     }
 
-    await page.evaluate(anonymizeLibrary, FICTIONAL_SERIES, 'TV Shows');
+    // Names are anonymized at the network layer; no DOM pass needed.
     await page.waitForTimeout(500);
     await saveScreenshot(page, 'library-browse');
 }
@@ -343,39 +385,40 @@ async function captureSeriesDetail(page) {
     console.log('Capturing series-detail...');
     await page.setViewportSize(VIEWPORT_DETAIL);
 
-    // Navigate to a series detail page (requires navigating through dashboard > library > series)
+    // Navigate dashboard -> library -> series via row clicks.
     await navigateTo(page, 'segment_dashboard', 'segmentDashboardPage');
-    const firstRow = await page.$('#segmentDashboardPage .detailTableContainer tbody tr');
+    const firstRow = await page.$('#segmentDashboardPage table tbody tr');
     if (firstRow) {
         await firstRow.click();
-        await page.waitForTimeout(2000);
+        await page.waitForSelector('#segmentLibraryPage', { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(3500);
     }
-    // Click first series in the library page
-    const seriesLink = await page.$('#segmentLibraryPage table tbody tr td:first-child a');
-    if (seriesLink) {
-        await seriesLink.click();
-        await page.waitForTimeout(2000);
+    // Library rows carry data-series-id; the first cell is the series name.
+    const seriesRow = await page.$('#segmentLibraryPage table tbody tr');
+    if (seriesRow) {
+        await seriesRow.click();
+        await page.waitForSelector('#segmentSeriesPage', { timeout: 20000 }).catch(() => {});
+        await page.waitForTimeout(3500);
     } else {
-        console.warn('  No series links found, skipping series-detail');
+        console.warn('  No series rows found, skipping series-detail');
         return;
     }
 
-    // Wait for episode table to load (first season auto-expands)
-    await page.waitForTimeout(2000);
+    // Wait for episode table to load (first season auto-expands).
+    await page.waitForTimeout(1500);
 
-    // Anonymize series name and episode names
-    await page.evaluate(anonymizeSeriesDetail, 'Crimson Meridian', FICTIONAL_EPISODES);
+    // Names are anonymized at the network layer; no DOM pass needed.
 
-    // Open the Actions dropdown on the 3rd episode row to show the submenu
-    const actionsButtons = await page.$$('#segmentSeriesPage table tbody tr .btnActions, #segmentSeriesPage table tbody tr [class*="action"]');
+    // Open the Actions dropdown on the 3rd episode row to show the submenu.
+    const actionsButtons = await page.$$('#segmentSeriesPage table tbody tr td:last-child, #segmentSeriesPage table tbody tr .btnActions');
     if (actionsButtons.length >= 3) {
-        await actionsButtons[2].click();
+        await actionsButtons[2].click({ timeout: 3000 }).catch(() => {});
         await page.waitForTimeout(500);
 
-        // Hover over "Copy" to expand its submenu
+        // Hover over "Copy" to expand its submenu.
         const copyItem = await page.$('text=Copy');
         if (copyItem) {
-            await copyItem.hover();
+            await copyItem.hover({ timeout: 3000 }).catch(() => {});
             await page.waitForTimeout(300);
         }
     }
@@ -456,26 +499,28 @@ async function captureQueryResults(page) {
             textarea.value =
                 "SELECT * FROM MediaSegments WHERE HasCredits = 1 AND ItemType = 'Episode' " +
                 "ORDER BY SeriesName, SeasonNumber LIMIT 100";
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.dispatchEvent(new Event('change', { bubbles: true }));
         }
     });
     const execBtn = await page.$('#segmentCustomQueryPage button:has-text("Execute")');
     if (execBtn) {
         await execBtn.click();
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(3000);
     }
 
-    // Anonymize the results table
-    await page.evaluate(anonymizeQueryResults, FICTIONAL_SERIES, FICTIONAL_EPISODES);
+    // Query results are anonymized at the network layer; no DOM pass needed.
 
     // Open Actions dropdown on the 3rd row to show the submenu
-    const actionsButtons = await page.$$('#segmentCustomQueryPage .queryResultTable tbody tr .btnActions, #segmentCustomQueryPage .queryResultTable [class*="action"]');
+    const actionsButtons = await page.$$('#segmentCustomQueryPage table tbody tr td:last-child, #segmentCustomQueryPage .queryResultTable tbody tr .btnActions');
     if (actionsButtons.length >= 3) {
-        await actionsButtons[2].click();
+        await actionsButtons[2].click({ timeout: 3000 }).catch(() => {});
         await page.waitForTimeout(500);
-        // Hover over Delete to expand submenu
+        // Hover over Delete to expand submenu (best-effort; submenu layout may
+        // not always be hoverable in headless mode).
         const deleteItem = await page.$('text=Delete');
         if (deleteItem) {
-            await deleteItem.hover();
+            await deleteItem.hover({ timeout: 3000 }).catch(() => {});
             await page.waitForTimeout(300);
         }
     }
@@ -507,15 +552,21 @@ async function main() {
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
         viewport: VIEWPORT_FULL,
-        // Authenticate via URL parameter
-        extraHTTPHeaders: { 'X-Emby-Token': API_KEY }
+        // API-key header lets non-SPA asset requests through; the real session
+        // for in-page ApiClient calls is established by login() below.
+        extraHTTPHeaders: API_KEY ? { 'X-Emby-Token': API_KEY } : {}
     });
+    // Anonymize plugin JSON responses at the network boundary so that tables
+    // AND charts render with fictional names from the start (see function doc).
+    await installAnonymizingRoute(context);
+
     const page = await context.newPage();
 
     try {
-        // Authenticate by visiting the dashboard with the API key
-        await page.goto(`${EMBY_URL}/web/index.html`, { waitUntil: 'networkidle' });
-        await page.waitForTimeout(2000);
+        // Establish an authenticated SPA session. The plugin pages use Emby's
+        // ApiClient, which requires a logged-in user session; navigating to the
+        // bare configurationpage URL is not authenticated and never loads data.
+        await login(page);
 
         await captureDashboard(page);
         await captureLibraryBrowse(page);
