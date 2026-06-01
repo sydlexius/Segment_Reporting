@@ -1,6 +1,18 @@
 <!-- markdownlint-disable MD024 -->
 # Segment Reporting - Release Notes
 
+## [v1.3.0.2](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.3.0.2) - Security Fix and Repo Hardening
+
+Maintenance release. No changes to shipped plugin behavior.
+
+### Security
+
+- **Fixed the palette designer XSS finding** (CodeQL #1) - The developer-only color palette designer now HTML-escapes color values before rendering them, fully resolving the `js/xss-through-dom` alert that the v1.3.0.1 input-validation change did not clear.
+
+### Internal
+
+- **Repository hardening** - Pinned all GitHub Actions to commit SHAs, added least-privilege workflow permissions and `persist-credentials: false`, added an OpenSSF Scorecard workflow, and grouped Dependabot updates to reduce pull request noise. Also fixed the release-notes extraction so GitHub Releases populate from this file automatically. None of these affect the installed plugin.
+
 ## [v1.3.0.1](https://github.com/sydlexius/Segment_Reporting/releases/tag/v1.3.0.1) - Security Maintenance
 
 Housekeeping release. No new features and no action required for admins. All changes are confined to development-only tooling, so the shipped plugin behaves exactly as in v1.3.0.0.
