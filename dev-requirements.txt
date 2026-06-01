@@ -1,0 +1,20 @@
+# Python development tooling for the documentation site.
+#
+# The site is built with ProperDocs (a maintained, drop-in continuation of
+# MkDocs 1.x) using the Material for MkDocs theme. ProperDocs is used instead of
+# MkDocs because its dev server's live-reload works reliably on macOS, and MkDocs
+# core has been unmaintained since 2024. The Material theme is in maintenance
+# mode (security/bug fixes through ~Nov 2026); if needed the site can later move
+# to Zensical, which reads this same config natively.
+#
+# Local preview (live-reload):
+#   uv run --with-requirements dev-requirements.txt properdocs serve
+# or:
+#   pip install -r dev-requirements.txt && properdocs serve
+#
+# CI (.github/workflows/pages.yml) installs from this same file (single source
+# of truth). C#/.NET and Node tooling are managed via the csproj and
+# segment_reporting/package.json, not here.
+properdocs==1.6.7
+mkdocs-material==9.7.6
+mkdocs-git-revision-date-localized-plugin==1.5.3

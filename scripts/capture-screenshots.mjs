@@ -17,7 +17,7 @@
  *   EMBY_URL      Emby server URL (default: http://localhost:8096)
  *   EMBY_API_KEY  Admin API key for authentication (required)
  *
- * Output: Screenshots/ directory (full-page and *-crop.png variants)
+ * Output: docs/Screenshots/ directory (full-page and *-crop.png variants)
  */
 
 import { chromium } from 'playwright';
@@ -26,7 +26,7 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const SCREENSHOTS_DIR = path.resolve(__dirname, '..', 'Screenshots');
+const SCREENSHOTS_DIR = path.resolve(__dirname, '..', 'docs', 'Screenshots');
 
 const EMBY_URL = process.env.EMBY_URL || 'http://localhost:8096';
 const API_KEY = process.env.EMBY_API_KEY;

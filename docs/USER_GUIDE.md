@@ -7,59 +7,6 @@ your media libraries.
 
 ---
 
-## Table of Contents
-
-1. [Getting Started](#1-getting-started)
-   - [What This Plugin Does](#what-this-plugin-does)
-   - [Installation](#installation)
-   - [Running the First Sync](#running-the-first-sync)
-   - [Finding the Plugin](#finding-the-plugin)
-2. [Dashboard](#2-dashboard)
-   - [Summary Cards](#summary-cards)
-   - [Coverage Chart](#coverage-chart)
-   - [Library Table](#library-table)
-   - [Sync Status and Actions](#sync-status-and-actions)
-3. [Library Browsing](#3-library-browsing)
-   - [Navigating to a Library](#navigating-to-a-library)
-   - [Filtering and Searching](#filtering-and-searching)
-   - [Series Libraries](#series-libraries)
-   - [Movie Libraries](#movie-libraries)
-   - [Mixed Libraries](#mixed-libraries)
-4. [Series Detail](#4-series-detail)
-   - [Season Chart](#season-chart)
-   - [Season Accordions](#season-accordions)
-   - [Episode Table](#episode-table)
-   - [Playback Links](#playback-links)
-5. [Editing Segments](#5-editing-segments)
-   - [Inline Editing](#inline-editing)
-   - [Timestamp Format](#timestamp-format)
-   - [Deleting a Segment](#deleting-a-segment)
-   - [Setting Credits to End](#setting-credits-to-end)
-6. [Bulk Operations](#6-bulk-operations)
-   - [Selecting Episodes](#selecting-episodes)
-   - [Copy Segments from a Source Episode](#copy-segments-from-a-source-episode)
-   - [Season-Level Actions Dropdown](#season-level-actions-dropdown)
-7. [Custom Queries](#7-custom-queries)
-   - [Built-in and Saved Queries](#built-in-and-saved-queries)
-   - [Visual Query Builder](#visual-query-builder)
-   - [Autocomplete and Multi-Value Selection](#autocomplete-and-multi-value-selection)
-   - [Query Results](#query-results)
-   - [CSV Export](#csv-export)
-   - [Saving Queries](#saving-queries)
-8. [Settings](#8-settings)
-   - [Chart Color Palettes](#chart-color-palettes)
-   - [Table Display Options](#table-display-options)
-   - [Library Visibility](#library-visibility)
-   - [Cache Management](#cache-management)
-9. [Maintenance](#9-maintenance)
-   - [Scheduled Tasks](#scheduled-tasks)
-   - [Manual Sync](#manual-sync)
-   - [Force Rescan](#force-rescan)
-   - [Vacuum](#vacuum)
-   - [Troubleshooting](#troubleshooting)
-10. [About](#10-about)
-
----
 
 ## 1. Getting Started
 
@@ -128,7 +75,7 @@ Clicking it opens the Dashboard — the main entry point for all plugin features
 The Dashboard gives you a high-level overview of segment coverage across all
 your libraries.
 
-![Dashboard](../Screenshots/dashboard.png)
+![Dashboard](Screenshots/dashboard.png)
 
 *The Dashboard showing summary cards, a stacked bar chart of coverage by
 library, and a detailed breakdown table.*
@@ -195,7 +142,7 @@ Click any library name or chart bar on the Dashboard to open the library view.
 A breadcrumb trail at the top (e.g., *Dashboard > TV Shows*) lets you navigate
 back at any time.
 
-![Library Browsing](../Screenshots/library-browse.png)
+![Library Browsing](Screenshots/library-browse.png)
 
 *A TV Shows library with a series-level coverage chart, filter/search controls,
 and a sortable series table.*
@@ -274,7 +221,7 @@ Both sections include the full Actions dropdown described above.
 Click a series name from the library view to see its full season and episode
 breakdown.
 
-![Series Detail](../Screenshots/series-detail.png)
+![Series Detail](Screenshots/series-detail.png)
 
 *A series detail page showing a per-season coverage chart, season accordions
 with episode tables, and the "Missing Credits" filter applied.*
@@ -464,7 +411,7 @@ visual query builder or by writing SQL directly.
 
 ### Built-in and Saved Queries
 
-![Custom Query](../Screenshots/custom-query.png)
+![Custom Query](Screenshots/custom-query.png)
 
 *The Custom Query page showing the query dropdown with built-in templates and
 saved queries.*
@@ -489,7 +436,7 @@ Select any query from the dropdown and click **Run Query** to execute it.
 
 ### Visual Query Builder
 
-![Query Builder](../Screenshots/query-builder.png)
+![Query Builder](Screenshots/query-builder.png)
 
 *The visual query builder with column pills, condition rows, and a live SQL
 preview.*
@@ -513,7 +460,7 @@ populate itself from the SQL so you can modify it visually.
 
 ### Autocomplete and Multi-Value Selection
 
-![Query Autocomplete](../Screenshots/query-autocomplete.png)
+![Query Autocomplete](Screenshots/query-autocomplete.png)
 
 *Autocomplete suggestions from your library appearing as you type, with
 multi-value pill selection for "is any of" queries.*
@@ -528,7 +475,7 @@ libraries in a single condition.
 
 ### Query Results
 
-![Query Results](../Screenshots/query-results.png)
+![Query Results](Screenshots/query-results.png)
 
 *Query results with checkboxes, per-row Actions menu, and bulk action buttons.*
 
@@ -572,23 +519,26 @@ delete a saved query, load it and click **Delete**.
 
 The Settings page controls how the plugin looks and behaves.
 
-![Settings](../Screenshots/settings.png)
+![Settings](Screenshots/settings.png)
 
 *Settings page with chart palette selection, live preview, table display
 options, and cache management.*
 
 ### Chart Color Palettes
 
-Choose a color palette for all charts across the plugin. Options include:
+Choose a color palette for all charts across the plugin. The five named
+palettes are theme-aware: each one uses different shades automatically when
+your Emby theme is light versus dark, so charts stay readable in both modes.
+Options include:
 
 | Palette | Description |
 |---------|-------------|
 | **Auto (match accent color)** | Generates colors based on your Emby theme's accent color |
-| **Refreshing Ocean Breeze** | Cool blue and green tones |
-| **Sunshine Blue Dream** | Warm blue and yellow tones |
-| **Deep Sea Carnival** | Red and deep blue tones |
-| **Pastel Dreamland Adventure** | Soft pastel tones |
-| **Bold Hues** | High-contrast vivid colors |
+| **Green (Default)** | Green-based palette (theme-aware light/dark shades) |
+| **Blue** | Blue-based palette (theme-aware light/dark shades) |
+| **Red** | Red-based palette (theme-aware light/dark shades) |
+| **Pink** | Pink-based palette (theme-aware light/dark shades) |
+| **Purple** | Purple-based palette (theme-aware light/dark shades) |
 | **Custom Colors** | Pick your own colors for each segment category |
 
 When you choose **Custom Colors**, four color pickers appear so you can set
@@ -730,7 +680,7 @@ to run.
 
 ## 10. About
 
-![About](../Screenshots/about.png)
+![About](Screenshots/about.png)
 
 *The About page showing plugin version, acknowledgements, and reference links.*
 

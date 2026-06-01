@@ -2,6 +2,8 @@
 
 An Emby server plugin for reporting, browsing, and editing media segment markers (Intros, Credits) across your libraries.
 
+Documentation site: **https://sydlexius.github.io/Segment_Reporting/** (User Guide and Developer Guide, built from `docs/` with ProperDocs and the Material theme).
+
 ## Features
 
 ### Reporting & Navigation
@@ -26,16 +28,16 @@ An Emby server plugin for reporting, browsing, and editing media segment markers
 
 ### Settings & Maintenance
 
-- **Display Preferences** — Choose from six chart color palettes or define custom colors, toggle gridlines and alternating row colors, and hide specific libraries from the dashboard
+- **Display Preferences** — Choose from five named, theme-aware chart color palettes (Green, Blue, Red, Pink, Purple), plus Auto (accent-matched) and Custom colors; toggle gridlines and alternating row colors, and hide specific libraries from the dashboard
 - **Scheduled Sync** — Automatic daily sync with your Emby server (configurable via Emby's Scheduled Tasks)
 - **Cache Maintenance** — Weekly VACUUM task, on-demand Vacuum button, force rescan, and sync status display
 - **About Page** — Plugin version, acknowledgements, Emby Forums link, and API endpoint reference
 
 ## Screenshots
 
-![Dashboard](Screenshots/dashboard.png)
+![Dashboard](docs/Screenshots/dashboard.png)
 
-![Query Builder](Screenshots/query-builder.png)
+![Query Builder](docs/Screenshots/query-builder.png)
 
 See the **[User Guide](docs/USER_GUIDE.md)** for a full walkthrough with all screenshots.
 
@@ -58,7 +60,7 @@ The plugin integrates with Emby's built-in Scheduled Tasks system:
 
 From the plugin Settings page you can:
 
-- Choose a chart color palette (six presets or custom colors) with a live preview chart
+- Choose a chart color palette: five named, theme-aware presets (Green, Blue, Red, Pink, Purple), Auto (accent-matched), or custom colors, with a live preview chart
 - Toggle table gridlines and alternating row colors
 - Hide specific libraries from the dashboard (per-library checkboxes)
 - View cache statistics (row count, database size, last sync time)
@@ -83,9 +85,9 @@ The compiled DLL will be in `bin/Release/`.
 
 ### Dependencies
 
-- `mediabrowser.server.core` (4.8.x) — Emby server SDK
+- `mediabrowser.server.core` (4.9.*) — Emby server SDK
 - `SQLitePCL.pretty.core` (1.2.2) — SQLite database wrapper
-- `System.Memory` (4.5.5) — Memory utilities
+- `System.Memory` (4.6.3) — Memory utilities
 
 ## Supported Segment Types
 

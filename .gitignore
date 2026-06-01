@@ -27,3 +27,6 @@ node_modules/
 ## Build output
 *.nupkg
 project.lock.json
+
+## MkDocs generated site output (docs site_dir)
+/site/

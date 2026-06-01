@@ -94,8 +94,8 @@ Three docs describe the plugin at different levels. When code changes affect doc
 - **New/changed bulk operation** → USER_GUIDE.md (Bulk Operations section)
 - **New/changed query builder feature** → USER_GUIDE.md (Custom Queries section)
 - **Build/CI changes** → DEVELOPER.md (CI/CD section)
-- **New screenshot needed** → capture to `Screenshots/`, reference in USER_GUIDE.md, consider updating README.md hero images
+- **New screenshot needed** → capture to `docs/Screenshots/`, reference in USER_GUIDE.md, consider updating README.md hero images
 
-**Screenshot freshness:** When a UI change alters the appearance of a page that has a screenshot in `Screenshots/`, flag that the screenshot needs retaking. Screenshots are captured via Playwright MCP (`browser_take_screenshot`) from a local Emby server with DOM manipulation to anonymize personal library data (see issue #56 for the anonymization patterns and fictional name lists used). Do not commit screenshots containing real media library names.
+**Screenshot freshness:** When a UI change alters the appearance of a page that has a screenshot in `docs/Screenshots/`, flag that the screenshot needs retaking. Screenshots are captured via Playwright MCP (`browser_take_screenshot`) from a local Emby server with DOM manipulation to anonymize personal library data (see issue #56 for the anonymization patterns and fictional name lists used). Do not commit screenshots containing real media library names.
 
 Prefer solving tasks in a single session. Only spawn subagents for genuinely independent workstreams.

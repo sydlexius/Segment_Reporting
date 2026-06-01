@@ -23,3 +23,20 @@ pre-commit:
         actionlint found workflow problems. Install if missing:
           brew install actionlint   (macOS)
           https://github.com/rhysd/actionlint (other platforms)
+
+# pre-push mirrors the CI "build" job (.github/workflows/build.yml) so a push
+# that would fail CI is caught locally first. The pre-commit stage only checks
+# format + eslint on *staged* files; it never compiles and never applies the
+# analyzer `-warnaserror` policy, so a clean commit can still break CI (a
+# missing using directive, an analyzer warning, an unstaged-but-tracked .cs
+# edit). The gate runs a full Release build + format + lint on the whole
+# solution, exactly as CI does. It lives in a script (not inline commands) so a
+# single trap can always restore the minified JS sources even when a step
+# fails. Skip with: git push --no-verify (you are bypassing the CI gate).
+pre-push:
+  commands:
+    ci-gate:
+      run: bash scripts/pre-push-gate.sh
+      fail_text: |
+        Pre-push gate failed (this is what CI runs). Fix the errors above
+        before pushing, or bypass with `git push --no-verify` (not advised).

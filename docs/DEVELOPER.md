@@ -6,76 +6,6 @@ contributing to this project or using it as a reference for your own Emby plugin
 
 ---
 
-## Table of Contents
-
-1. [Prerequisites and Dev Environment Setup](#1-prerequisites-and-dev-environment-setup)
-   - [Required Software](#required-software)
-   - [Building the Plugin](#building-the-plugin)
-   - [Deploying to Emby for Testing](#deploying-to-emby-for-testing)
-   - [Automatic Deploy via Environment Variable](#automatic-deploy-via-environment-variable)
-2. [Architecture Overview](#2-architecture-overview)
-   - [Design Principles](#design-principles)
-   - [Data Flow](#data-flow)
-   - [Component Map](#component-map)
-   - [Key Design Decisions](#key-design-decisions)
-3. [SQLite Schema and Data Model](#3-sqlite-schema-and-data-model)
-   - [Tables](#tables)
-   - [MediaSegments Table](#mediasegments-table)
-   - [SyncStatus Table](#syncstatus-table)
-   - [UserPreferences Table](#userpreferences-table)
-   - [SavedQueries Table](#savedqueries-table)
-   - [Indexes](#indexes)
-   - [Schema Migration](#schema-migration)
-   - [Segment Types](#segment-types)
-   - [Tick Format](#tick-format)
-   - [Movies vs Episodes](#movies-vs-episodes)
-4. [API Reference](#4-api-reference)
-   - [API Overview](#api-overview)
-   - [Browsing Endpoints](#browsing-endpoints)
-   - [Single-Item Endpoints](#single-item-endpoints)
-   - [Edit Endpoints](#edit-endpoints)
-   - [Bulk Operation Endpoints](#bulk-operation-endpoints)
-   - [Sync and Cache Endpoints](#sync-and-cache-endpoints)
-   - [Custom Query Endpoints](#custom-query-endpoints)
-   - [Saved Query Endpoints](#saved-query-endpoints)
-   - [Preferences Endpoints](#preferences-endpoints)
-   - [Info Endpoints](#info-endpoints)
-5. [Web UI Development Guide](#5-web-ui-development-guide)
-   - [Page Architecture](#page-architecture)
-   - [Embedding Resources](#embedding-resources)
-   - [Page Lifecycle](#page-lifecycle)
-   - [Shared Utilities](#shared-utilities-segment_reporting_helpersjs)
-   - [Chart Integration](#chart-integration)
-   - [Adding a New Page](#adding-a-new-page-step-by-step)
-   - [Existing Pages Overview](#existing-pages-overview)
-6. [Scheduled Tasks](#6-scheduled-tasks)
-   - [IScheduledTask Interface](#ischeduledtask-interface)
-   - [TaskSyncSegments -- Full Sync](#tasksyncsegments----full-sync)
-   - [TaskCleanSegmentDb -- Cache Maintenance](#taskcleansegmentdb----cache-maintenance)
-   - [Adding a New Scheduled Task](#adding-a-new-scheduled-task)
-   - [Running Tasks Manually](#running-tasks-manually)
-7. [CI/CD Pipeline](#7-cicd-pipeline)
-   - [Workflow Overview](#workflow-overview)
-   - [Build Job](#build-job)
-   - [Release Job](#release-job)
-   - [JS Minification Pipeline](#js-minification-pipeline)
-   - [Auto-Deploy for Local Development](#auto-deploy-for-local-development)
-   - [Code Quality Enforcement](#code-quality-enforcement)
-   - [Releasing a New Version](#releasing-a-new-version)
-8. [Testing](#8-testing)
-   - [Manual Testing Workflow](#manual-testing-workflow)
-   - [Bruno API Test Collection](#bruno-api-test-collection)
-   - [What to Check After Changes](#what-to-check-after-changes)
-9. [Screenshots](#9-screenshots)
-   - [Screenshot Inventory](#screenshot-inventory)
-   - [Automated Capture Script](#automated-capture-script)
-   - [Data Anonymization](#data-anonymization)
-   - [Emby SPA Gotchas](#emby-spa-gotchas)
-   - [ImageMagick Crop Commands](#imagemagick-crop-commands)
-   - [Retaking Screenshots](#retaking-screenshots)
-10. [Reference Links](#10-reference-links)
-
----
 
 ## 1. Prerequisites and Dev Environment Setup
 
@@ -84,7 +14,7 @@ contributing to this project or using it as a reference for your own Emby plugin
 | Tool | Version | Purpose |
 |------|---------|---------|
 | .NET SDK | 6.0 or later | Compiles the project (target is .NET Standard 2.0) |
-| Emby Server | 4.8.x | Runtime host -- required for manual testing |
+| Emby Server | 4.9.x | Runtime host -- required for manual testing |
 | Node.js | 22.x (LTS) | JS minification in Release builds |
 | npm | Bundled with Node.js | Installs rollup/terser for the minification pipeline |
 | Git | Any modern version | Source control |
@@ -1185,7 +1115,7 @@ Returns all display preferences as a key-value map.
 
 ```json
 {
-  "chartPalette": "default",
+  "chartPalette": "auto",
   "customColorBoth": "#4caf50",
   "customColorIntro": "#2196f3",
   "customColorCredits": "#ff9800",
@@ -2413,7 +2343,7 @@ Depending on what was changed, verify the following:
 ## 9. Screenshots
 
 This section documents the screenshot capture process, anonymization patterns,
-and cropping commands used to produce the images in `Screenshots/`.
+and cropping commands used to produce the images in `docs/Screenshots/`.
 
 ### Screenshot Inventory
 
@@ -2531,16 +2461,16 @@ the repository root:
 
 ```bash
 # Dashboard: coverage chart + library table (removes sidebar)
-magick Screenshots/dashboard.png -crop 2190x1210+370+55 +repage Screenshots/dashboard-crop.png
+magick docs/Screenshots/dashboard.png -crop 2190x1210+370+55 +repage docs/Screenshots/dashboard-crop.png
 
 # Series detail: episode table with Actions dropdown/submenu
-magick Screenshots/series-detail.png -crop 1220x450+240+240 +repage Screenshots/series-detail-crop.png
+magick docs/Screenshots/series-detail.png -crop 1220x450+240+240 +repage docs/Screenshots/series-detail-crop.png
 
 # Query results: results table with Actions dropdown
-magick Screenshots/query-results.png -crop 1220x620+240+180 +repage Screenshots/query-results-crop.png
+magick docs/Screenshots/query-results.png -crop 1220x620+240+180 +repage docs/Screenshots/query-results-crop.png
 
 # Query builder: Match conditions through Limit field
-magick Screenshots/query-builder.png -crop 2190x990+370+170 +repage Screenshots/query-builder-crop.png
+magick docs/Screenshots/query-builder.png -crop 2190x990+370+170 +repage docs/Screenshots/query-builder-crop.png
 ```
 
 Crop geometry format: `WxH+X+Y` where X,Y is the top-left corner offset. These
@@ -2580,7 +2510,7 @@ When a UI change alters the appearance of a screenshot:
 ### Emby SDK
 
 - **[mediabrowser.server.core](https://www.nuget.org/packages/mediabrowser.server.core/)** --
-  NuGet package for Emby Server SDK (version 4.8.x). Provides `IItemRepository`,
+  NuGet package for Emby Server SDK (version 4.9.x). Provides `IItemRepository`,
   `ILibraryManager`, `IScheduledTask`, `BasePlugin`, and other interfaces.
 
 - **Emby Plugin SDK documentation** -- Emby does not publish standalone SDK docs.
