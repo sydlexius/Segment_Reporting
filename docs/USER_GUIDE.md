@@ -1,8 +1,8 @@
-# Segment Reporting — User Guide
+# Segment Reporting - User Guide
 
 A complete walkthrough of the Segment Reporting plugin for Emby Server. This
 guide covers installation, navigation, editing, bulk operations, custom queries,
-and settings — everything you need to manage intro and credits markers across
+and settings - everything you need to manage intro and credits markers across
 your media libraries.
 
 ---
@@ -16,21 +16,21 @@ Segment Reporting gives you visibility and control over the intro and credits
 markers in your Emby libraries. These markers are the timestamps that power
 Emby's "Skip Intro" and "Skip Credits" buttons during playback.
 
-The plugin tracks three marker types — **Intro Start**, **Intro End**, and
-**Credits Start** — which are the marker types that Emby currently supports.
+The plugin tracks three marker types - **Intro Start**, **Intro End**, and
+**Credits Start** - which are the marker types that Emby currently supports.
 Other segment types such as recaps, previews, commercials, and mid/post-credit
 scenes are not supported by Emby's chapter system and cannot be tracked here.
 
 The plugin builds a local index of all your segment data so you can:
 
-- **See** which episodes and movies have markers — and which are missing them
+- **See** which episodes and movies have markers - and which are missing them
 - **Edit** timestamps directly from a table view
 - **Bulk-manage** markers across entire seasons or series
 - **Query** your segment data with a visual query builder or raw SQL
 - **Export** results to CSV for offline analysis
 
 All changes you make through the plugin are saved back to Emby immediately.
-The plugin's local index is just a fast cache — Emby always has the real data.
+The plugin's local index is just a fast cache - Emby always has the real data.
 
 ### Installation
 
@@ -66,7 +66,7 @@ After installation and the first sync, you can access the plugin from Emby's
 sidebar menu. Look for **Segment Reporting** under the server administration
 section (it uses a chart icon).
 
-Clicking it opens the Dashboard — the main entry point for all plugin features.
+Clicking it opens the Dashboard - the main entry point for all plugin features.
 
 ---
 
@@ -98,10 +98,10 @@ These numbers update whenever you return to the Dashboard.
 Below the summary cards is a stacked bar chart with one bar per library. Each
 bar shows four categories:
 
-- **Both Segments** — items with intro and credits markers
-- **Intro Only** — items with an intro marker but no credits
-- **Credits Only** — items with a credits marker but no intro
-- **No Segments** — items with neither marker
+- **Both Segments** - items with intro and credits markers
+- **Intro Only** - items with an intro marker but no credits
+- **Credits Only** - items with a credits marker but no intro
+- **No Segments** - items with neither marker
 
 Click any bar in the chart to navigate directly into that library.
 
@@ -121,11 +121,11 @@ missing credits in that library and queues detection for them.
 
 At the bottom of the Dashboard you will find:
 
-- **Last synced** — a relative timestamp (e.g., "3 hours ago") showing when the
+- **Last synced** - a relative timestamp (e.g., "3 hours ago") showing when the
   index was last updated
-- **Sync Now** — triggers an immediate sync without waiting for the nightly
+- **Sync Now** - triggers an immediate sync without waiting for the nightly
   schedule
-- **Detect All Credits** — only visible if the
+- **Detect All Credits** - only visible if the
   [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin is installed.
   Queues credits detection for everything in your library
 
@@ -163,7 +163,7 @@ Two controls at the top help you narrow down results:
 | Has Credits | Series/movies that have at least one credits marker |
 | No Segments | Series/movies with no markers at all |
 
-**Search box** — type part of a series or movie name to filter the list
+**Search box** - type part of a series or movie name to filter the list
 instantly. The search updates as you type (with a short delay to avoid
 flickering).
 
@@ -177,20 +177,20 @@ For libraries containing TV shows, you will see:
 
 Click a series name or chart bar to drill into the Series Detail view.
 
-Column headers in the table are sortable — click any header to sort by that
+Column headers in the table are sortable - click any header to sort by that
 column. Click again to reverse the order.
 
 Each series row has an **Actions** dropdown with the following operations:
 
-- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+- **Delete** - submenu with **Intros**, **Credits**, or **Both** to remove
   markers from all episodes in the series. Greyed out when the series has no
   markers of that type.
-- **Set Credits to End** — places the Credits Start marker at each episode's
+- **Set Credits to End** - places the Credits Start marker at each episode's
   runtime endpoint across the entire series.
-- **Detect All** — queues credits detection for all episodes in the series,
+- **Detect All** - queues credits detection for all episodes in the series,
   overwriting any existing markers. Only visible when
   [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
-- **Detect Missing** — queues credits detection only for episodes that don't
+- **Detect Missing** - queues credits detection only for episodes that don't
   have credits yet. Greyed out when all episodes already have credits. Only
   visible when EmbyCredits is installed.
 
@@ -200,18 +200,18 @@ For movie-only libraries, the view shows a flat table of movies with their
 segment timestamps displayed directly. Each movie row has an **Actions**
 dropdown with the following operations:
 
-- **Edit** — opens inline editing for the movie's timestamps
-- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+- **Edit** - opens inline editing for the movie's timestamps
+- **Delete** - submenu with **Intros**, **Credits**, or **Both** to remove
   markers. Greyed out when the movie has no markers of that type.
-- **Set Credits to End** — places the Credits Start marker at the movie's
+- **Set Credits to End** - places the Credits Start marker at the movie's
   runtime endpoint.
-- **Detect Credits** — queues credits detection for the movie. Only visible
+- **Detect Credits** - queues credits detection for the movie. Only visible
   when [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
 
 ### Mixed Libraries
 
-Libraries that contain both TV shows and movies display two separate sections —
-a series table and a movie table — so you can work with each type independently.
+Libraries that contain both TV shows and movies display two separate sections - 
+a series table and a movie table - so you can work with each type independently.
 Both sections include the full Actions dropdown described above.
 
 ---
@@ -262,7 +262,7 @@ Timestamp values appear as clickable links (see Playback Links below). A dash
 Every timestamp in the episode table is a clickable link. Clicking it launches
 playback of that episode starting at exactly that timestamp position in Emby's
 built-in player. This is useful for verifying that a marker is at the correct
-position — click the Intro Start timestamp and you should see the beginning of
+position - click the Intro Start timestamp and you should see the beginning of
 the intro sequence.
 
 ---
@@ -281,7 +281,7 @@ To edit an episode's segment timestamps:
 5. Click **Save** to apply, or **Cancel** to discard.
 
 When you save, the plugin writes the change directly to Emby's chapter system.
-The edit takes effect immediately — if you play the episode, Emby will use the
+The edit takes effect immediately - if you play the episode, Emby will use the
 new timestamp for its "Skip Intro" or "Skip Credits" button.
 
 > **Tip:** You can edit timestamps on the Library page (for movies), the Series
@@ -300,9 +300,9 @@ All timestamps use the format `HH:MM:SS.fff`:
 
 Examples:
 
-- `00:01:23.500` — 1 minute and 23.5 seconds in
-- `00:00:45.000` — 45 seconds in
-- `01:05:30.250` — 1 hour, 5 minutes, 30.25 seconds in
+- `00:01:23.500` - 1 minute and 23.5 seconds in
+- `00:00:45.000` - 45 seconds in
+- `01:05:30.250` - 1 hour, 5 minutes, 30.25 seconds in
 
 If you enter an invalid format, the plugin will show an error and will not save.
 
@@ -313,9 +313,9 @@ To remove markers from an episode:
 1. Click the **Actions** button on the episode row.
 2. Hover over **Delete** to open the submenu.
 3. Choose what to remove:
-   - **Intros** — removes Intro Start and Intro End markers
-   - **Credits** — removes the Credits Start marker
-   - **Both** — removes all markers from the episode
+   - **Intros** - removes Intro Start and Intro End markers
+   - **Credits** - removes the Credits Start marker
+   - **Both** - removes all markers from the episode
 4. Confirm the deletion when prompted.
 
 This is useful when a marker was detected incorrectly and you want to clear it
@@ -325,13 +325,13 @@ rather than edit it to a new value.
 
 The **Set Credits to End** option in the Actions menu sets the Credits Start
 marker to the very end of the episode's runtime. This is primarily intended for
-episodes that have **no end credits at all** — by placing the marker at the
+episodes that have **no end credits at all** - by placing the marker at the
 end, you signal that the item has been accounted for. This prevents the
 [EmbyCredits](https://github.com/faush01/EmbyCredits) plugin from needlessly
 scanning these items for credits that do not exist.
 
 > **Tip:** To apply this across many episodes at once, use the season-level
-> **Actions** dropdown — see [Season-Level Actions Dropdown](#season-level-actions-dropdown).
+> **Actions** dropdown - see [Season-Level Actions Dropdown](#season-level-actions-dropdown).
 
 ---
 
@@ -355,15 +355,15 @@ When episodes are selected, the bulk action buttons update to show the count
 
 ### Copy Segments from a Source Episode
 
-This feature copies marker values from one episode to others — useful when
+This feature copies marker values from one episode to others - useful when
 multiple episodes share the same intro or credits timing.
 
 1. Find the episode whose timestamps you want to copy.
 2. Click **Actions** on that episode's row.
 3. Hover over **Copy** to open the submenu, then choose what to copy:
-   - **Intros** — copies only Intro Start and Intro End
-   - **Credits** — copies only Credits Start
-   - **Both** — copies all markers
+   - **Intros** - copies only Intro Start and Intro End
+   - **Credits** - copies only Credits Start
+   - **Both** - copies all markers
 4. A banner appears at the top confirming the source episode and the copy type
    (e.g., "Copying intros from Episode 3").
 5. Select the target episodes using checkboxes (or leave all unchecked to apply
@@ -372,7 +372,7 @@ multiple episodes share the same intro or credits timing.
    **Apply Source to Selected** (the button label reflects the copy type).
 
 Only the marker types you chose are copied to the targets. For example, if you
-choose **Intros**, only the Intro Start and Intro End values are applied — any
+choose **Intros**, only the Intro Start and Intro End values are applied - any
 existing credits markers on the target episodes are left unchanged. This is
 especially useful when a series has consistent intro timing across a season but
 varying credits positions.
@@ -382,19 +382,19 @@ varying credits positions.
 Each season header has an **Actions** dropdown that provides bulk operations
 for the entire season (or selected episodes within it):
 
-- **Delete** — submenu with **Intros**, **Credits**, or **Both** to remove
+- **Delete** - submenu with **Intros**, **Credits**, or **Both** to remove
   markers from the selected episodes (or all episodes in the season). A
   confirmation prompt appears before any deletions are made.
-- **Set Credits to End** — places the Credits Start marker at each episode's
+- **Set Credits to End** - places the Credits Start marker at each episode's
   runtime endpoint. This is primarily useful for episodes that have no end
   credits, signaling that the item has been accounted for and preventing the
   EmbyCredits plugin from needlessly rescanning these items.
-- **Apply Source** — only visible when a copy source is active (see Copy
+- **Apply Source** - only visible when a copy source is active (see Copy
   Segments above). Applies the copied markers to the season's episodes.
-- **Detect All** — queues credits detection for all episodes in the season,
+- **Detect All** - queues credits detection for all episodes in the season,
   overwriting any existing markers. Only visible when
   [EmbyCredits](https://github.com/faush01/EmbyCredits) is installed.
-- **Detect Missing** — queues credits detection only for episodes that don't
+- **Detect Missing** - queues credits detection only for episodes that don't
   have credits yet. Only visible when EmbyCredits is installed.
 
 Detection runs in the background. After it completes, run a sync (or wait for
@@ -444,18 +444,18 @@ preview.*
 The visual builder lets you construct queries without writing SQL:
 
 1. Click **Query Builder** to expand the builder panel.
-2. **Columns** — drag-to-reorder pills at the top control which columns appear
+2. **Columns** - drag-to-reorder pills at the top control which columns appear
    in results. Click the `x` on a pill to remove it.
-3. **Conditions** — each row has three parts: a field name, an operator, and a
+3. **Conditions** - each row has three parts: a field name, an operator, and a
    value. Click **Add Condition** to add more rows.
-4. **AND / OR groups** — click **Add Group** to create condition groups with
+4. **AND / OR groups** - click **Add Group** to create condition groups with
    OR logic (e.g., "Series Name is X OR Series Name is Y").
-5. **ORDER BY** — pick a column and choose ascending or descending.
-6. **LIMIT** — optionally cap the number of results.
+5. **ORDER BY** - pick a column and choose ascending or descending.
+6. **LIMIT** - optionally cap the number of results.
 7. A **live SQL preview** at the bottom shows the query that will be executed.
 8. Click **Run Query** to execute.
 
-The builder fully round-trips — if you load a saved query, the builder will
+The builder fully round-trips - if you load a saved query, the builder will
 populate itself from the SQL so you can modify it visually.
 
 ### Autocomplete and Multi-Value Selection
@@ -482,16 +482,16 @@ libraries in a single condition.
 After running a query, results appear in a table below. The results table
 supports:
 
-- **Row checkboxes** — select rows for bulk operations
-- **Per-row Actions menu** — when the query includes an `ItemId` column, each
+- **Row checkboxes** - select rows for bulk operations
+- **Per-row Actions menu** - when the query includes an `ItemId` column, each
   row shows an **Actions** button with options for Edit, Delete (with Intros /
   Credits / Both submenu), Set Credits to End, and Detect Credits
-- **Inline editing** — if the results include segment timestamp columns, you
+- **Inline editing** - if the results include segment timestamp columns, you
   can edit values directly in the results table
-- **Bulk actions** — delete or set credits to end for selected rows
-- **Playback links** — timestamp values are clickable links that start playback
+- **Bulk actions** - delete or set credits to end for selected rows
+- **Playback links** - timestamp values are clickable links that start playback
   at that position
-- **Timestamp formatting** — tick values are automatically displayed in the
+- **Timestamp formatting** - tick values are automatically displayed in the
   human-readable `HH:MM:SS.fff` format
 
 ### CSV Export
@@ -556,17 +556,17 @@ so you can see exactly how your charts will look before saving.
 
 Two toggles control the appearance of data tables throughout the plugin:
 
-- **Gridlines** — adds borders between table cells for easier reading
-- **Alternating row colors** — adds subtle background striping to every other
+- **Gridlines** - adds borders between table cells for easier reading
+- **Alternating row colors** - adds subtle background striping to every other
   row
 
 ### Library Visibility
 
 Checkboxes let you hide specific library types from the Dashboard:
 
-- **Hide movie libraries** — removes movie-only libraries from the dashboard
+- **Hide movie libraries** - removes movie-only libraries from the dashboard
   chart and table
-- **Hide mixed libraries** — removes libraries that contain both TV shows and
+- **Hide mixed libraries** - removes libraries that contain both TV shows and
   movies
 
 Hidden libraries are only removed from the Dashboard view. You can still
@@ -588,9 +588,9 @@ The bottom of the Settings page shows cache statistics and maintenance tools:
 
 Two maintenance buttons:
 
-- **Vacuum** — compacts the database file to reclaim disk space. Safe to run
+- **Vacuum** - compacts the database file to reclaim disk space. Safe to run
   at any time.
-- **Force Full Rescan** — drops the entire cache and rebuilds it from scratch.
+- **Force Full Rescan** - drops the entire cache and rebuilds it from scratch.
   The plugin will show no data until the rebuild completes. Use this if you
   suspect the cache is out of sync.
 
@@ -621,7 +621,7 @@ You can trigger a sync at any time without waiting for the schedule:
   click **Run** next to "Sync Segment Data."
 
 The sync runs in the background. You can continue using the plugin while it
-runs — the data will update when the sync completes.
+runs - the data will update when the sync completes.
 
 ### Force Rescan
 
@@ -636,7 +636,7 @@ The cache is emptied and a fresh sync is queued. The plugin will show empty
 results until the sync completes.
 
 > **Warning:** While the rescan is running, the plugin's Dashboard, Library,
-> and Series views will be empty. This is normal — the data returns once the
+> and Series views will be empty. This is normal - the data returns once the
 > sync finishes.
 
 ### Vacuum
@@ -686,25 +686,27 @@ to run.
 
 The About page displays:
 
-- **Plugin version** — the currently installed version number
-- **Acknowledgements** — credits to the upstream projects that this plugin is
+- **Plugin version** - the currently installed version number
+- **Acknowledgements** - credits to the upstream projects that this plugin is
   built on:
-  - [playback_reporting](https://github.com/faush01/playback_reporting) —
+  - [playback_reporting](https://github.com/faush01/playback_reporting) - 
     the architectural template for plugin structure, data layer, and web UI
-  - [ChapterApi](https://github.com/faush01/ChapterApi) — the reference for
+  - [ChapterApi](https://github.com/faush01/ChapterApi) - the reference for
     Emby's segment/chapter APIs
-  - [EmbyCredits](https://github.com/faush01/EmbyCredits) — the optional
+  - [EmbyCredits](https://github.com/faush01/EmbyCredits) - the optional
     companion plugin for automatic credits detection
-- **Links** — quick links to the GitHub repository, issue tracker, releases
-  page, and Emby community forum thread
-- **API reference** — a table listing all the plugin's endpoints for advanced
+- **Links** - quick links to the
+  [documentation site](https://sydlexius.github.io/Segment_Reporting/),
+  GitHub repository, issue tracker, releases page, and Emby community forum
+  thread
+- **API reference** - a table listing all the plugin's endpoints for advanced
   users or script integration
 
 ### Getting Help
 
-- **Emby Forums** — post questions or feedback in the
+- **Emby Forums** - post questions or feedback in the
   [Segment Reporting discussion thread](https://emby.media/community/index.php?/topic/146268-segment-reporting-plugin/)
-- **GitHub Issues** — report bugs or request features at the
+- **GitHub Issues** - report bugs or request features at the
   [issue tracker](https://github.com/sydlexius/Segment_Reporting/issues)
-- **Developer Guide** — for technical details on the plugin's architecture,
+- **Developer Guide** - for technical details on the plugin's architecture,
   data model, and API, see the [Developer Guide](DEVELOPER.md)
