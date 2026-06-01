@@ -152,7 +152,12 @@ async function saveFeatureShot(page, name, boxFn, pad = 40) {
     console.log(`  Saved ${name}.png`);
 
     let box;
-    try { box = await boxFn(page); } catch (e) { box = null; }
+    try {
+        box = await boxFn(page);
+    } catch (e) {
+        console.warn(`  Warning: boxFn failed for ${name}: ${e.message}`);
+        box = null;
+    }
     if (!box) {
         console.warn(`  Warning: could not measure bbox for ${name}-crop, skipping crop.`);
         return;
@@ -166,8 +171,8 @@ async function saveFeatureShot(page, name, boxFn, pad = 40) {
     try {
         execSync(`magick "${fullPath}" -crop ${w}x${h}+${x}+${y} +repage "${cropPath}"`);
         console.log(`  Saved ${name}-crop.png (${w}x${h})`);
-    } catch {
-        console.warn(`  Warning: ImageMagick crop failed for ${name}`);
+    } catch (e) {
+        console.warn(`  Warning: ImageMagick crop failed for ${name}: ${e.message}`);
     }
 }
 

@@ -20,9 +20,8 @@ contributing to this project or using it as a reference for your own Emby plugin
 | Git | Any modern version | Source control |
 
 The plugin targets **.NET Standard 2.0** so it can load into Emby Server's runtime.
-Any in-support .NET SDK can compile it; 8.0 is the floor only because it is the
-oldest LTS still receiving support (6.0 and 7.0 are end-of-life). Newer SDKs
-(9, 10) work too, and 8.0+ also runs the xUnit test suite.
+Any in-support .NET SDK can compile it; 8.0 is the current minimum LTS version.
+Newer SDKs (9, 10, etc.) work too, and 8.0+ also runs the xUnit test suite.
 
 ### Optional Tooling
 
@@ -2578,10 +2577,10 @@ commands are here for manual re-cropping only:
 magick docs/Screenshots/dashboard.png -crop 2190x1210+370+55 +repage docs/Screenshots/dashboard-crop.png
 
 # Series detail: episode table with Actions dropdown/submenu
-magick docs/Screenshots/series-detail.png -crop 1220x450+240+415 +repage docs/Screenshots/series-detail-crop.png
+magick docs/Screenshots/series-detail.png -crop 1220x450+240+240 +repage docs/Screenshots/series-detail-crop.png
 
 # Query results: results table with Actions dropdown
-magick docs/Screenshots/query-results.png -crop 1220x620+240+553 +repage docs/Screenshots/query-results-crop.png
+magick docs/Screenshots/query-results.png -crop 1220x620+240+180 +repage docs/Screenshots/query-results-crop.png
 
 # Query builder: Match conditions through Limit field
 magick docs/Screenshots/query-builder.png -crop 2190x990+370+170 +repage docs/Screenshots/query-builder-crop.png
