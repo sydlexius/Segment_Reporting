@@ -500,14 +500,14 @@ namespace segment_reporting.Api
 
             if (!string.IsNullOrEmpty(request.SeasonId))
             {
-                // JS encodeURIComponent(null) sends literal "null" — treat as NULL SeasonId
+                // JS encodeURIComponent(null) sends literal "null" - treat as NULL SeasonId
                 string seasonId = IsJsNullString(request.SeasonId) ? null : request.SeasonId;
                 string seriesScope = IsJsNullString(request.SeriesId) ? null : request.SeriesId;
 
                 // Null-season queries MUST be scoped to a series to avoid cross-series results
                 if (seasonId == null && string.IsNullOrEmpty(seriesScope))
                 {
-                    _logger.Warn("GetEpisodeList: null seasonId without seriesId — returning empty");
+                    _logger.Warn("GetEpisodeList: null seasonId without seriesId - returning empty");
                     return new List<SegmentInfo>();
                 }
 

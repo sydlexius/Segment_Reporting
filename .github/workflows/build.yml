@@ -47,6 +47,9 @@ jobs:
       - name: Build with analyzers
         run: dotnet build Segment_Reporting.sln --configuration Release --no-restore -warnaserror
 
+      - name: Run tests
+        run: dotnet test Segment_Reporting.sln --configuration Release --no-build
+
       - name: Check code formatting
         run: dotnet format Segment_Reporting.sln --verify-no-changes --no-restore
 

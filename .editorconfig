@@ -15,6 +15,9 @@ indent_size = 2
 [*.sln]
 indent_style = tab
 
+[{Makefile,*.mk}]
+indent_style = tab
+
 [*.md]
 trim_trailing_whitespace = false
 

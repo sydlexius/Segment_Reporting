@@ -16,53 +16,53 @@ Read docs/plans/issue-execution-guide.md and execute the next unchecked session.
 
 ## Progress Tracker
 
-### Phase 1 — Quick Wins (safety fixes + small bundled fixes)
+### Phase 1 - Quick Wins (safety fixes + small bundled fixes)
 
 Small, focused changes that reduce risk and clean up low-hanging fruit. Do these first while the codebase is stable.
 
-- [x] **Session 1A** — #64 — Custom query SQL hardening (Small)
-- [x] **Session 1B** — #65 — MarkerTypes.GetColumnName validation (Tiny)
-- [x] **Session 1C** — #66 — Dispose lock ordering (Small)
-- [x] **Session 1D** — #71 + #74 + #75 — Three small JS fixes in one commit (Tiny bundle)
-- [x] **Session 1E** — #72 + #73 — Two small C# fixes in one commit (Tiny bundle)
+- [x] **Session 1A** - #64 - Custom query SQL hardening (Small)
+- [x] **Session 1B** - #65 - MarkerTypes.GetColumnName validation (Tiny)
+- [x] **Session 1C** - #66 - Dispose lock ordering (Small)
+- [x] **Session 1D** - #71 + #74 + #75 - Three small JS fixes in one commit (Tiny bundle)
+- [x] **Session 1E** - #72 + #73 - Two small C# fixes in one commit (Tiny bundle)
 
-### Phase 2 — Tooling
+### Phase 2 - Tooling
 
 Set up analyzers and linting so they catch problems during all subsequent work.
 
-- [x] **Session 2A** — #76 Milestone 1 — C# analyzers: Roslynator, IDisposableAnalyzers (Medium)
-- [x] **Session 2B** — #76 Milestone 2 — ESLint for JavaScript (Medium)
-- [x] **Session 2C** — #76 Milestone 3 — Lefthook pre-commit hooks (Small)
+- [x] **Session 2A** - #76 Milestone 1 - C# analyzers: Roslynator, IDisposableAnalyzers (Medium)
+- [x] **Session 2B** - #76 Milestone 2 - ESLint for JavaScript (Medium)
+- [x] **Session 2C** - #76 Milestone 3 - Lefthook pre-commit hooks (Small)
 
-### Phase 3 — Backend Refactors
+### Phase 3 - Backend Refactors
 
 Clean up C# code while no frontend work is in flight.
 
-- [x] **Session 3A** — #68 — Extract bulk operation helper (Small-Medium) `[plan first]`
-- [x] **Session 3B** — #60 — Drop LastSyncDate column migration (Small-Medium)
+- [x] **Session 3A** - #68 - Extract bulk operation helper (Small-Medium) `[plan first]`
+- [x] **Session 3B** - #60 - Drop LastSyncDate column migration (Small-Medium)
 
-### Phase 4 — Frontend Refactors
+### Phase 4 - Frontend Refactors
 
 Large JS refactors that touch shared files. Do these before feature work to avoid merge conflicts.
 
-- [x] **Session 4A** — #67 Milestones 1-2 — Design + implement shared inline editor (Medium) `[plan first]`
-- [x] **Session 4B** — #67 Milestones 3-5 — Migrate all 3 pages to shared editor (Medium-Large) `[plan first]`
-- [x] **Session 4C** — #70 — Debounce/guard buttons across pages (Small-Medium)
-- [x] **Session 4D** — #69 — Movie delete menu theme colors (Small)
+- [x] **Session 4A** - #67 Milestones 1-2 - Design + implement shared inline editor (Medium) `[plan first]`
+- [x] **Session 4B** - #67 Milestones 3-5 - Migrate all 3 pages to shared editor (Medium-Large) `[plan first]`
+- [x] **Session 4C** - #70 - Debounce/guard buttons across pages (Small-Medium)
+- [x] **Session 4D** - #69 - Movie delete menu theme colors (Small)
 
-### Phase 5 — Features
+### Phase 5 - Features
 
 Build new functionality on the cleaned-up codebase.
 
-- [x] **Session 5A** — #61 — Dashboard coverage split + Detect button label (Medium)
-- [x] **Session 5B** — #63 — Season-level Actions dropdown (Medium) `[plan first]`
-- [x] **Session 5C** — #78 — Extend season Actions with bulk operations (Medium) `[plan first]`
+- [x] **Session 5A** - #61 - Dashboard coverage split + Detect button label (Medium)
+- [x] **Session 5B** - #63 - Season-level Actions dropdown (Medium) `[plan first]`
+- [x] **Session 5C** - #78 - Extend season Actions with bulk operations (Medium) `[plan first]`
 
-### Phase 6 — Documentation (last)
+### Phase 6 - Documentation (last)
 
 Screenshots and docs after all UI changes are settled.
 
-- [ ] **Session 6A** — #62 — User Guide screenshots — do AFTER all UI changes (Medium)
+- [ ] **Session 6A** - #62 - User Guide screenshots - do AFTER all UI changes (Medium)
 
 ---
 
@@ -72,7 +72,7 @@ Copy-paste these into Claude Code at the start of each session. Each prompt is s
 
 ---
 
-### Session 1A — Custom Query SQL Hardening (#64)
+### Session 1A - Custom Query SQL Hardening (#64)
 
 ```
 Implement issue #64: Harden the custom query endpoint against SQL abuse.
@@ -93,7 +93,7 @@ When done, mark Session 1A as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 1B — MarkerTypes.GetColumnName Validation (#65)
+### Session 1B - MarkerTypes.GetColumnName Validation (#65)
 
 ```
 Implement issue #65: Add input validation to MarkerTypes.GetColumnName().
@@ -104,14 +104,14 @@ Currently it blindly appends "Ticks" to any input, and the result gets interpola
 - If the markerType is not in MarkerTypes.Valid, throw ArgumentException
 - This makes the method self-validating so callers can't accidentally bypass the check
 
-This is a tiny change — just add the guard clause. Bump revision, build to verify.
+This is a tiny change - just add the guard clause. Bump revision, build to verify.
 
 When done, mark Session 1B as [x] in docs/plans/issue-execution-guide.md and include the guide in the commit.
 ```
 
 ---
 
-### Session 1C — Dispose Lock Ordering (#66)
+### Session 1C - Dispose Lock Ordering (#66)
 
 ```
 Implement issue #66: Fix the potential deadlock in SegmentRepository.Dispose() lock ordering.
@@ -134,14 +134,14 @@ When done, mark Session 1C as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 1D — Small JS Fixes Bundle (#71 + #74 + #75)
+### Session 1D - Small JS Fixes Bundle (#71 + #74 + #75)
 
 ```
 Implement three small JS fixes in one commit, covering issues #71, #74, and #75.
 
 Fix 1 (#71): In segment_reporting/Pages/segment_series.js around line 260-273, wrap seasonLabel in helpers.escHtml() before inserting into innerHTML. The season.SeasonName value is currently unescaped.
 
-Fix 2 (#74): In segment_reporting/Pages/segment_reporting_helpers.js, remove the clearNavParams function and its export from getSegmentReportingHelpers() — it's never called by any page. Also in segment_reporting/Pages/segment_custom_query.js line 2, change the copyright year from 2024 to 2026.
+Fix 2 (#74): In segment_reporting/Pages/segment_reporting_helpers.js, remove the clearNavParams function and its export from getSegmentReportingHelpers() - it's never called by any page. Also in segment_reporting/Pages/segment_custom_query.js line 2, change the copyright year from 2024 to 2026.
 
 Fix 3 (#75): In segment_reporting/Pages/segment_custom_query.js around line 2349-2360, add URL.revokeObjectURL(url) after the CSV download link click. Use setTimeout with ~1000ms delay so the browser finishes the download first.
 
@@ -152,7 +152,7 @@ When done, mark Session 1D as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 1E — Small C# Fixes Bundle (#72 + #73)
+### Session 1E - Small C# Fixes Bundle (#72 + #73)
 
 ```
 Implement two small C# fixes in one commit, covering issues #72 and #73.
@@ -168,7 +168,7 @@ When done, mark Session 1E as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 2A — C# Analyzers (#76 Milestone 1)
+### Session 2A - C# Analyzers (#76 Milestone 1)
 
 ```
 Implement issue #76, Milestone 1: Add C# analyzer enhancements.
@@ -180,7 +180,7 @@ Changes to segment_reporting/segment_reporting.csproj:
 
 Then:
 1. Build: dotnet build segment_reporting/segment_reporting.csproj -c Release
-2. Triage all new warnings — for each:
+2. Triage all new warnings - for each:
    - If it's a real issue: fix it in this same session
    - If it's a false positive or intentional pattern: suppress in .editorconfig with a comment explaining why
 3. The build uses -warnaserror in CI, so all warnings must be either fixed or suppressed
@@ -193,7 +193,7 @@ When done, mark Session 2A as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 2B — ESLint for JavaScript (#76 Milestone 2)
+### Session 2B - ESLint for JavaScript (#76 Milestone 2)
 
 ```
 Implement issue #76, Milestone 2: Add ESLint for JavaScript.
@@ -225,7 +225,7 @@ When done, mark Session 2B as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 2C — Lefthook Pre-commit Hooks (#76 Milestone 3)
+### Session 2C - Lefthook Pre-commit Hooks (#76 Milestone 3)
 
 ```
 Implement issue #76, Milestone 3: Add Lefthook pre-commit hooks.
@@ -251,16 +251,16 @@ Implement issue #76, Milestone 3: Add Lefthook pre-commit hooks.
 3. Update docs/DEVELOPER.md to document the pre-commit hook setup:
    - How to install (lefthook install after cloning)
    - What it checks (format, lint, whitespace, conflict markers)
-   - How to bypass if needed (git commit --no-verify — but discouraged)
+   - How to bypass if needed (git commit --no-verify - but discouraged)
 
-No revision bump needed — this is infrastructure only, no code changes.
+No revision bump needed - this is infrastructure only, no code changes.
 
 When done, mark Session 2C as [x] in docs/plans/issue-execution-guide.md and include the guide in the commit.
 ```
 
 ---
 
-### Session 3A — Extract Bulk Operation Logic (#68)
+### Session 3A - Extract Bulk Operation Logic (#68)
 
 ```
 Implement issue #68: Extract shared bulk operation logic in the API.
@@ -284,7 +284,7 @@ When done, mark Session 3A as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 3B — Drop LastSyncDate Column (#60)
+### Session 3B - Drop LastSyncDate Column (#60)
 
 ```
 Implement issue #60: Drop the LastSyncDate column from MediaSegments.
@@ -293,7 +293,7 @@ File: segment_reporting/Data/SegmentRepository.cs, in the migration/initializati
 
 In CheckMigration() or the initialization path:
 1. Try: ALTER TABLE MediaSegments DROP COLUMN LastSyncDate
-2. Catch: On failure (older SQLite without DROP COLUMN support), fall back to UPDATE MediaSegments SET LastSyncDate = NULL — this nulls out the data even if the column can't be dropped
+2. Catch: On failure (older SQLite without DROP COLUMN support), fall back to UPDATE MediaSegments SET LastSyncDate = NULL - this nulls out the data even if the column can't be dropped
 
 Also:
 - Remove any code that reads or writes the LastSyncDate column (grep for "LastSyncDate" across all files)
@@ -309,15 +309,15 @@ When done, mark Session 3B as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 4A — Inline Editor: Design + Implement (#67 Milestones 1-2)
+### Session 4A - Inline Editor: Design + Implement (#67 Milestones 1-2)
 
 ```
 Implement issue #67, Milestones 1 and 2: Design and implement the shared inline editing module.
 
 First, READ the three existing inline editing implementations to understand the common pattern:
-- segment_reporting/Pages/segment_series.js — episode editing
-- segment_reporting/Pages/segment_library.js — movie editing
-- segment_reporting/Pages/segment_custom_query.js — query result editing
+- segment_reporting/Pages/segment_series.js - episode editing
+- segment_reporting/Pages/segment_library.js - movie editing
+- segment_reporting/Pages/segment_custom_query.js - query result editing
 
 Identify the common lifecycle (start edit → show inputs → save → API call → refresh) and the per-page variations (column definitions, API endpoints, validation rules, post-save behavior).
 
@@ -326,7 +326,7 @@ Then implement a shared createInlineEditor() function in segment_reporting/Pages
 - Handles: input creation from cell values, value extraction, time-tick validation, API save with error handling, cancel/restore, loading state
 - Provides hooks for per-page custom behavior
 
-Do NOT migrate the pages yet — just add the new shared function alongside the existing code. The migrations happen in a separate session.
+Do NOT migrate the pages yet - just add the new shared function alongside the existing code. The migrations happen in a separate session.
 
 Bump revision, build to verify.
 
@@ -335,18 +335,18 @@ When done, mark Session 4A as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 4B — Inline Editor: Migrate Pages (#67 Milestones 3-5)
+### Session 4B - Inline Editor: Migrate Pages (#67 Milestones 3-5)
 
 ```
 Implement issue #67, Milestones 3-5: Migrate all three pages to use the shared inline editor.
 
 The shared createInlineEditor() helper was added in the previous session. Now migrate each page:
 
-1. segment_series.js FIRST (most standard pattern) — replace its inline editing code with helpers.createInlineEditor(...) calls. Test: edit an episode's intro/credits timestamps, verify save/cancel/refresh all work, verify no regressions in season expand/collapse.
+1. segment_series.js FIRST (most standard pattern) - replace its inline editing code with helpers.createInlineEditor(...) calls. Test: edit an episode's intro/credits timestamps, verify save/cancel/refresh all work, verify no regressions in season expand/collapse.
 
-2. segment_library.js SECOND — same migration for movie editing. Test: edit a movie's timestamps.
+2. segment_library.js SECOND - same migration for movie editing. Test: edit a movie's timestamps.
 
-3. segment_custom_query.js LAST (most customized — editable columns depend on query results). May need additional config options. Test: run a custom query, edit a result row.
+3. segment_custom_query.js LAST (most customized - editable columns depend on query results). May need additional config options. Test: run a custom query, edit a result row.
 
 After migrating all three, delete the now-dead inline editing code from each page.
 
@@ -357,7 +357,7 @@ When done, mark Session 4B as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 4C — Debounce Buttons (#70)
+### Session 4C - Debounce Buttons (#70)
 
 ```
 Implement issue #70: Add debounce/guard to save/delete buttons to prevent double-submission.
@@ -383,7 +383,7 @@ When done, mark Session 4C as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 4D — Movie Delete Menu Theme (#69)
+### Session 4D - Movie Delete Menu Theme (#69)
 
 ```
 Implement issue #69: Migrate the movie delete menu to use shared menu infrastructure.
@@ -401,25 +401,25 @@ When done, mark Session 4D as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 5A — Dashboard Coverage Split (#61)
+### Session 5A - Dashboard Coverage Split (#61)
 
 ```
 Implement issue #61: Split the Coverage % column by type and clarify the Detect button label.
 
 Files:
-- segment_reporting/Pages/segment_dashboard.js — main changes
-- segment_reporting/Pages/segment_dashboard.html — update table header if needed
+- segment_reporting/Pages/segment_dashboard.js - main changes
+- segment_reporting/Pages/segment_dashboard.html - update table header if needed
 
 Changes:
 1. Replace the single "Coverage" column in the library table with two columns: "Intro %" and "Credits %". Use helpers.percentage(withIntro, totalItems) and helpers.percentage(withCredits, totalItems) respectively.
 
 2. Change the per-library button label from "Detect" to "Detect Credits" to match the global "Detect All Credits" button.
 
-3. Review the stacked bar chart labels — update if they reference a single "Coverage" metric.
+3. Review the stacked bar chart labels - update if they reference a single "Coverage" metric.
 
 Also update:
-- docs/USER_GUIDE.md — Dashboard section to reflect new columns and button label
-- Properties/AssemblyInfo.cs — bump revision (release notes are auto-generated by GitHub from merged PRs; no RELEASE_NOTES.md file)
+- docs/USER_GUIDE.md - Dashboard section to reflect new columns and button label
+- Properties/AssemblyInfo.cs - bump revision (release notes are auto-generated by GitHub from merged PRs; no RELEASE_NOTES.md file)
 
 Build to verify.
 
@@ -428,7 +428,7 @@ When done, mark Session 5A as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 5B — Season-Level Actions Dropdown (#63)
+### Session 5B - Season-Level Actions Dropdown (#63)
 
 ```
 Implement issue #63: Replace the season-level Detect button with an Actions dropdown using EmbyCredit's ProcessSeason endpoints.
@@ -446,7 +446,7 @@ Changes:
 
 4. Refactor detectCreditsForSeason() to make a single API call instead of looping ProcessEpisode per episode.
 
-5. The season object from season_list has both SeasonId and SeasonNumber — use SeasonNumber as the new endpoints require it.
+5. The season object from season_list has both SeasonId and SeasonNumber - use SeasonNumber as the new endpoints require it.
 
 6. If ProcessSeason needs a JSON body (not query params), add a creditsDetectorPostJson() helper in segment_reporting_helpers.js.
 
@@ -457,7 +457,7 @@ When done, mark Session 5B as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 5C — Extend Season Actions with Bulk Operations (#78)
+### Session 5C - Extend Season Actions with Bulk Operations (#78)
 
 ```
 Implement issue #78: Extend the season-level Actions dropdown to include bulk operations beyond credits detection.
@@ -465,11 +465,11 @@ Implement issue #78: Extend the season-level Actions dropdown to include bulk op
 File: segment_reporting/Pages/segment_series.js
 
 Changes:
-1. Make the season Actions dropdown unconditional — it currently only renders when EmbyCredits is installed. The new menu items (Delete, Set Credits to End) don't depend on EmbyCredits. Detect items should still be conditionally included.
+1. Make the season Actions dropdown unconditional - it currently only renders when EmbyCredits is installed. The new menu items (Delete, Set Credits to End) don't depend on EmbyCredits. Detect items should still be conditionally included.
 
 2. Add menu items to showSeasonActionsMenu():
-   - Delete submenu (Intros / Credits / Both) — uses helpers.createSubmenuItem() pattern from per-episode Actions
-   - Set Credits to End — uses existing helpers.bulkSetCreditsEnd()
+   - Delete submenu (Intros / Credits / Both) - uses helpers.createSubmenuItem() pattern from per-episode Actions
+   - Set Credits to End - uses existing helpers.bulkSetCreditsEnd()
    - Divider, then Detect All / Detect Missing (existing, conditional on creditsDetectorAvailable)
 
 3. The Delete and Set Credits to End operations need item IDs. If episodes are already cached (loadedSeasons[seasonId]), use them directly. If not loaded yet, load them first via the episode_list endpoint, then proceed.
@@ -483,7 +483,7 @@ When done, mark Session 5C as [x] in docs/plans/issue-execution-guide.md and inc
 
 ---
 
-### Session 6A — User Guide Screenshots (#62)
+### Session 6A - User Guide Screenshots (#62)
 
 ```
 Implement issue #62: Add feature-highlight screenshots to the User Guide.

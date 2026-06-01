@@ -740,10 +740,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             var modeLabel = copyMode === 'intros' ? 'intros' : copyMode === 'credits' ? 'credits' : 'intros + credits';
             var banner = view.querySelector('#bulkSourceBanner');
             var bannerText = view.querySelector('#bulkSourceText');
-            bannerText.textContent = 'Copying ' + modeLabel + ' from Episode ' + (ep.EpisodeNumber || '?') + ' — ' + (ep.ItemName || 'Unknown');
+            bannerText.textContent = 'Copying ' + modeLabel + ' from Episode ' + (ep.EpisodeNumber || '?') + ' - ' + (ep.ItemName || 'Unknown');
             banner.style.display = 'block';
 
-            // Re-highlight rows — refresh all visible tables
+            // Re-highlight rows - refresh all visible tables
             var allRows = view.querySelectorAll('tr[data-item-id]');
             allRows.forEach(function (row) {
                 var itemId = row.getAttribute('data-item-id');

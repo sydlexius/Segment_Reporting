@@ -41,7 +41,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 }
             }
             var canEdit = hasItemId && editableColumns.length > 0;
-            var canDelete = hasItemId; // Delete only needs ItemId — marker type chosen from menu
+            var canDelete = hasItemId; // Delete only needs ItemId - marker type chosen from menu
             var canPlayback = hasItemId && editableColumns.length > 0;
             return {
                 canEdit: canEdit,
@@ -168,7 +168,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 })
                 .catch(function (err) {
                     console.error('distinct_values fetch failed for ' + fieldName + ':', err);
-                    // Don't cache failures — allow retry on next focus
+                    // Don't cache failures - allow retry on next focus
                     callback([]);
                 });
         }
@@ -543,7 +543,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             // Parse SELECT columns
             if (match('keyword', 'SELECT')) {
                 if (peek() && peek().type === 'star') {
-                    next(); // consume * — selectedColumns stays empty = all
+                    next(); // consume * - selectedColumns stays empty = all
                 } else {
                     while (pos < tokens.length) {
                         var ct = peek();
@@ -1023,7 +1023,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         function onBuilderChange(e) {
             var target = e.target;
 
-            // Skip autocomplete inputs — handled by onAcInput
+            // Skip autocomplete inputs - handled by onAcInput
             if (target.classList && (target.classList.contains('sr-pill-input') || target.classList.contains('sr-ac-input'))) return;
 
             var action = target.getAttribute('data-action');
@@ -1345,7 +1345,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             _dragStartX = e.clientX;
             _dragStartY = e.clientY;
             _draggedPill = el;
-            _draggedCol = null; // not committed yet — wait for threshold
+            _draggedCol = null; // not committed yet - wait for threshold
             _wasDragging = false;
 
             document.addEventListener('pointermove', onPillPointerMove);
@@ -1393,7 +1393,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             document.removeEventListener('pointerup', onPillPointerUp);
 
             if (!_draggedCol) {
-                // Threshold was never crossed — let the click handler toggle the pill
+                // Threshold was never crossed - let the click handler toggle the pill
                 _draggedPill = null;
                 return;
             }

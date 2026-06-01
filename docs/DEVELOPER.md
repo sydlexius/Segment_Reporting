@@ -1823,7 +1823,7 @@ A SQL editor with a visual query builder and saved query management.
 - Save / Delete / Overwrite saved queries
 - Query execution with results displayed in a dynamic table
 - Per-row **Actions** dropdown (Edit, Delete submenu, Set Credits to End,
-  Detect Credits) — shown whenever `ItemId` is present in the result columns
+  Detect Credits) - shown whenever `ItemId` is present in the result columns
 - Tick columns automatically formatted as `HH:MM:SS.fff`
 - CSV export of query results
 - Clear button to reset the interface
@@ -2000,9 +2000,11 @@ branches. Runs on `ubuntu-latest`.
 6. **Restore dependencies** -- `dotnet restore Segment_Reporting.sln`
 7. **Build with analyzers** -- `dotnet build` with `-warnaserror` so any
    StyleCop or analyzer warning fails the build
-8. **Check code formatting** -- `dotnet format --verify-no-changes` ensures
+8. **Run tests** -- `dotnet test Segment_Reporting.sln --configuration Release
+   --no-build` runs the xUnit suite (see the Testing section)
+9. **Check code formatting** -- `dotnet format --verify-no-changes` ensures
    code style matches `.editorconfig` rules
-9. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
+10. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
 
 **Key point:** JS minification happens *before* `dotnet build` so the minified
 files are what gets compiled into the DLL as embedded resources. The MSBuild
@@ -2151,10 +2153,24 @@ Follow these steps to create a release:
 
 ## 8. Testing
 
-There are no automated unit tests -- Emby plugins require a running server
-instance with loaded libraries to exercise the code paths. Testing is done
-manually against a live Emby server using the Bruno API test collection and
-direct UI interaction.
+Pure logic (the custom-query security validators and marker-type helpers) is
+covered by an xUnit unit-test project; everything that needs a live Emby server
+(sync, write-through, UI) is still verified manually against a running server
+using the Bruno API test collection and direct UI interaction.
+
+### Unit Tests (xUnit)
+
+The `tests/segment_reporting.Tests` project covers logic that does not need a
+running Emby server: the custom-query validators (`ContainsDangerousKeyword`,
+`IsAllowedPragma`, exposed as `internal` via `InternalsVisibleTo`) and
+`MarkerTypes`. Run them with `make test` or `dotnet test Segment_Reporting.sln`.
+
+The project targets `net8.0` to match the CI SDK; `<RollForward>Major</RollForward>`
+lets the test host run on a newer locally-installed runtime when 8.0 is absent.
+CI runs them as a dedicated step in the build job (see the CI/CD Pipeline section).
+
+Future work (issue #106) adds repository/migration tests, SharpFuzz fuzz targets
+for the query parser, the Threading.Analyzers, and a Dockerized UAT Emby harness.
 
 ### Manual Testing Workflow
 

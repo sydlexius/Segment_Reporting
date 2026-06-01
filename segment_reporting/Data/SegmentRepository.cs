@@ -711,7 +711,7 @@ namespace segment_reporting.Data
             string sql;
             if (isNullSeason)
             {
-                // Episodes with no season parent — scope to series when available
+                // Episodes with no season parent - scope to series when available
                 sql = !string.IsNullOrEmpty(seriesId)
                     ? "SELECT * FROM MediaSegments WHERE SeasonId IS NULL AND SeriesId = @SeriesId AND ItemType = 'Episode' ORDER BY EpisodeNumber"
                     : "SELECT * FROM MediaSegments WHERE SeasonId IS NULL AND ItemType = 'Episode' ORDER BY EpisodeNumber";
@@ -804,7 +804,7 @@ namespace segment_reporting.Data
 
                 if (MarkerTypes.IsIntroType(markerType))
                 {
-                    string otherColumn = markerType == MarkerTypes.IntroStart
+                    string otherColumn = string.Equals(markerType, MarkerTypes.IntroStart, StringComparison.OrdinalIgnoreCase)
                         ? MarkerTypes.GetColumnName(MarkerTypes.IntroEnd)
                         : MarkerTypes.GetColumnName(MarkerTypes.IntroStart);
                     sql += ", HasIntro = CASE WHEN " + otherColumn + " IS NOT NULL THEN 1 ELSE 0 END";
@@ -1020,7 +1020,7 @@ namespace segment_reporting.Data
             "foreign_key_list", "compile_options", "integrity_check"
         };
 
-        private static bool ContainsDangerousKeyword(string sql)
+        internal static bool ContainsDangerousKeyword(string sql)
         {
             if (sql.Contains(";"))
             {
@@ -1049,7 +1049,7 @@ namespace segment_reporting.Data
             return false;
         }
 
-        private static bool IsAllowedPragma(string trimmedSql)
+        internal static bool IsAllowedPragma(string trimmedSql)
         {
             // Extract pragma name from "PRAGMA [schema.]name" or "PRAGMA [schema.]name(...)"
             var afterPragma = trimmedSql.Substring(6).TrimStart();

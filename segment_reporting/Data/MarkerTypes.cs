@@ -16,11 +16,21 @@ namespace segment_reporting.Data
 
         public static string GetColumnName(string markerType)
         {
-            if (!Valid.Contains(markerType))
+            // Normalize to the canonical constant so the column name is stable
+            // regardless of the caller's casing (e.g. "introstart" -> "IntroStartTicks").
+            if (string.Equals(markerType, IntroStart, StringComparison.OrdinalIgnoreCase))
             {
-                throw new ArgumentException("Unknown marker type: " + markerType, nameof(markerType));
+                return IntroStart + "Ticks";
             }
-            return markerType + "Ticks";
+            if (string.Equals(markerType, IntroEnd, StringComparison.OrdinalIgnoreCase))
+            {
+                return IntroEnd + "Ticks";
+            }
+            if (string.Equals(markerType, CreditsStart, StringComparison.OrdinalIgnoreCase))
+            {
+                return CreditsStart + "Ticks";
+            }
+            throw new ArgumentException("Unknown marker type: " + markerType, nameof(markerType));
         }
 
         public static bool IsIntroType(string markerType)
