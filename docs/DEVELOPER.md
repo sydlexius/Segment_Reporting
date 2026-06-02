@@ -87,10 +87,11 @@ can always run the underlying command shown below by hand.
 | `make screenshots` | `node scripts/capture-screenshots.mjs` | Capture and anonymize page screenshots (needs a running Emby plus `.env`). |
 | `make clean` | `dotnet clean` + remove `bin`/`obj`/`site` | Remove build output and the generated docs site. |
 
-Bruno API tests, fuzzing, leak detection, and the UAT Emby harness will arrive
-as `make bruno` / `fuzz` / `leak-check` / `uat-up` / `uat-down` alongside the
-test-infrastructure Phase 2/3 work, so those targets ship with the scripts they
-drive rather than as empty stubs.
+The UAT Emby harness ships as `make uat-deploy` / `uat-seed` / `uat-test`
+(alias `bruno`) / `uat-clean` / `uat`, driving `scripts/uat/*`. Fuzzing and
+leak detection (`make fuzz` / `leak-check`) remain Phase 3 and ship with that
+work. See [UAT Emby Harness](#uat-emby-harness) below before running any of
+the `uat-*` targets.
 
 ### Building the Plugin
 
@@ -129,6 +130,53 @@ an xUnit suite you can run with `make test` (`dotnet test`). Anything that
 touches Emby Server internals cannot be mocked outside a running server, so that
 surface is still validated manually. See the [Testing](#testing) section for the
 full picture.
+
+### UAT Emby Harness
+
+> **SAFETY WARNING -- READ FIRST.** The UAT harness is **destructive by design**:
+> it writes and deletes segment markers, runs bulk operations, and creates and
+> removes whole libraries. It must **only ever** target the local UAT Emby. The
+> scripts read **only** `EMBY_UAT_URL` / `EMBY_UAT_API_KEY` from `.env` (never
+> `EMBY_PROD_*`) and `scripts/uat/lib.sh` hard-aborts unless the target host is
+> `localhost` / `127.0.0.1` / `::1`. **Never point these targets at a production Emby.**
+
+The harness exercises the full write path that unit tests cannot reach:
+
+```
+seed media -> Emby ingest -> plugin sync -> set markers -> read reports -> assert
+```
+
+**Prerequisites:**
+
+- **OrbStack / Docker** with the `stillwater` UAT compose project up, the
+  Segment Reporting plugin installed, and the "Nfo Metadata" reader enabled.
+  The harness targets the existing container named `emby` (override with the
+  `CONTAINER` env var).
+- **bash 4+** (the scripts use `mapfile` and `${!var}`; macOS ships bash 3.2,
+  so install a newer one with `brew install bash`).
+- **ffmpeg** on the host (sparse synthetic-video generation).
+- **Node.js** (for the Bruno CLI via `npx @usebruno/cli`).
+- **dotnet** SDK (for the `uat-deploy` Release build).
+- **`.env`** populated with `EMBY_UAT_URL=http://localhost:8096` and
+  `EMBY_UAT_API_KEY=<admin key>` (template in `.env.example`; `.env` is gitignored).
+
+**Targets:**
+
+| Target | Description |
+|--------|-------------|
+| `make uat-deploy` | Build the Release DLL, `docker cp` it into the container's `/config/plugins`, restart Emby, wait until healthy. |
+| `make uat-seed` | Generate sparse media + lockdata NFOs, `docker cp` into `/uat-media`, create the `SR-UAT-TV` / `SR-UAT-Movies` libraries via the VirtualFolders API, scan, `sync_now`, write a varied marker coverage matrix, and capture the discovered IDs into `bruno-tests/.../environments/Local.bru`. Idempotent. |
+| `make uat-test` (alias `make bruno`) | Run the Bruno collection assertions against UAT (reads `apiKey` from `.env`). |
+| `make uat-clean` | Delete the `SR-UAT` libraries, remove `/uat-media` in the container, and reset the captured IDs in `Local.bru` to placeholders. |
+| `make uat` | Convenience chain: `uat-deploy` -> `uat-seed` -> `uat-test`. |
+
+The synthetic media is generated as static black-frame H.264 clips (a 10-minute
+clip is ~9.7 KB) that still report a true runtime, so markers sit at lifelike
+offsets. Because `docker cp` writes into the container's ephemeral layer, the
+seeded media does not survive a container rebuild; recovery is just re-running
+`make uat-seed`. The seed populates all four `library_summary` coverage buckets
+(`WithIntro` / `WithCredits` / `WithBoth` / `WithNeither`) and includes a movies
+library to exercise the null `series` / `season` code path.
 
 ### Automatic Deploy via Environment Variable
 
