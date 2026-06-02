@@ -2076,7 +2076,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     return helpers.applyBulkSet([changed])
                         .then(function (res) {
                             helpers.hideLoading();
-                            if (res && res.error) { helpers.showError(res.error); return Promise.reject(res.error); }
+                            if (res && (res.error || res.failed > 0)) {
+                                helpers.showError(res.error || (res.errors && res.errors.length ? res.errors.join('\n') : 'Failed to adjust timing.'));
+                                return Promise.reject(res.error || 'apply failed');
+                            }
                             executeQuery();
                             helpers.showOffsetSnackbar('Timing adjusted.', function () {
                                 return helpers.applyBulkSet([undoItem]).then(function () { executeQuery(); });
@@ -2131,12 +2134,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         var cs = tickOf(row, 'CreditsStartTicks');
                         var ci = { ItemId: row['ItemId'], introStart: null, introEnd: null, credits: null };
                         var ui = { ItemId: row['ItemId'], introStart: null, introEnd: null, credits: null };
+                        var nextIntroStart = is;
                         if (deltas.introDelta !== 0 && is != null) {
-                            ci.introStart = Math.max(0, is + deltas.introDelta);
+                            nextIntroStart = Math.max(0, is + deltas.introDelta);
+                            ci.introStart = nextIntroStart;
                             ui.introStart = is;
                         }
                         if (endTotal !== 0 && ie != null) {
-                            ci.introEnd = Math.max(0, ie + endTotal);
+                            var minEnd = nextIntroStart != null ? nextIntroStart : 0;
+                            ci.introEnd = Math.max(minEnd, ie + endTotal);
                             ui.introEnd = ie;
                         }
                         if (deltas.creditsDelta !== 0 && cs != null) {

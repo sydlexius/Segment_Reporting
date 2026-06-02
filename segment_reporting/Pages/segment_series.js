@@ -1047,7 +1047,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     return helpers.applyBulkSet([changed])
                         .then(function (res) {
                             helpers.hideLoading();
-                            if (res && res.error) { helpers.showError(res.error); return Promise.reject(res.error); }
+                            if (res && (res.error || res.failed > 0)) {
+                                helpers.showError(res.error || (res.errors && res.errors.length ? res.errors.join('\n') : 'Failed to adjust timing.'));
+                                return Promise.reject(res.error || 'apply failed');
+                            }
                             refreshRow(row, ep);
                             helpers.showOffsetSnackbar('Timing adjusted.', function () {
                                 return helpers.applyBulkSet([undoItem]).then(function () {
@@ -1090,12 +1093,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     targets.forEach(function (t) {
                         var ci = { ItemId: t.ItemId, introStart: null, introEnd: null, credits: null };
                         var ui = { ItemId: t.ItemId, introStart: null, introEnd: null, credits: null };
+                        var nextIntroStart = t.IntroStartTicks;
                         if (deltas.introDelta !== 0 && t.IntroStartTicks != null) {
-                            ci.introStart = Math.max(0, t.IntroStartTicks + deltas.introDelta);
+                            nextIntroStart = Math.max(0, t.IntroStartTicks + deltas.introDelta);
+                            ci.introStart = nextIntroStart;
                             ui.introStart = t.IntroStartTicks;
                         }
                         if (endTotal !== 0 && t.IntroEndTicks != null) {
-                            ci.introEnd = Math.max(0, t.IntroEndTicks + endTotal);
+                            var minEnd = nextIntroStart != null ? nextIntroStart : 0;
+                            ci.introEnd = Math.max(minEnd, t.IntroEndTicks + endTotal);
                             ui.introEnd = t.IntroEndTicks;
                         }
                         if (deltas.creditsDelta !== 0 && t.CreditsStartTicks != null) {

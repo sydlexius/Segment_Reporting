@@ -1254,8 +1254,16 @@ function segmentReportingCreateOffsetModal(config) {
                 return segmentReportingTicksToTime(state.introStart) + ' -> ' + segmentReportingTicksToTime(state.introEnd);
             } });
         rows.push({ label: 'Intro end', hint: 'trim / extend the end only', enabled: state.introEnd != null,
-            step: function (d) { if (state.introEnd != null) { state.introEnd = Math.max(0, state.introEnd + d * STEP); } },
-            leftDisabled: function () { return state.introEnd == null || state.introEnd <= 0; },
+            step: function (d) {
+                if (state.introEnd != null) {
+                    var floor = state.introStart != null ? state.introStart : 0;
+                    state.introEnd = Math.max(floor, state.introEnd + d * STEP);
+                }
+            },
+            leftDisabled: function () {
+                var floor = state.introStart != null ? state.introStart : 0;
+                return state.introEnd == null || state.introEnd <= floor;
+            },
             display: function () { return segmentReportingTicksToTime(state.introEnd); } });
         rows.push({ label: 'Credits', hint: '', enabled: state.credits != null,
             step: function (d) { if (state.credits != null) { state.credits = Math.max(0, state.credits + d * STEP); } },

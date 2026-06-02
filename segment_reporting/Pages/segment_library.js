@@ -728,7 +728,10 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     return helpers.applyBulkSet([changed])
                         .then(function (res) {
                             helpers.hideLoading();
-                            if (res && res.error) { helpers.showError(res.error); return Promise.reject(res.error); }
+                            if (res && (res.error || res.failed > 0)) {
+                                helpers.showError(res.error || (res.errors && res.errors.length ? res.errors.join('\n') : 'Failed to adjust timing.'));
+                                return Promise.reject(res.error || 'apply failed');
+                            }
                             refreshMovieRowById();
                             helpers.showOffsetSnackbar('Timing adjusted.', function () {
                                 return helpers.applyBulkSet([undoItem]).then(refreshMovieRowById);
