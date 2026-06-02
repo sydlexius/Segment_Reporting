@@ -12,6 +12,15 @@
 
 set -euo pipefail
 
+# --- Require bash 4+ -------------------------------------------------------
+# The harness uses bash 4+ features (mapfile, ${!var} indirection). macOS ships
+# bash 3.2; install a newer one with `brew install bash`.
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+    echo "FATAL: the UAT harness requires bash >= 4 (found ${BASH_VERSION:-unknown})." >&2
+    echo "       Install a newer bash: brew install bash" >&2
+    exit 1
+fi
+
 # --- Resolve repo root (scripts/uat/lib.sh -> two levels up) ---------------
 SR_UAT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SR_UAT_DIR/../.." && pwd)"
