@@ -28,7 +28,7 @@ clip() {
 mk_show() {
     # mk_show <Show Name>
     local show="$1"
-    local dir="$OUT_DIR/tv/$show"
+    local dir="$OUT_DIR/SR-UAT-TV/$show"
     mkdir -p "$dir/Season 01"
     cat > "$dir/tvshow.nfo" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -61,7 +61,7 @@ mk_show "SR Test Bravo"
 mk_movie() {
     # mk_movie <Movie Name (Year)>
     local name="$1"
-    local dir="$OUT_DIR/movies/$name"
+    local dir="$OUT_DIR/SR-UAT-Movies/$name"
     mkdir -p "$dir"
     clip "$dir/$name.mp4" 600
     cat > "$dir/$name.nfo" <<EOF

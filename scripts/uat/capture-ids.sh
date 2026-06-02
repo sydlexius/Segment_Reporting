@@ -26,10 +26,13 @@ mapfile -t eps < <(echo "$items_json" | jq -r '
 sampleItemId="${eps[0]:-}"
 sampleItemId2="${eps[1]:-}"
 
-# Library ID: the TV virtual folder id from VirtualFolders.
-vf_json="$(sr_get /emby/Library/VirtualFolders '')"
-sampleLibraryId="$(echo "$vf_json" | jq -r '
-    map(select(.Name=="SR-UAT TV")) | (.[0].ItemId // .[0].Id // empty)')"
+# Library ID: take it from the plugin's own library_summary so it matches the
+# LibraryId the other plugin endpoints key off (the top-parent folder id, which
+# differs from the Emby VirtualFolder ItemId). LibraryName is the media path
+# leaf folder ("SR-UAT-TV").
+ls_json="$(sr_get /emby/segment_reporting/library_summary '')"
+sampleLibraryId="$(echo "$ls_json" | jq -r '
+    map(select(.LibraryName=="SR-UAT-TV")) | (.[0].LibraryId // empty)')"
 
 for v in sampleLibraryId sampleSeriesId sampleSeasonId sampleItemId sampleItemId2; do
     eval "val=\$$v"
