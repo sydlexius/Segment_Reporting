@@ -44,8 +44,17 @@ See the **[User Guide](docs/USER_GUIDE.md)** for a full walkthrough with all scr
 
 ## Installation
 
-1. Download the latest release from the [GitHub Releases](../../releases) page
-2. Copy the DLL file to your Emby server's plugins directory:
+> **Pick the build for your Emby version.** Emby changed its plugin binary
+> interface (ABI) between 4.9 and 4.10, so each release ships two assets:
+> - `segment_reporting_emby_4.9x.zip` - for Emby **4.9.x**
+> - `segment_reporting_emby_4.10x.zip` - for Emby **4.10.x**
+>
+> A mismatched build will not load (or loads but does not function). Check your
+> version at **Settings > About** on the Emby dashboard. Each zip contains a
+> ready-to-use `segment_reporting.dll` - no renaming needed.
+
+1. Download the zip matching your Emby version from the [GitHub Releases](../../releases) page
+2. Unzip it and copy `segment_reporting.dll` to your Emby server's plugins directory:
    - **Windows:** `C:\ProgramData\Emby-Server\plugins`
    - **Linux:** `/opt/emby-server/plugins` (or wherever your installation is)
 3. Restart your Emby server
@@ -73,6 +82,9 @@ From the plugin Settings page you can:
 
 - .NET SDK (any modern version such as .NET 6, 7, or 8 to compile the project)
 - The project compiles to `.NET Standard 2.0` for compatibility with Emby Server
+- Emby 4.10.0.13 reference assemblies in `segment_reporting/embylibs/` (gitignored;
+  see [docs/DEVELOPER.md](docs/DEVELOPER.md) "Building the Plugin" for the one-time
+  extraction command). The build references these instead of a NuGet SDK package.
 
 ### Build
 

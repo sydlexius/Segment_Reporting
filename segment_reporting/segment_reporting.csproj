@@ -7,12 +7,51 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <AnalysisLevel>latest-All</AnalysisLevel>
+    <!-- Target Emby ABI: "4.10" (default; local 4.10.0.13 reference assemblies in
+         embylibs/) or "4.9" (pinned Emby SDK from NuGet). Emby's plugin ABI changed
+         between 4.9 and 4.10, so a build only loads on its matching server line.
+         Override with: dotnet build -p:EmbyAbi=4.9 -->
+    <EmbyAbi Condition="'$(EmbyAbi)' == ''">4.10</EmbyAbi>
   </PropertyGroup>
 
+  <!-- Fail fast on an unsupported EmbyAbi: an unknown value (e.g. a typo like 4.11)
+       would otherwise skip both reference ItemGroups below and fail much later with
+       opaque missing-reference errors. -->
+  <Target Name="ValidateEmbyAbi" BeforeTargets="Restore;ResolveReferences">
+    <Error
+      Condition="'$(EmbyAbi)' != '4.9' AND '$(EmbyAbi)' != '4.10'"
+      Text="Unsupported EmbyAbi '$(EmbyAbi)'. Expected '4.9' or '4.10'." />
+  </Target>
+
   <ItemGroup>
-    <PackageReference Include="mediabrowser.server.core" Version="4.9.*" />
     <PackageReference Include="SQLitePCL.pretty.core" Version="1.2.2" />
     <PackageReference Include="System.Memory" Version="4.6.3" />
+  </ItemGroup>
+
+  <!-- 4.10 ABI: local references to the Emby 4.10.0.13 runtime assemblies
+       (gitignored embylibs/; populated locally or by CI). NuGet has no 4.10.0.13. -->
+  <ItemGroup Condition="'$(EmbyAbi)' == '4.10'">
+    <Reference Include="MediaBrowser.Model">
+      <HintPath>embylibs\MediaBrowser.Model.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MediaBrowser.Common">
+      <HintPath>embylibs\MediaBrowser.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="MediaBrowser.Controller">
+      <HintPath>embylibs\MediaBrowser.Controller.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Emby.Naming">
+      <HintPath>embylibs\Emby.Naming.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <!-- 4.9 ABI: pinned Emby SDK from NuGet (the Emby 4.9.x stable channel artifact). -->
+  <ItemGroup Condition="'$(EmbyAbi)' == '4.9'">
+    <PackageReference Include="mediabrowser.server.core" Version="4.9.1.90" />
   </ItemGroup>
 
   <ItemGroup>

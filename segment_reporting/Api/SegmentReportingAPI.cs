@@ -341,6 +341,11 @@ namespace segment_reporting.Api
 
         public IRequest Request { get; set; }
 
+        private void DisableResponseCache()
+        {
+            Request?.Response?.AddHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+        }
+
         private string GetDbPath()
         {
             return Path.Combine(_config.ApplicationPaths.DataPath, SegmentRepository.DbFileName);
@@ -447,6 +452,7 @@ namespace segment_reporting.Api
 
         public object Get(GetPluginVersion request)
         {
+            DisableResponseCache();
             var v = GetType().Assembly.GetName().Version;
             return new { version = v.ToString() };
         }
@@ -1073,6 +1079,7 @@ namespace segment_reporting.Api
 
         public object Get(GetPluginInfo request)
         {
+            DisableResponseCache();
             var plugin = Plugin.Instance;
             var version = plugin.GetType().Assembly.GetName().Version;
 

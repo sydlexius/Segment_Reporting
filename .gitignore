@@ -35,3 +35,8 @@ project.lock.json
 .env
 .env.*
 !.env.example
+
+## Local Emby reference assemblies extracted from a server build for ABI-exact
+## diagnostic builds (proprietary; never commit). See RCA checkpoint memory.
+embylibs/
+segment_reporting/embylibs/

@@ -103,6 +103,35 @@ dotnet build segment_reporting/segment_reporting.csproj -c Release
 
 The compiled DLL is written to `segment_reporting/bin/Release/netstandard2.0/segment_reporting.dll`.
 
+**Reference assemblies (required):** the plugin builds against the Emby **4.10.0.13**
+runtime assemblies, referenced locally from the gitignored
+`segment_reporting/embylibs/` directory (NuGet has no 4.10.0.13 package, and the
+old floating `mediabrowser.server.core` reference produced a 4.9-ABI DLL that fails
+to load on Emby 4.10 servers). Populate `embylibs/` once before building:
+
+```bash
+mkdir -p segment_reporting/embylibs
+curl -fsSL https://github.com/MediaBrowser/Emby.Releases/releases/download/4.10.0.13/emby-server-freebsd14_4.10.0.13_amd64.tar.xz -o /tmp/emby.tar.xz
+tar xJf /tmp/emby.tar.xz -C /tmp --wildcards '*/MediaBrowser.Model.dll' '*/MediaBrowser.Common.dll' '*/MediaBrowser.Controller.dll' '*/Emby.Naming.dll'
+find /tmp \( -name 'MediaBrowser.*.dll' -o -name 'Emby.Naming.dll' \) -exec cp {} segment_reporting/embylibs/ \;
+```
+
+The managed assemblies are AnyCPU/cross-platform, so the freebsd package works on
+any OS. CI populates `embylibs/` automatically (see the [CI/CD Pipeline](#cicd-pipeline)
+Build Job).
+
+**Building the 4.9 artifact:** the build targets one Emby ABI at a time via the
+`EmbyAbi` MSBuild property. The default (`EmbyAbi=4.10`) uses the local `embylibs/`
+references above. Pass `-p:EmbyAbi=4.9` to build against the pinned
+`mediabrowser.server.core` 4.9.1.90 NuGet package instead (no `embylibs/` needed):
+
+```bash
+dotnet build segment_reporting/segment_reporting.csproj -c Release -p:EmbyAbi=4.9
+```
+
+Each release ships both ABIs as separate zips (`segment_reporting_emby_4.9x.zip`,
+`segment_reporting_emby_4.10x.zip`); a build only loads on its matching Emby line.
+
 **Debug builds** skip JS minification. **Release builds** run a three-step MSBuild
 pipeline (`NpmInstall` -> `MinifyJS` -> `RestoreJS`) that minifies every `.js` file
 in `Pages/` before compilation and restores the originals afterward. This requires
@@ -2186,17 +2215,23 @@ branches. Runs on `ubuntu-latest`.
 1. **Checkout** -- `actions/checkout@v6` (SHA-pinned)
 2. **Setup .NET** -- `actions/setup-dotnet@v5` (SHA-pinned) with .NET 8.0.x
 3. **Setup Node.js** -- `actions/setup-node@v6` (SHA-pinned) with Node 24
-4. **Install JS build tools** -- `npm ci --prefix segment_reporting`
-5. **Minify JS** -- `npm run build:js --prefix segment_reporting` (esbuild
+4. **Fetch Emby 4.10.0.13 reference assemblies** -- downloads the pinned Emby
+   server package and extracts `MediaBrowser.*.dll` + `Emby.Naming.dll` into
+   `segment_reporting/embylibs/` (the gitignored 4.10 ABI references the build
+   binds to; NuGet has no 4.10.0.13)
+5. **Install JS build tools** -- `npm ci --prefix segment_reporting`
+6. **Minify JS** -- `npm run build:js --prefix segment_reporting` (esbuild
    minification of the 7 custom JS files)
-6. **Restore dependencies** -- `dotnet restore Segment_Reporting.sln`
-7. **Build with analyzers** -- `dotnet build` with `-warnaserror` so any
+7. **Restore dependencies** -- `dotnet restore Segment_Reporting.sln`
+8. **Build with analyzers** -- `dotnet build` with `-warnaserror` so any
    StyleCop or analyzer warning fails the build
-8. **Run tests** -- `dotnet test Segment_Reporting.sln --configuration Release
+9. **Run tests** -- `dotnet test Segment_Reporting.sln --configuration Release
    --no-build` runs the xUnit suite (see the Testing section)
-9. **Check code formatting** -- `dotnet format --verify-no-changes` ensures
+10. **Check code formatting** -- `dotnet format --verify-no-changes` ensures
    code style matches `.editorconfig` rules
-10. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
+11. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
+12. **Verify 4.9 ABI also compiles** -- `dotnet build ... -p:EmbyAbi=4.9` so a PR
+    that breaks the 4.9 channel fails CI (the default gate builds the 4.10 ABI)
 
 **Key point:** JS minification happens *before* `dotnet build` so the minified
 files are what gets compiled into the DLL as embedded resources. The MSBuild
@@ -2233,11 +2268,17 @@ Depends on the build job succeeding.
 
 **Steps:**
 
-1. Repeats checkout, .NET/Node setup, JS minification, and build
-2. Downloads the build artifact from the build job
-3. **Creates a GitHub Release** via `softprops/action-gh-release` with the DLL
+1. Repeats checkout, .NET/Node setup, and the 4.10 reference-assembly fetch
+2. **Builds both ABIs** from the same source: `-p:EmbyAbi=4.9` (NuGet 4.9.1.90)
+   and `-p:EmbyAbi=4.10` (embylibs), cleaning between builds. Each compiled
+   `segment_reporting.dll` is zipped under its exact install name into a labelled
+   archive: `segment_reporting_emby_4.9x.zip` and `segment_reporting_emby_4.10x.zip`
+3. **Creates a GitHub Release** via `softprops/action-gh-release` with both zips
    attached and `generate_release_notes: true`, so GitHub auto-generates the
    release body from the pull requests merged since the previous tag
+
+Shipping zipped, correctly-named DLLs (rather than renamed loose `.dll` assets)
+means users unzip and drop `segment_reporting.dll` straight in - no rename step.
 
 **Release notes:** There is no `RELEASE_NOTES.md` file. GitHub generates the
 release body automatically from merged PR titles/labels since the previous
@@ -2610,7 +2651,6 @@ and cropping commands used to produce the images in `docs/Screenshots/`.
 | `query-results.png` | 1460x1000 | static | Results table with Actions dropdown |
 | `settings.png` | 2561x1398 | -- | Plugin settings page |
 | `palette-preview.png` | 1460x1000 | dynamic | Custom color pickers + live preview chart |
-| `about.png` | 2561x1398 | -- | About/info page |
 
 Full-page screenshots show the complete Emby interface (sidebar, header,
 content). Cropped variants focus on a specific feature and are committed

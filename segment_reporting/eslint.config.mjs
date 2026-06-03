@@ -52,8 +52,9 @@ export default [
                 ApiClient: "readonly",
                 Chart: "readonly",
 
-                // Plugin entry point (provided by segment_reporting_helpers.js)
-                getSegmentReportingHelpers: "readonly"
+                // Plugin entry point + build-baked constant (provided by segment_reporting_helpers.js)
+                getSegmentReportingHelpers: "readonly",
+                SEGMENT_REPORTING_PLUGIN_VERSION: "readonly"
             }
         },
         plugins: {
@@ -79,8 +80,9 @@ export default [
         files: ["Pages/segment_reporting_helpers.js"],
         languageOptions: {
             globals: {
-                // Helpers file defines getSegmentReportingHelpers, not consumes it
-                getSegmentReportingHelpers: "off"
+                // Helpers file defines these globals, not consumes them
+                getSegmentReportingHelpers: "off",
+                SEGMENT_REPORTING_PLUGIN_VERSION: "off"
             }
         },
         rules: {

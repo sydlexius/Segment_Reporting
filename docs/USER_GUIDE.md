@@ -779,31 +779,7 @@ to run.
 
 ---
 
-## About
-
-![About](Screenshots/about.png)
-
-*The About page showing plugin version, acknowledgements, and reference links.*
-
-The About page displays:
-
-- **Plugin version** - the currently installed version number
-- **Acknowledgements** - credits to the upstream projects that this plugin is
-  built on:
-  - [playback_reporting](https://github.com/faush01/playback_reporting) - 
-    the architectural template for plugin structure, data layer, and web UI
-  - [ChapterApi](https://github.com/faush01/ChapterApi) - the reference for
-    Emby's segment/chapter APIs
-  - [EmbyCredits](https://github.com/faush01/EmbyCredits) - the optional
-    companion plugin for automatic credits detection
-- **Links** - quick links to the
-  [documentation site](https://sydlexius.github.io/Segment_Reporting/),
-  GitHub repository, issue tracker, releases page, and Emby community forum
-  thread
-- **API reference** - a table listing all the plugin's endpoints for advanced
-  users or script integration
-
-### Getting Help
+## Getting Help
 
 - **Emby Forums** - post questions or feedback in the
   [Segment Reporting discussion thread](https://emby.media/community/index.php?/topic/146268-segment-reporting-plugin/)

@@ -35,6 +35,20 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Fetch Emby 4.10.0.13 reference assemblies
+        run: |
+          set -euo pipefail
+          mkdir -p segment_reporting/embylibs
+          extract_dir="$(mktemp -d)"
+          url="https://github.com/MediaBrowser/Emby.Releases/releases/download/4.10.0.13/emby-server-freebsd14_4.10.0.13_amd64.tar.xz"
+          curl -fsSL "$url" -o /tmp/emby.tar.xz
+          tar xJf /tmp/emby.tar.xz -C "$extract_dir" --wildcards \
+            '*/MediaBrowser.Model.dll' '*/MediaBrowser.Common.dll' \
+            '*/MediaBrowser.Controller.dll' '*/Emby.Naming.dll'
+          find "$extract_dir" \( -name 'MediaBrowser.*.dll' -o -name 'Emby.Naming.dll' \) \
+            -exec cp {} segment_reporting/embylibs/ \;
+          ls -la segment_reporting/embylibs/
+
       - name: Install JS build tools
         run: npm ci --prefix segment_reporting
 
@@ -62,6 +76,9 @@ jobs:
           name: segment_reporting-dll
           path: segment_reporting/bin/Release/**/segment_reporting.dll
 
+      - name: Verify 4.9 ABI also compiles
+        run: dotnet build segment_reporting/segment_reporting.csproj -c Release -p:EmbyAbi=4.9 -warnaserror
+
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -85,28 +102,45 @@ jobs:
         with:
           node-version: '24'
 
+      - name: Fetch Emby 4.10.0.13 reference assemblies
+        run: |
+          set -euo pipefail
+          mkdir -p segment_reporting/embylibs
+          extract_dir="$(mktemp -d)"
+          url="https://github.com/MediaBrowser/Emby.Releases/releases/download/4.10.0.13/emby-server-freebsd14_4.10.0.13_amd64.tar.xz"
+          curl -fsSL "$url" -o /tmp/emby.tar.xz
+          tar xJf /tmp/emby.tar.xz -C "$extract_dir" --wildcards \
+            '*/MediaBrowser.Model.dll' '*/MediaBrowser.Common.dll' \
+            '*/MediaBrowser.Controller.dll' '*/Emby.Naming.dll'
+          find "$extract_dir" \( -name 'MediaBrowser.*.dll' -o -name 'Emby.Naming.dll' \) \
+            -exec cp {} segment_reporting/embylibs/ \;
+          ls -la segment_reporting/embylibs/
+
       - name: Install JS build tools
         run: npm ci --prefix segment_reporting
 
-      - name: Minify JS for Release
-        run: npm run build:js --prefix segment_reporting
-
-      - name: Restore dependencies
-        run: dotnet restore Segment_Reporting.sln
-
-      - name: Build
-        run: dotnet build Segment_Reporting.sln --configuration Release --no-restore
-
-      - name: Download artifact
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: segment_reporting-dll
-          path: ./release-assets
+      - name: Build dual-ABI release artifacts (one zip per Emby line)
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/release-assets"
+          build_zip() {
+            abi="$1"; suffix="$2"
+            rm -rf segment_reporting/obj segment_reporting/bin
+            dotnet build segment_reporting/segment_reporting.csproj -c Release -p:EmbyAbi="$abi" -warnaserror
+            tmp="$(mktemp -d)"
+            # Ship the DLL under the exact name Emby expects, bundled in a labelled zip.
+            cp segment_reporting/bin/Release/netstandard2.0/segment_reporting.dll "$tmp/segment_reporting.dll"
+            (cd "$tmp" && zip -q "segment_reporting_emby_${suffix}.zip" segment_reporting.dll)
+            mv "$tmp/segment_reporting_emby_${suffix}.zip" "$GITHUB_WORKSPACE/release-assets/"
+          }
+          build_zip 4.9 4.9x
+          build_zip 4.10 4.10x
+          ls -la "$GITHUB_WORKSPACE/release-assets/"
 
       - name: Create Release
         uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v3
         with:
-          files: ./release-assets/**/*.dll
+          files: ./release-assets/*.zip
           generate_release_notes: true
           draft: false
           prerelease: false

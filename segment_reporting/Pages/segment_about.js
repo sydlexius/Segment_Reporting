@@ -40,13 +40,24 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             { method: 'GET',  path: 'canned_queries',       description: 'List of built-in queries' },
             { method: 'GET',  path: 'plugin_info',          description: 'Plugin name, version, and description' },
             { method: 'GET',  path: 'preferences',          description: 'Get all display preferences' },
-            { method: 'POST', path: 'preferences',          description: 'Save display preferences' }
+            { method: 'POST', path: 'preferences',          description: 'Save display preferences' },
+            { method: 'POST', path: 'bulk_set_segments',    description: 'Bulk set or adjust segment values on selected items' },
+            { method: 'GET',  path: 'distinct_values',      description: 'Distinct column values for the query builder' },
+            { method: 'GET',  path: 'saved_queries',        description: 'List saved custom queries' },
+            { method: 'POST', path: 'saved_queries',        description: 'Add a saved custom query' },
+            { method: 'DELETE', path: 'saved_queries/{Id}', description: 'Delete a saved custom query' },
+            { method: 'POST', path: 'vacuum',               description: 'VACUUM the cache database' },
+            { method: 'GET',  path: 'version',              description: 'Plugin assembly version (cache validation)' }
         ];
 
         function loadPluginInfo() {
             helpers.apiCall('plugin_info', 'GET').then(function (info) {
                 view.querySelector('#aboutPluginName').textContent = info.name || 'Segment Reporting';
-                view.querySelector('#aboutPluginVersion').textContent = 'v' + (info.version || '?.?.?.?');
+                var bakedVersion = (typeof SEGMENT_REPORTING_PLUGIN_VERSION !== 'undefined' &&
+                    SEGMENT_REPORTING_PLUGIN_VERSION.indexOf('__') !== 0)
+                    ? SEGMENT_REPORTING_PLUGIN_VERSION
+                    : (info.version || '?.?.?.?');
+                view.querySelector('#aboutPluginVersion').textContent = 'v' + bakedVersion;
                 view.querySelector('#aboutPluginDescription').textContent = info.description || '';
             }).catch(function () {
                 view.querySelector('#aboutPluginName').textContent = 'Segment Reporting';

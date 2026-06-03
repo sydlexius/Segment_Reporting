@@ -48,6 +48,21 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
+      - name: Fetch Emby 4.10.0.13 reference assemblies
+        if: matrix.language == 'csharp'
+        run: |
+          set -euo pipefail
+          mkdir -p segment_reporting/embylibs
+          extract_dir="$(mktemp -d)"
+          url="https://github.com/MediaBrowser/Emby.Releases/releases/download/4.10.0.13/emby-server-freebsd14_4.10.0.13_amd64.tar.xz"
+          curl -fsSL "$url" -o /tmp/emby.tar.xz
+          tar xJf /tmp/emby.tar.xz -C "$extract_dir" --wildcards \
+            '*/MediaBrowser.Model.dll' '*/MediaBrowser.Common.dll' \
+            '*/MediaBrowser.Controller.dll' '*/Emby.Naming.dll'
+          find "$extract_dir" \( -name 'MediaBrowser.*.dll' -o -name 'Emby.Naming.dll' \) \
+            -exec cp {} segment_reporting/embylibs/ \;
+          ls -la segment_reporting/embylibs/
+
       - name: Initialize CodeQL
         uses: github/codeql-action/init@87557b9c84dde89fdd9b10e88954ac2f4248e463 # v4.36.1
         with:

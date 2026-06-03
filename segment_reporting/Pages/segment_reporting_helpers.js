@@ -1519,16 +1519,17 @@ var SEGMENT_REPORTING_PLUGIN_VERSION = '__PLUGIN_VERSION__';
     if (SEGMENT_REPORTING_PLUGIN_VERSION.indexOf('__') === 0) return; // dev build, skip check
 
     var reloadKey = 'sr_version_reload';
-    var lastReload = sessionStorage.getItem(reloadKey);
-    if (lastReload === SEGMENT_REPORTING_PLUGIN_VERSION) return; // already reloaded for this version
 
     try {
         var url = ApiClient.getUrl('segment_reporting/version');
         ApiClient.ajax({ type: 'GET', url: url, dataType: 'json' }).then(function (data) {
-            if (data && data.version && data.version !== SEGMENT_REPORTING_PLUGIN_VERSION) {
-                sessionStorage.setItem(reloadKey, SEGMENT_REPORTING_PLUGIN_VERSION);
-                location.reload(true);
-            }
+            if (!data || !data.version) return;
+            if (data.version === SEGMENT_REPORTING_PLUGIN_VERSION) return; // loaded JS already matches the server
+            // Guard keyed to the SERVER target version: reload once per real version change,
+            // so a single soft reload that fails to refresh does not permanently disarm the check.
+            if (sessionStorage.getItem(reloadKey) === data.version) return;
+            sessionStorage.setItem(reloadKey, data.version);
+            location.reload();
         });
     } catch (_e) {
         // Version check is best-effort
