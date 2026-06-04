@@ -34,6 +34,10 @@ Documentation site: **https://sydlexius.github.io/Segment_Reporting/** (User Gui
 - **Cache Maintenance** - Weekly VACUUM task, on-demand Vacuum button, force rescan, and sync status display
 - **About Page** - Plugin version, acknowledgements, Emby Forums link, and API endpoint reference
 
+### Accessibility
+
+- **WCAG 2.1 AA** - ARIA roles, labels, and live-region announcements across every page and chart, plus full keyboard operation: arrow-key nudging of intro/credits markers in the timing dialog (hold Shift for a larger step), Enter/Escape in the editors, keyboard-operable sortable headers, and a keyboard-reachable Undo. See the [Keyboard Shortcuts](docs/USER_GUIDE.md#keyboard-shortcuts) guide.
+
 ## Screenshots
 
 ![Dashboard](docs/Screenshots/dashboard.png)
