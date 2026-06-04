@@ -3,7 +3,7 @@
      data-controller="__plugin/segment_about.js">
 
     <div data-role="content">
-        <div class="content-primary">
+        <div class="content-primary" role="main" aria-label="About Segment Reporting">
 
             <!-- Header -->
             <div class="sectionTitleContainer flex align-items-center">
@@ -37,23 +37,24 @@
                         This plugin builds on the work of several open-source projects and Emby community plugins.
                     </p>
                     <table style="width: 100%; border-collapse: collapse;">
+                        <caption class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Open-source projects and plugins this plugin builds on.</caption>
                         <tbody>
                             <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.2);">
-                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">Playback Reporting</td>
+                                <th scope="row" style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top; text-align: left;">Playback Reporting</th>
                                 <td style="padding: 0.75em 0.5em;">
                                     The architecture pattern for this plugin (SQLite caching, embedded web UI, scheduled tasks) is based on
                                     <a href="https://github.com/faush01/playback_reporting" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">playback_reporting</a> by faush01.
                                 </td>
                             </tr>
                             <tr style="border-bottom: 1px solid rgba(128, 128, 128, 0.2);">
-                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">ChapterApi</td>
+                                <th scope="row" style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top; text-align: left;">ChapterApi</th>
                                 <td style="padding: 0.75em 0.5em;">
                                     Emby's segment and chapter APIs were referenced from
                                     <a href="https://github.com/faush01/ChapterApi" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">ChapterApi</a> by faush01.
                                 </td>
                             </tr>
                             <tr>
-                                <td style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top;">EmbyCredits</td>
+                                <th scope="row" style="padding: 0.75em 0.5em; font-weight: bold; white-space: nowrap; vertical-align: top; text-align: left;">EmbyCredits</th>
                                 <td style="padding: 0.75em 0.5em;">
                                     Credits detection features integrate with the
                                     <a href="https://github.com/rlauuzo/EmbyCredits" target="_blank" rel="noopener" style="color: inherit; text-decoration: underline;">EmbyCredits</a> plugin by rlauuzo.
@@ -112,11 +113,12 @@
                         All endpoints require admin authentication. Base path: <code style="opacity: 0.9;">/emby/segment_reporting/</code>
                     </p>
                     <table id="apiEndpointsTable" style="width: 100%; border-collapse: collapse;">
+                        <caption class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">REST API endpoints provided by the plugin.</caption>
                         <thead>
                             <tr style="border-bottom: 2px solid rgba(128, 128, 128, 0.3);">
-                                <th style="text-align: left; padding: 0.5em;">Method</th>
-                                <th style="text-align: left; padding: 0.5em;">Endpoint</th>
-                                <th style="text-align: left; padding: 0.5em;">Description</th>
+                                <th scope="col" style="text-align: left; padding: 0.5em;">Method</th>
+                                <th scope="col" style="text-align: left; padding: 0.5em;">Endpoint</th>
+                                <th scope="col" style="text-align: left; padding: 0.5em;">Description</th>
                             </tr>
                         </thead>
                         <tbody id="apiEndpointsBody">

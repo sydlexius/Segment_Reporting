@@ -3,6 +3,14 @@ pre-commit:
   commands:
     dotnet-format:
       glob: "*.cs"
+      # Build at the 4.9 ABI (Emby SDK from NuGet) so a fresh clone or git
+      # worktree without the gitignored 4.10 embylibs/ reference DLLs can still
+      # commit. Formatting is ABI-independent; the pre-push gate and CI still
+      # build the default 4.10 ABI.
+      # EmbyAbi is set via env (not an inline VAR=val prefix) so the command is
+      # shell-agnostic and works on Windows (cmd/PowerShell) as well as Unix.
+      env:
+        EmbyAbi: "4.9"
       run: dotnet format segment_reporting/segment_reporting.csproj --verify-no-changes
     eslint:
       glob: "segment_reporting/Pages/*.js"

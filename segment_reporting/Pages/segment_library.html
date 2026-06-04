@@ -3,10 +3,10 @@
      data-controller="__plugin/segment_library.js">
 
     <div data-role="content">
-        <div class="content-primary">
+        <div class="content-primary" role="main" aria-label="Library segment coverage">
 
             <!-- Breadcrumbs -->
-            <div id="breadcrumbContainer"></div>
+            <nav id="breadcrumbContainer" aria-label="Breadcrumb"></nav>
 
             <!-- Header -->
             <div class="sectionTitleContainer flex align-items-center">
@@ -29,7 +29,7 @@
                         </select>
                     </div>
                     <div style="flex: 1 1 300px;">
-                        <input id="searchBox" type="text" class="emby-input" placeholder="Search by name..." style="width: 100%; max-width: 400px;" />
+                        <input id="searchBox" type="text" class="emby-input" placeholder="Search by name..." aria-label="Search by name" style="width: 100%; max-width: 400px;" />
                     </div>
                 </div>
             </div>
@@ -57,16 +57,17 @@
                 </style>
                 <div class="paperList">
                     <table id="seriesTable" class="tblSeries" style="width: 100%;">
+                        <caption class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Segment coverage by series. Column headers are sortable; press Enter or Space on a header to sort.</caption>
                         <thead>
                             <tr>
-                                <th data-sort="name" style="text-align: left;">Name <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="total" style="text-align: left;">Total Items <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="intro" style="text-align: left;">With Intro <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="credits" style="text-align: left;">With Credits <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="both" style="text-align: left;">Both <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="introPct" style="text-align: left;">Intro % <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="creditsPct" style="text-align: left;">Credits % <span class="sort-arrow">&#9650;</span></th>
-                                <th id="thSeriesActions" style="text-align: center;">Actions</th>
+                                <th scope="col" data-sort="name" tabindex="0" role="button" aria-sort="ascending" style="text-align: left;">Name <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="total" tabindex="0" role="button" style="text-align: left;">Total Items <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="intro" tabindex="0" role="button" style="text-align: left;">With Intro <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="credits" tabindex="0" role="button" style="text-align: left;">With Credits <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="both" tabindex="0" role="button" style="text-align: left;">Both <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="introPct" tabindex="0" role="button" style="text-align: left;">Intro % <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="creditsPct" tabindex="0" role="button" style="text-align: left;">Credits % <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" id="thSeriesActions" style="text-align: center;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="seriesTableBody">
@@ -85,13 +86,14 @@
                 <h3 class="sectionTitle">Movies</h3>
                 <div class="paperList">
                     <table id="movieTable" class="tblMovies" style="width: 100%;">
+                        <caption class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Segment markers by movie. Column headers are sortable; press Enter or Space on a header to sort.</caption>
                         <thead>
                             <tr>
-                                <th data-sort="name">Name <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="introStart">Intro Start <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="introEnd">Intro End <span class="sort-arrow">&#9650;</span></th>
-                                <th data-sort="creditsStart">Credits Start <span class="sort-arrow">&#9650;</span></th>
-                                <th>Actions</th>
+                                <th scope="col" data-sort="name" tabindex="0" role="button" aria-sort="ascending">Name <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="introStart" tabindex="0" role="button">Intro Start <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="introEnd" tabindex="0" role="button">Intro End <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col" data-sort="creditsStart" tabindex="0" role="button">Credits Start <span class="sort-arrow" aria-hidden="true">&#9650;</span></th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="movieTableBody">

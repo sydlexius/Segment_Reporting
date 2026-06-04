@@ -107,6 +107,35 @@ sr_status() {
 
 jqf() { jq -r "$1"; }
 
+# delete_uat_libraries [prefix] -- remove every Emby VirtualFolder whose name
+# starts with the synthetic UAT prefix (default "SR-UAT"). Name-based delete
+# throws a NullReferenceException on Emby 4.9.5, so we resolve each
+# VirtualFolder's ItemId and delete by id (which returns 204).
+#
+# This is the shared idempotency + "merge-disable" reset used by both seed.sh and
+# clean.sh: it guarantees a prior run's libraries (the primary SR-UAT-TV /
+# SR-UAT-Movies pair, the themed extra libraries, and any symlink duplicate-root
+# libraries) are all torn down before a fresh seed re-creates them. Matching by
+# prefix (instead of by exact name) is what lets the seed grow or shrink the set
+# of synthetic libraries without leaving orphans behind.
+delete_uat_libraries() {
+    local prefix="${1:-SR-UAT}" id name status
+    sr_get /emby/Library/VirtualFolders '' \
+        | jq -r --arg p "$prefix" '
+            map(select((.Name // "") | startswith($p)))
+            | .[] | [ (.ItemId // .Id // ""), (.Name // "") ] | @tsv' \
+    | while IFS=$'\t' read -r id name; do
+        [ -n "$id" ] || continue
+        log "Removing library '$name' (id=$id)"
+        status="$(curl -s -o /dev/null -w '%{http_code}' "${SR_CURL_OPTS[@]}" -X DELETE \
+            -H "X-Emby-Token: ${API_KEY}" \
+            "${BASE_URL}/emby/Library/VirtualFolders?id=${id}" || echo "000")"
+        if [ "$status" != "204" ] && [ "$status" != "404" ]; then
+            log "WARN: failed to remove library '$name' (id=$id, status=$status)"
+        fi
+    done
+}
+
 wait_for_healthy() {
     # Short per-attempt timeout (2s) so a non-responding target can't stall each
     # of the 60 iterations; the loop still bounds total wait to ~60s.

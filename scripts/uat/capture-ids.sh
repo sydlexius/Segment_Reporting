@@ -16,8 +16,10 @@ LOCAL_BRU="$REPO_ROOT/bruno-tests/segment-reporting-api/environments/Local.bru"
 items_json="$(sr_get /emby/Items \
     'Recursive=true&IncludeItemTypes=Episode,Series,Season,Movie&Fields=Path,ParentId')"
 
+# Synthetic show titles are now varied (no fixed "SR Test" prefix), so key the
+# sample series off the in-container media path instead of the name.
 sampleSeriesId="$(echo "$items_json" | jq -r '
-    .Items | map(select(.Type=="Series" and ((.Name // "") | startswith("SR Test")))) | (.[0].Id // empty)')"
+    .Items | map(select(.Type=="Series" and ((.Path // "") | startswith("/uat-media")))) | (.[0].Id // empty)')"
 sampleSeasonId="$(echo "$items_json" | jq -r --arg s "$sampleSeriesId" '
     .Items | map(select(.Type=="Season" and (.SeriesId == $s or .ParentId == $s))) | (.[0].Id // empty)')"
 # Two episodes under /uat-media for sampleItemId / sampleItemId2.

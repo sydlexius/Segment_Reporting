@@ -122,7 +122,7 @@
     </style>
 
     <div data-role="content">
-        <div class="content-primary">
+        <div class="content-primary" role="main" aria-label="Custom query">
 
             <!-- Header -->
             <div class="sectionTitleContainer flex align-items-center">
@@ -188,14 +188,14 @@
                 <!-- Result Info -->
                 <div id="resultInfo" style="margin-bottom: 1em; padding: 0.5em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px; display: none;">
                     <span id="resultCount" style="display: none;">Rows returned: <strong id="rowCount">0</strong></span>
-                    <span id="resultError" style="color: #F44336; display: none;"></span>
+                    <span id="resultError" role="alert" style="color: #F44336; display: none;"></span>
                     <span id="editingIndicator" style="display: none; margin-left: 1em; font-size: 0.9em; opacity: 0.7;"></span>
                 </div>
 
                 <!-- Bulk Actions -->
-                <div id="bulkActionBar" style="display: none; padding: 0.5em 0.75em; margin-bottom: 0.5em; background-color: rgba(255,255,255,0.03); border-radius: 4px; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: space-between;">
+                <div id="bulkActionBar" role="region" aria-label="Bulk actions" style="display: none; padding: 0.5em 0.75em; margin-bottom: 0.5em; background-color: rgba(255,255,255,0.03); border-radius: 4px; flex-wrap: wrap; gap: 0.5em; align-items: center; justify-content: space-between;">
                     <div style="display: flex; align-items: center; gap: 0.75em;">
-                        <span id="bulkSelectionInfo" style="font-size: 0.9em; opacity: 0.8;"></span>
+                        <span id="bulkSelectionInfo" role="status" aria-live="polite" style="font-size: 0.9em; opacity: 0.8;"></span>
                     </div>
                     <div id="bulkActionButtons" style="display: flex; align-items: center; gap: 0.5em; flex-wrap: wrap;">
                     </div>

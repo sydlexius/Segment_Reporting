@@ -5,8 +5,10 @@
 # Makefile can never silently drift the build. Run `make help` for the list.
 #
 # The UAT Emby harness ships here as `make uat-deploy|uat-seed|uat-test|bruno|
-# uat-clean|uat` (Phase 2, #106) driving scripts/uat/*. Fuzzing and leak
-# detection (`make fuzz|leak-check`) remain Phase 3 and ship with their work.
+# uat-clean|uat` (Phase 2, #106) driving scripts/uat/*. SharpFuzz fuzzing of the
+# pure SQL validators runs in a short-lived Linux container via `make fuzz`
+# (bounded) / `make fuzz-deep` (unbounded) driving scripts/fuzz/*; both are
+# local-only manual gates and never run in CI or a git hook.
 
 SLN := Segment_Reporting.sln
 NPM_PREFIX := segment_reporting
@@ -15,7 +17,8 @@ NPM_PREFIX := segment_reporting
 
 .PHONY: help restore build build-release test format format-check lint gate \
         hooks hooks-install docs docs-deps docs-serve screenshots clean \
-        uat-deploy uat-seed uat-test bruno uat-clean uat uat-concurrency
+        uat-deploy uat-seed uat-test bruno uat-clean uat uat-concurrency \
+        fuzz fuzz-deep
 
 help: ## Show this help
 	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -87,3 +90,15 @@ uat-clean: ## UAT: remove synthetic libraries/media, reset Local.bru IDs
 	bash scripts/uat/clean.sh
 
 uat: uat-deploy uat-seed uat-test ## UAT: full chain (deploy -> seed -> test)
+
+FUZZ_IMAGE := segment-reporting-fuzz
+
+fuzz: ## Fuzz the pure validators in Docker (local-only; bounded 60s/target)
+	@echo "Local manual gate: builds + runs SharpFuzz inside a Linux container."
+	docker build -t $(FUZZ_IMAGE) -f scripts/fuzz/Dockerfile .
+	docker run --rm -e MAX_TOTAL_TIME=60 -v "$(CURDIR)":/src $(FUZZ_IMAGE)
+
+fuzz-deep: ## Fuzz unbounded in Docker (deliberate sessions; Ctrl-C to stop)
+	@echo "Local manual gate: unbounded SharpFuzz campaign inside a Linux container."
+	docker build -t $(FUZZ_IMAGE) -f scripts/fuzz/Dockerfile .
+	docker run --rm -e MAX_TOTAL_TIME=0 -v "$(CURDIR)":/src $(FUZZ_IMAGE)

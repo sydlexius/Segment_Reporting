@@ -76,6 +76,8 @@ From the plugin Settings page you can:
 - View cache statistics (row count, database size, last sync time)
 - Force a full rescan or vacuum the database on demand
 
+> **Note:** The admin pages are designed for desktop browsers. Mobile web browsers (phone/tablet) are not currently supported - the wide data tables, inline editing, and query builder assume a desktop viewport (see issue #47).
+
 ## Building from Source
 
 ### Prerequisites

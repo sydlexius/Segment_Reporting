@@ -194,7 +194,7 @@ seed media -> Emby ingest -> plugin sync -> set markers -> read reports -> asser
 | Target | Description |
 |--------|-------------|
 | `make uat-deploy` | Build the Release DLL, `docker cp` it into the container's `/config/plugins`, restart Emby, wait until healthy. |
-| `make uat-seed` | Generate sparse media + lockdata NFOs, `docker cp` into `/uat-media`, create the `SR-UAT-TV` / `SR-UAT-Movies` libraries via the VirtualFolders API, scan, `sync_now`, write a varied marker coverage matrix, and capture the discovered IDs into `bruno-tests/.../environments/Local.bru`. Idempotent. |
+| `make uat-seed` | Generate a rich sparse-media tree + lockdata NFOs (multiple libraries, many shows across several seasons, two movie libraries), `docker cp` into `/uat-media`, create every library from the generated manifest via the VirtualFolders API, scan, `sync_now`, write a 4-bucket marker coverage matrix derived from each item's runtime, and capture the discovered IDs into `bruno-tests/.../environments/Local.bru`. Idempotent (tears down all `SR-UAT*` libraries first). Tunable via `SR_UAT_SHOWS_PER_LIB` / `SR_UAT_MAX_SEASONS` / `SR_UAT_MAX_EPISODES` / `SR_UAT_MOVIES_PER_LIB` / `SR_UAT_DUP_ROOTS`. |
 | `make uat-test` (alias `make bruno`) | Run the Bruno collection assertions against UAT (reads `apiKey` from `.env`). |
 | `make uat-concurrency` | Stress `SegmentRepository` lock ordering (#66) with concurrent API workers (mixed reads plus an idempotent `/uat-media` write); fails on any request error/timeout or rowCount drift. Needs `make uat-seed` first. Tunable via `WORKERS` / `ITERATIONS` (defaults 8 / 25). Not run in CI. |
 | `make uat-clean` | Delete the `SR-UAT` libraries, remove `/uat-media` in the container, and reset the captured IDs in `Local.bru` to placeholders. |
@@ -202,11 +202,38 @@ seed media -> Emby ingest -> plugin sync -> set markers -> read reports -> asser
 
 The synthetic media is generated as static black-frame H.264 clips (a 10-minute
 clip is ~9.7 KB) that still report a true runtime, so markers sit at lifelike
-offsets. Because `docker cp` writes into the container's ephemeral layer, the
-seeded media does not survive a container rebuild; recovery is just re-running
-`make uat-seed`. The seed populates all four `library_summary` coverage buckets
-(`WithIntro` / `WithCredits` / `WithBoth` / `WithNeither`) and includes a movies
-library to exercise the null `series` / `season` code path.
+offsets. Clip durations vary, and the coverage matrix derives each marker offset
+from the item's `RunTimeTicks` (IntroStart 5s, IntroEnd 35s, CreditsStart 30s
+before the end), so markers always land in-bounds and spread across the charts.
+Because `docker cp` writes into the container's ephemeral layer, the seeded media
+does not survive a container rebuild; recovery is just re-running `make uat-seed`.
+The seed cycles all four `library_summary` coverage buckets (`WithBoth` /
+`WithIntro` / `WithCredits` / `WithNeither`) across every episode and includes
+movie libraries to exercise the null `series` / `season` code path.
+
+`scripts/uat/gen-media.sh` is the single source of truth for the library set: it
+generates the tree and writes a `libraries.tsv` manifest
+(`<name>\t<collectionType>\t<containerPath>` per row) that `seed.sh` reads to
+create the Emby libraries. By default it builds two TV libraries (`SR-UAT-TV`,
+`SR-UAT-TV-Classics`) and two movie libraries (`SR-UAT-Movies`,
+`SR-UAT-Movies-Indie`). The first TV and first movie library keep their canonical
+names because `capture-ids.sh` and the Bruno environment key sample IDs off them;
+the extras exist to make the dashboard show several library rows. All synthetic
+libraries are named with the `SR-UAT` prefix so `delete_uat_libraries()` (in
+`lib.sh`) can tear the whole set down by prefix for idempotency.
+
+**Duplicate-root library inflation (`SR_UAT_DUP_ROOTS`, optional).** To inflate
+the library count cheaply, `SR_UAT_DUP_ROOTS=N` generates one shared content tree
+plus N sibling symlinks to it, registering each symlink as its own library
+(`SR-UAT-Dup-1` ...). Relative symlink targets are used so they resolve under
+`/uat-media` after `docker cp`. **Verified on Emby (UAT, 4.9.x):** distinct
+symlink roots pointing at the same target register as separate libraries (a
+`SR_UAT_DUP_ROOTS=2` run produced `SR-UAT-Dup-1` and `SR-UAT-Dup-2` as two
+distinct VirtualFolders, each with its own items) - Emby does not canonicalize
+the root or dedupe to the shared inode. Multiple same-content-type libraries at
+genuinely distinct paths (the 4 defaults) also render separately, so no explicit
+merge-disable option is needed. Default is `0` (off) since the 4 distinct-path
+libraries already give the dashboard several rows.
 
 ### Automatic Deploy via Environment Variable
 
@@ -1670,7 +1697,7 @@ helpers.ticksToTime(50000000);  // "00:00:05.000"
 | Function | Description |
 |----------|-------------|
 | `getThemeColors(view)` | Returns the current theme's color set (accent, text, chart palette, card backgrounds). Respects user preferences for palette selection. |
-| `createSegmentChart(Chart, ctx, labels, segmentData, view, options)` | Creates a pre-configured stacked bar chart with theme-aware colors, legend, and tooltips. All chart pages use this for visual consistency. |
+| `createSegmentChart(Chart, ctx, labels, segmentData, view, options)` | Creates a pre-configured stacked bar chart with theme-aware colors, legend, and tooltips. All chart pages use this for visual consistency. Also marks the canvas as `role="img"` with a concise `aria-label` and links a visually-hidden data table via `aria-describedby` for screen readers (pass `options.ariaCaption` for the chart's accessible name). |
 | `registerChartCleanup(view, getChart, setChart)` | Registers viewhide/viewdestroy handlers to destroy a Chart.js instance. |
 | `generateChartPalette(accentHex)` | Auto-selects the best built-in palette based on hue distance from the accent color. |
 | `getPaletteByName(name)` | Looks up a named palette from the `chartPalettes` array. |
@@ -1749,6 +1776,34 @@ call that backs both per-row and bulk apply/undo.
 | `CreditsDetector/ProcessSeries` | POST | `SeriesId` | Series-level detect button |
 | `CreditsDetector/ProcessSeason` | POST | `SeriesId`, `SeasonNumber`, `SkipExistingMarkers` | Season Actions > Detect All |
 | `CreditsDetector/ProcessSeasonMissingMarkers` | POST | `SeriesId`, `SeasonNumber` | Season Actions > Detect Missing |
+
+#### Accessibility (a11y)
+
+These helpers back the plugin's WCAG 2.1 AA support (issue #57). They let pages
+announce dynamic changes to screen readers and expose chart data as an
+accessible alternative.
+
+| Function | Description |
+|----------|-------------|
+| `announce(view, message)` | Sends a message to the page's polite live region so screen readers read it. Used after filtering, sorting, query execution, and bulk selection. The text is cleared and re-set on a short delay so identical consecutive messages are still announced. |
+| `getLiveRegion(view)` | Returns (or lazily creates) the page-level `role="status"` `aria-live="polite"` region appended to `.content-primary`. Visually hidden. |
+| `describeChart(canvas, ariaLabel, describeEl)` | Marks a `<canvas>` as `role="img"` with `aria-label`, and optionally appends a visually-hidden element (typically a data table) linked via `aria-describedby`. Pass `null` for `describeEl` on purely decorative charts. |
+| `buildDataTable(caption, columns, rows)` | Builds a `<table>` element (with `<caption>`, `scope="col"` headers, and `scope="row"` first cells) from plain arrays. Used as the visually-hidden screen-reader alternative for charts. |
+| `describeSegmentChart(canvas, caption, labels, segmentData)` | Convenience wrapper that builds a per-category data table (Both / Intro Only / Credits Only / No Segments) and calls `describeChart`. Invoked automatically by `createSegmentChart`. |
+
+**Conventions:**
+
+- Each page wraps its primary content in `role="main"` with a descriptive
+  `aria-label`; breadcrumb containers are `<nav aria-label="Breadcrumb">`.
+- Every `<canvas>` chart has `role="img"` plus an `aria-label`, and (except for
+  decorative previews) a hidden data table linked via `aria-describedby`.
+- Sortable table headers use `aria-sort` (updated on sort), are keyboard
+  operable (Enter/Space), and carry `scope="col"`. Data tables have an
+  `sr-only` `<caption>`.
+- Autocomplete inputs follow the combobox pattern (`role="combobox"`,
+  `aria-expanded`, `aria-controls`, `aria-activedescendant`); the dropdown is
+  `role="listbox"` with `role="option"` items. Chips expose a keyboard-operable
+  remove button (`role="button"`, `aria-label="Remove ..."`).
 
 ---
 
@@ -2429,8 +2484,8 @@ The plugin analyzer set also includes `Microsoft.VisualStudio.Threading.Analyzer
 (threading-antipattern static checks), enforced by the `-warnaserror` Release
 build in CI and the local pre-push gate.
 
-Remaining issue #106 work: SharpFuzz fuzz targets for the query validators (run
-in Docker, local-only).
+The same validators are also fuzzed with SharpFuzz (Docker, local-only); see
+[Fuzzing the SQL Validators](#fuzzing-the-sql-validators-docker-manual) below.
 
 ### Concurrency Stress (UAT, manual)
 
@@ -2445,6 +2500,79 @@ deadlock) or if the row count drifts (the writes are idempotent, so drift implie
 a lost update or corruption). Local manual gate only: it needs the UAT Emby up and
 seeded (`make uat-seed`) and never runs in CI or a git hook. Tune with the
 `WORKERS` and `ITERATIONS` environment variables (defaults 8 and 25).
+
+### Fuzzing the SQL Validators (Docker, manual)
+
+The custom-query security predicates are the plugin's trust boundary for the
+admin custom-query feature, so they are fuzzed in addition to the example-based
+unit tests. The `tests/segment_reporting.Fuzz` console project (net8.0,
+referencing the plugin via an `InternalsVisibleTo("segment_reporting.Fuzz")`
+seam) drives SharpFuzz against the two branch-rich string predicates:
+
+| Target name | Function under test |
+|-------------|---------------------|
+| `dangerous` | `SegmentRepository.ContainsDangerousKeyword(string)` |
+| `pragma` | `SegmentRepository.IsAllowedPragma(string)` |
+
+The property under test is simple: each must return a `bool` for ANY input and
+never throw. A SharpFuzz crash (a thrown exception on some input) is a genuine
+finding to fix in the validator.
+
+The `MarkerTypes.Valid` whitelist lookup is deliberately **not** an AFL target.
+`MarkerTypes.Valid.Contains(input)` routes only through framework `HashSet`
+collection code with no branches in our own assembly, so SharpFuzz/AFL finds no
+instrumented coverage and aborts the campaign with "No instrumentation
+detected". The lookup also provably never throws on a non-null string, so its
+"never throw for any input" property is covered by an ordinary xUnit test
+(`MarkerTypesTests.Valid_Contains_ToleratesEdgeInputs_WithoutThrowing`, which
+exercises empty, unicode, and very long inputs) rather than by fuzzing.
+
+SharpFuzz is Linux-first (it drives AFL), so the campaign runs in a short-lived
+container built from `scripts/fuzz/Dockerfile`; nothing fuzz-related touches the
+developer's macOS host directly, and it is never wired into CI or a git hook.
+
+| Command | Behavior |
+|---------|----------|
+| `make fuzz` | Build the image, then fuzz each target for a bounded 60s (`MAX_TOTAL_TIME=60`). |
+| `make fuzz-deep` | Same image, unbounded campaign (`MAX_TOTAL_TIME=0`); stop with Ctrl-C. |
+
+Both targets `docker build` the image and `docker run` it with the repo
+bind-mounted at `/src`. The container entrypoint is `scripts/fuzz/run-fuzz.sh`,
+which builds the fuzz project, instruments `segment_reporting.dll` with the
+`sharpfuzz` CLI, seeds a benign `SELECT` corpus, and runs `afl-fuzz` per target.
+Crashes (if any) land under `tests/segment_reporting.Fuzz/findings/<target>/crashes/`.
+
+The runner builds the plugin in `Debug` against the `4.9` Emby ABI by default
+(overridable via the `BUILD_CONFIG` and `EMBY_ABI` environment variables). This
+sidesteps two container-only concerns that do not affect the pure string
+predicates being fuzzed: the Release build minifies embedded JS via npm (no
+Node in the image), and the default `4.10` ABI references the gitignored
+`embylibs/` reference assemblies, which are absent in the container, whereas the
+`4.9` ABI resolves the Emby SDK from NuGet. Narrow a run with `FUZZ_TARGETS`
+(for example `-e FUZZ_TARGETS=dangerous`).
+
+### Memory and Leak Profiling (manual)
+
+The plugin caches into SQLite and runs scheduled syncs, so the leak class that
+matters is managed-heap growth across repeated sync cycles. This is a manual,
+local procedure with no CI gate:
+
+1. Start the UAT Emby harness and install the plugin (`make uat-deploy`,
+   `make uat-seed`).
+2. Install the tools once: `dotnet tool install --global dotnet-gcdump` and
+   `dotnet tool install --global dotnet-counters`.
+3. Find the Emby server process ID, then capture a baseline snapshot:
+   `dotnet-gcdump collect -p <pid> -o before.gcdump`.
+4. Trigger several full sync cycles (run `sync_now` a few times via the UAT
+   harness or the admin UI), optionally watching live with
+   `dotnet-counters monitor -p <pid> System.Runtime` (watch `GC Heap Size` and
+   the Gen 2 collection count).
+5. Capture a second snapshot: `dotnet-gcdump collect -p <pid> -o after.gcdump`.
+6. Compare the two `.gcdump` files (in Visual Studio, or with
+   `dotnet-gcdump report`) by object count. Healthy: the managed heap returns to
+   roughly the baseline after a GC, and `SegmentInfo` and SQLite connection
+   objects do not accumulate per cycle. A monotonic climb in either across
+   cycles indicates a leak to investigate.
 
 ### Manual Testing Workflow
 
@@ -2694,6 +2822,47 @@ temp path for smoke tests so committed images are not overwritten accidentally.
 
 The script requires a running Emby server with the plugin installed and synced.
 ImageMagick (`magick` CLI) must be on PATH for cropping.
+
+<!-- BEGIN UAT-SCREENSHOTS (issue #117) - keep edits localized to this block -->
+### Capturing Against the UAT Emby
+
+The capture script has two targets. The default (prod) path captures the real
+Emby server and anonymizes every name at the network layer; the committed images
+in `docs/Screenshots/` come from there. The UAT path captures the synthetic UAT
+Emby seeded by `make uat-seed`, whose data is already fictional, so anonymization
+is skipped and the `EMBY_UAT_*` credentials are used by default.
+
+Set `CAPTURE_TARGET=uat` to switch:
+
+```bash
+# Seed the synthetic libraries first (see "UAT Emby Harness" above).
+make uat-seed
+
+# Capture against UAT. URL/key/user/password default to the EMBY_UAT_* vars
+# (override any of them with the plain EMBY_* vars if needed).
+export CAPTURE_TARGET=uat
+export EMBY_UAT_USER="admin"           # or set EMBY_USER
+export EMBY_UAT_PASSWORD="password"    # or set EMBY_PASSWORD
+node scripts/capture-screenshots.mjs
+```
+
+Differences from the prod path in UAT mode:
+
+- **No anonymization.** The network-layer rewrite is disabled (the UAT data is
+  already synthetic), so screenshots show the real seeded names.
+- **Credentials.** `EMBY_URL` / `EMBY_API_KEY` / `EMBY_USER` / `EMBY_PASSWORD`
+  fall back to `EMBY_UAT_URL` / `EMBY_UAT_API_KEY` / `EMBY_UAT_USER` /
+  `EMBY_UAT_PASSWORD`. (These come from the gitignored `.env`; see the UAT
+  harness safety notes above.)
+- **Output directory.** Defaults to a temp scratch dir
+  (`$TMPDIR/sr-uat-screenshots`) instead of `docs/Screenshots/`, so a UAT run
+  never overwrites the committed anonymized prod images. Override with
+  `SCREENSHOTS_DIR`.
+
+`CAPTURE_ONLY` still works to capture a subset. Because UAT capture skips
+anonymization, never commit UAT screenshots in place of the anonymized prod
+images without confirming they contain only synthetic `SR-UAT*` data.
+<!-- END UAT-SCREENSHOTS -->
 
 ### Data Anonymization
 

@@ -391,24 +391,28 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         function getPillContainerHtml(cond, fieldDef) {
             var vals = cond.values || [];
             var accentRgb = getAccentRgb();
-            var html = '<div class="sr-pill-container" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '">';
+            var fieldLabel = fieldDef.label || fieldDef.name;
+            var dropdownId = 'srAcList_' + cond.id;
+            var html = '<div class="sr-pill-container" role="group" aria-label="' + escHtml(fieldLabel) + ' values" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '">';
             for (var i = 0; i < vals.length; i++) {
                 html += '<span class="sr-chip" style="background:rgba(' + accentRgb + ',0.2);border:1px solid rgba(' + accentRgb + ',0.5);">';
                 html += escHtml(vals[i]);
-                html += '<span class="sr-chip-x" data-action="remove-chip" data-id="' + cond.id + '" data-idx="' + i + '">&times;</span>';
+                html += '<span class="sr-chip-x" role="button" tabindex="0" aria-label="Remove ' + escHtml(vals[i]) + '" data-action="remove-chip" data-id="' + cond.id + '" data-idx="' + i + '">&times;</span>';
                 html += '</span>';
             }
-            html += '<input type="text" class="sr-pill-input" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" placeholder="Type to search..." autocomplete="off">';
-            html += '<div class="sr-ac-dropdown" data-id="' + cond.id + '" style="display:none;"></div>';
+            html += '<input type="text" class="sr-pill-input" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="' + dropdownId + '" aria-label="Add ' + escHtml(fieldLabel) + ' value" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" placeholder="Type to search..." autocomplete="off">';
+            html += '<div class="sr-ac-dropdown" role="listbox" id="' + dropdownId + '" data-id="' + cond.id + '" style="display:none;"></div>';
             html += '</div>';
             return html;
         }
 
         function getAutocompleteInputHtml(cond, fieldDef) {
+            var fieldLabel = fieldDef.label || fieldDef.name;
+            var dropdownId = 'srAcList_' + cond.id;
             var html = '<div class="sr-ac-wrapper" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '">';
-            html += '<input type="text" class="sr-ac-input" data-field="value" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" ' +
+            html += '<input type="text" class="sr-ac-input" role="combobox" aria-expanded="false" aria-autocomplete="list" aria-controls="' + dropdownId + '" aria-label="' + escHtml(fieldLabel) + ' value" data-field="value" data-id="' + cond.id + '" data-field-name="' + fieldDef.name + '" ' +
                 'value="' + escHtml(cond.value) + '" placeholder="Type to search..." style="' + S_INPUT + 'width:200px;" autocomplete="off">';
-            html += '<div class="sr-ac-dropdown" data-id="' + cond.id + '" style="display:none;"></div>';
+            html += '<div class="sr-ac-dropdown" role="listbox" id="' + dropdownId + '" data-id="' + cond.id + '" style="display:none;"></div>';
             html += '</div>';
             return html;
         }
@@ -1113,7 +1117,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 dds[i].style.display = 'none';
                 dds[i].innerHTML = '';
             }
+            var inputs = view.querySelectorAll('.sr-pill-input, .sr-ac-input');
+            for (var j = 0; j < inputs.length; j++) {
+                inputs[j].setAttribute('aria-expanded', 'false');
+                inputs[j].removeAttribute('aria-activedescendant');
+            }
             _acDropdownIdx = -1;
+        }
+
+        // Find the combobox input paired with an autocomplete dropdown.
+        function getDropdownInput(dropdown) {
+            if (!dropdown || !dropdown.parentElement) return null;
+            return dropdown.parentElement.querySelector('.sr-pill-input, .sr-ac-input');
         }
 
         var _dropdownBg = null;
@@ -1126,33 +1141,49 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
 
         function showDropdown(dropdown, suggestions, condId) {
             dropdown.style.backgroundColor = detectDropdownBg();
+            var input = getDropdownInput(dropdown);
 
             if (suggestions.length === 0) {
                 dropdown.innerHTML = '<div class="sr-ac-empty">No matches</div>';
                 dropdown.style.display = 'block';
+                if (input) {
+                    input.setAttribute('aria-expanded', 'true');
+                    input.removeAttribute('aria-activedescendant');
+                }
                 _acDropdownIdx = -1;
                 return;
             }
             var html = '';
             for (var i = 0; i < suggestions.length && i < 50; i++) {
-                html += '<div class="sr-ac-item" data-value="' + escHtml(suggestions[i]) + '" data-id="' + condId + '">' + escHtml(suggestions[i]) + '</div>';
+                var optId = dropdown.id + '_opt' + i;
+                html += '<div class="sr-ac-item" id="' + optId + '" role="option" aria-selected="false" data-value="' + escHtml(suggestions[i]) + '" data-id="' + condId + '">' + escHtml(suggestions[i]) + '</div>';
             }
             if (suggestions.length > 50) {
                 html += '<div class="sr-ac-empty">... ' + (suggestions.length - 50) + ' more (keep typing)</div>';
             }
             dropdown.innerHTML = html;
             dropdown.style.display = 'block';
+            if (input) {
+                input.setAttribute('aria-expanded', 'true');
+                input.removeAttribute('aria-activedescendant');
+            }
             _acDropdownIdx = -1;
         }
 
         function highlightDropdownItem(dropdown, idx) {
             var items = dropdown.querySelectorAll('.sr-ac-item');
+            var input = getDropdownInput(dropdown);
             for (var i = 0; i < items.length; i++) {
                 items[i].classList.remove('sr-ac-active');
+                items[i].setAttribute('aria-selected', 'false');
             }
             if (idx >= 0 && idx < items.length) {
                 items[idx].classList.add('sr-ac-active');
+                items[idx].setAttribute('aria-selected', 'true');
                 items[idx].scrollIntoView({ block: 'nearest' });
+                if (input && items[idx].id) input.setAttribute('aria-activedescendant', items[idx].id);
+            } else if (input) {
+                input.removeAttribute('aria-activedescendant');
             }
         }
 
@@ -1214,6 +1245,25 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         function onAcKeydown(e) {
             var target = e.target;
             if (!target.classList) return;
+
+            // Activate a chip remove button via keyboard (Enter or Space).
+            if (target.classList.contains('sr-chip-x') && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+                e.preventDefault();
+                var rmCondId = parseInt(target.getAttribute('data-id'), 10);
+                var rmIdx = parseInt(target.getAttribute('data-idx'), 10);
+                var rmCond = findInItems(builderState.items, rmCondId);
+                if (rmCond && rmCond.values && rmIdx >= 0 && rmIdx < rmCond.values.length) {
+                    rmCond.values.splice(rmIdx, 1);
+                    renderBuilder();
+                    syncToSQL();
+                    setTimeout(function () {
+                        var newInput = view.querySelector('.sr-pill-input[data-id="' + rmCondId + '"]');
+                        if (newInput) newInput.focus();
+                    }, 0);
+                }
+                return;
+            }
+
             if (!target.classList.contains('sr-pill-input') && !target.classList.contains('sr-ac-input')) return;
 
             var dropdown = target.parentElement.querySelector('.sr-ac-dropdown');
@@ -2231,13 +2281,15 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             if (hasCheckboxes) {
                 var thCheck = document.createElement('th');
                 thCheck.className = 'col-sticky-left';
+                thCheck.setAttribute('scope', 'col');
                 thCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.3); width: 40px; background: ' + pageBg + ';';
-                thCheck.innerHTML = '<input type="checkbox" class="select-all-cb" title="Select all">';
+                thCheck.innerHTML = '<input type="checkbox" class="select-all-cb" title="Select all" aria-label="Select all rows">';
                 headerRow.appendChild(thCheck);
             }
 
             columns.forEach(function (col) {
                 var th = document.createElement('th');
+                th.setAttribute('scope', 'col');
                 th.textContent = col;
                 th.style.padding = '0.5em';
                 th.style.textAlign = 'left';
@@ -2247,6 +2299,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             if (hasActionsCol) {
                 var thActions = document.createElement('th');
                 thActions.className = 'col-sticky-right';
+                thActions.setAttribute('scope', 'col');
                 thActions.textContent = 'Actions';
                 thActions.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.3); background: ' + pageBg + ';';
                 headerRow.appendChild(thActions);
@@ -2268,7 +2321,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                     var tdCheck = document.createElement('td');
                     tdCheck.className = 'col-sticky-left';
                     tdCheck.style.cssText = 'padding: 0.5em; text-align: center; border-bottom: 1px solid rgba(128, 128, 128, 0.1); width: 40px; background: ' + rowBg + ';';
-                    tdCheck.innerHTML = '<input type="checkbox" class="row-select-cb">';
+                    tdCheck.innerHTML = '<input type="checkbox" class="row-select-cb" aria-label="Select row ' + (idx + 1) + '">';
                     tr.appendChild(tdCheck);
                 }
 
@@ -2335,6 +2388,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             view.querySelector('#resultCount').style.display = 'inline';
             view.querySelector('#resultError').style.display = 'none';
             resultInfo.style.display = 'block';
+
+            helpers.announce(view, 'Query returned ' + results.length +
+                ' row' + (results.length === 1 ? '' : 's') + '.');
         }
 
         /**

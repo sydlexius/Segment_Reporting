@@ -11,36 +11,73 @@
  *   npx playwright install chromium
  *
  * Usage:
- *   node scripts/capture-screenshots.mjs
+ *   node scripts/capture-screenshots.mjs              # prod path (anonymized)
+ *   CAPTURE_TARGET=uat node scripts/capture-screenshots.mjs   # UAT path
+ *
+ * Two targets:
+ *   - PROD (default): captures the real Emby server and ANONYMIZES every name at
+ *     the network layer (the committed docs/Screenshots/ images come from here).
+ *   - UAT (CAPTURE_TARGET=uat): captures the synthetic UAT Emby seeded by
+ *     `make uat-seed`. The data is already fictional, so anonymization is SKIPPED
+ *     and credentials/URL default to the EMBY_UAT_* variables. Output defaults to
+ *     a scratch temp dir so the committed prod images are never overwritten.
  *
  * Environment variables:
- *   EMBY_URL       Emby server URL (default: http://localhost:8096)
- *   EMBY_API_KEY   Admin API key (lets non-SPA asset requests through)
- *   EMBY_USER      Admin username (required; the plugin pages use ApiClient,
- *                  which needs an authenticated user session)
- *   EMBY_PASSWORD  Admin password
+ *   CAPTURE_TARGET  "uat" to target the UAT Emby (default: prod)
+ *   EMBY_URL        Emby server URL (default: http://localhost:8096, or
+ *                   EMBY_UAT_URL in UAT mode)
+ *   EMBY_API_KEY    Admin API key (default: EMBY_UAT_API_KEY in UAT mode)
+ *   EMBY_USER       Admin username (default: EMBY_UAT_USER in UAT mode). Required;
+ *                   the plugin pages use ApiClient, which needs an authenticated
+ *                   user session.
+ *   EMBY_PASSWORD   Admin password (default: EMBY_UAT_PASSWORD in UAT mode)
+ *   SCREENSHOTS_DIR Output dir override (default: docs/Screenshots in prod, a
+ *                   temp scratch dir in UAT)
  *
- * Output: docs/Screenshots/ directory (full-page and *-crop.png variants)
+ * Output: docs/Screenshots/ (prod) or a scratch dir (UAT); full-page and
+ * *-crop.png variants.
  */
 
 import { chromium } from 'playwright';
 import path from 'path';
+import os from 'os';
+import fs from 'fs';
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-// Output directory. Defaults to docs/Screenshots; override with SCREENSHOTS_DIR
-// to capture into a scratch directory (e.g. a smoke test) without overwriting
-// the committed images.
+
+// UAT mode targets the synthetic UAT Emby. Its data is already fictional, so the
+// anonymization layer is disabled and the EMBY_UAT_* credentials are used.
+const UAT = (process.env.CAPTURE_TARGET || '').toLowerCase() === 'uat';
+
+// Output directory. Prod defaults to docs/Screenshots; UAT defaults to a scratch
+// temp dir so committed (anonymized prod) images are never clobbered by a UAT
+// run. Override either with SCREENSHOTS_DIR.
 const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR
     ? path.resolve(process.env.SCREENSHOTS_DIR)
-    : path.resolve(__dirname, '..', 'docs', 'Screenshots');
+    : (UAT
+        ? path.join(os.tmpdir(), 'sr-uat-screenshots')
+        : path.resolve(__dirname, '..', 'docs', 'Screenshots'));
 
-const EMBY_URL = process.env.EMBY_URL || 'http://localhost:8096';
-const API_KEY = process.env.EMBY_API_KEY;
+const EMBY_URL = process.env.EMBY_URL
+    || (UAT ? process.env.EMBY_UAT_URL : undefined)
+    || (!UAT ? 'http://localhost:8096' : undefined);
+const API_KEY = process.env.EMBY_API_KEY || (UAT ? process.env.EMBY_UAT_API_KEY : undefined);
+const EMBY_USER = process.env.EMBY_USER || (UAT ? process.env.EMBY_UAT_USER : undefined);
+const EMBY_PASSWORD = process.env.EMBY_PASSWORD || (UAT ? process.env.EMBY_UAT_PASSWORD : '');
 
-if (!process.env.EMBY_USER) {
-    console.error('Error: EMBY_USER (and EMBY_PASSWORD) are required for SPA login.');
+// Fail closed in UAT mode: anonymization is disabled there, so a missing URL must
+// never silently fall back to localhost (which could be a non-UAT server holding
+// real library names that would then be captured unanonymized).
+if (UAT && !EMBY_URL) {
+    console.error('Error: CAPTURE_TARGET=uat requires EMBY_URL or EMBY_UAT_URL to be set explicitly.');
+    process.exit(1);
+}
+
+if (!EMBY_USER) {
+    const userVar = UAT ? 'EMBY_USER or EMBY_UAT_USER' : 'EMBY_USER';
+    console.error(`Error: ${userVar} (and the matching password) are required for SPA login.`);
     console.error('The plugin pages use Emby ApiClient, which needs an authenticated user session.');
     process.exit(1);
 }
@@ -355,10 +392,10 @@ async function navigateTo(page, pageName, pageId) {
 
 /** Log in to the Emby SPA so ApiClient has an authenticated session. */
 async function login(page) {
-    const user = process.env.EMBY_USER;
-    const pw = process.env.EMBY_PASSWORD || '';
+    const user = EMBY_USER;
+    const pw = EMBY_PASSWORD || '';
     if (!user) {
-        throw new Error('EMBY_USER environment variable is required for SPA login.');
+        throw new Error('An Emby admin username is required for SPA login.');
     }
     await page.goto(`${EMBY_URL}/web/index.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => typeof window.ApiClient !== 'undefined', null, { timeout: 15000 });
@@ -767,7 +804,9 @@ async function captureAbout(page) {
 // ---------------------------------------------------------------------------
 
 async function main() {
-    console.log(`Connecting to Emby at ${EMBY_URL}`);
+    console.log(`Connecting to Emby at ${EMBY_URL} (${UAT ? 'UAT' : 'prod'} mode)`);
+    console.log(`Output directory: ${SCREENSHOTS_DIR}`);
+    fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 
     const browser = await chromium.launch({ headless: true });
     const context = await browser.newContext({
@@ -778,7 +817,13 @@ async function main() {
     });
     // Anonymize plugin JSON responses at the network boundary so that tables
     // AND charts render with fictional names from the start (see function doc).
-    await installAnonymizingRoute(context);
+    // UAT data is already synthetic/fictional, so the anonymization layer is
+    // unnecessary there and is skipped (it would needlessly remap the fake names).
+    if (UAT) {
+        console.log('UAT mode: anonymization disabled (data is already synthetic).');
+    } else {
+        await installAnonymizingRoute(context);
+    }
 
     const page = await context.newPage();
 

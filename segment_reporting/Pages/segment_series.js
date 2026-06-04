@@ -147,8 +147,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
         }
 
         function handleFilterChange() {
-            currentFilter = view.querySelector('#episodeFilterDropdown').value;
+            var dropdown = view.querySelector('#episodeFilterDropdown');
+            currentFilter = dropdown.value;
             refilterAllSeasons();
+            var label = dropdown.options[dropdown.selectedIndex] ? dropdown.options[dropdown.selectedIndex].text : currentFilter;
+            helpers.announce(view, 'Episode filter applied: ' + label + '.');
         }
 
         function handleSearch() {
@@ -156,6 +159,9 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             searchDebounceTimer = setTimeout(function () {
                 currentSearch = view.querySelector('#episodeSearchBox').value.trim();
                 refilterAllSeasons();
+                helpers.announce(view, currentSearch ?
+                    'Episodes filtered by search term ' + currentSearch + '.' :
+                    'Episode search cleared.');
             }, 300);
         }
 
@@ -227,6 +233,27 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         }
                     }
                 });
+
+                var canvas = view.querySelector('#seasonChart');
+                var descRows = seasonData.map(function (s, i) {
+                    return [
+                        s.SeasonName || ('Season ' + (s.SeasonNumber || 1)),
+                        introPct[i] + '%',
+                        creditsPct[i] + '%'
+                    ];
+                });
+                var descTable = helpers.buildDataTable(
+                    'Season coverage',
+                    ['Season', 'Intro coverage', 'Credit coverage'],
+                    descRows
+                );
+                helpers.describeChart(
+                    canvas,
+                    'Season coverage. Bar chart of intro and credit coverage percentages across ' +
+                    seasonData.length + ' season' + (seasonData.length === 1 ? '' : 's') +
+                    '. A data table with the same values follows for screen readers.',
+                    descTable
+                );
             });
         }
 

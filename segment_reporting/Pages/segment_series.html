@@ -3,10 +3,10 @@
      data-controller="__plugin/segment_series.js">
 
     <div data-role="content">
-        <div class="content-primary">
+        <div class="content-primary" role="main" aria-label="Series segment coverage">
 
             <!-- Breadcrumbs -->
-            <div id="breadcrumbContainer"></div>
+            <nav id="breadcrumbContainer" aria-label="Breadcrumb"></nav>
 
             <!-- Header -->
             <div class="sectionTitleContainer flex align-items-center">
@@ -40,7 +40,7 @@
                         </select>
                     </div>
                     <div style="flex: 1 1 300px;">
-                        <input id="episodeSearchBox" type="text" class="emby-input" placeholder="Search by episode name..." style="width: 100%; max-width: 400px;" />
+                        <input id="episodeSearchBox" type="text" class="emby-input" placeholder="Search by episode name..." aria-label="Search by episode name" style="width: 100%; max-width: 400px;" />
                     </div>
                 </div>
             </div>

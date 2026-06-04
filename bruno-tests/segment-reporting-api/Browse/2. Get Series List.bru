@@ -19,12 +19,24 @@ assert {
 }
 
 tests {
-  test("series_list returns contentType + lists", function() {
+  test("series_list returns contentType + the list(s) for that type", function() {
     const b = res.getBody();
     expect(b).to.have.property("contentType");
     expect(["series", "movies", "mixed"]).to.include(b.contentType);
-    expect(b).to.have.property("series");
-    expect(b).to.have.property("movies");
+
+    // The handler returns { contentType, series, movies }, but Emby's JSON
+    // serializer omits null-valued members, so a single-type library only
+    // carries the list for its own content type (a series-only library has no
+    // "movies" key, a movies-only library has no "series" key). Assert the
+    // list(s) the returned contentType guarantees are present and are arrays.
+    if (b.contentType !== "movies") {
+      expect(b).to.have.property("series");
+      expect(Array.isArray(b.series)).to.be.true;
+    }
+    if (b.contentType !== "series") {
+      expect(b).to.have.property("movies");
+      expect(Array.isArray(b.movies)).to.be.true;
+    }
   });
 }
 
@@ -40,12 +52,13 @@ docs {
   - `search` (optional) — Search term to filter by name
   - `filter` (optional) — Comma-separated: `missing_intro`, `missing_credits`
 
-  **Expected Response:**
+  **Expected Response:** (null lists are omitted by the JSON serializer, so a
+  single-type library only includes the list for its own content type)
   ```json
   {
     "contentType": "series" | "movies" | "mixed",
-    "series": [...] | null,
-    "movies": [...] | null
+    "series": [...],   // present when contentType is "series" or "mixed"
+    "movies": [...]    // present when contentType is "movies" or "mixed"
   }
   ```
 

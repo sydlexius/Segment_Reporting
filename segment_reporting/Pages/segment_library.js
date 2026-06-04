@@ -177,6 +177,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 updateChart();
                 if (contentType !== 'movies') updateSeriesTable();
                 if (contentType !== 'series') updateMovieTable();
+                announceResultCount();
             }
         }
 
@@ -186,6 +187,20 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             updateChart();
             if (contentType !== 'movies') updateSeriesTable();
             if (contentType !== 'series') updateMovieTable();
+            announceResultCount();
+        }
+
+        // Announce the visible result count to screen readers after filtering or searching.
+        function announceResultCount() {
+            var count, noun;
+            if (contentType === 'movies') {
+                count = filteredMovieData.length;
+                noun = count === 1 ? 'movie' : 'movies';
+            } else {
+                count = filteredSeriesData.length;
+                noun = count === 1 ? 'series' : 'series entries';
+            }
+            helpers.announce(view, count + ' ' + noun + ' shown.');
         }
 
         // ── Series Sorting ──
@@ -225,12 +240,26 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var arrow = th.querySelector('.sort-arrow');
                 if (th.getAttribute('data-sort') === sortColumn) {
                     th.classList.add('sort-active');
+                    th.setAttribute('aria-sort', sortAscending ? 'ascending' : 'descending');
                     arrow.innerHTML = sortAscending ? '&#9650;' : '&#9660;';
                 } else {
                     th.classList.remove('sort-active');
+                    th.removeAttribute('aria-sort');
                     arrow.innerHTML = '&#9650;';
                 }
             });
+        }
+
+        // Header label text for screen-reader announcements, excluding the
+        // visual .sort-arrow glyph (which would otherwise be read verbosely).
+        function getSortHeaderLabel(th, fallback) {
+            if (!th) return (fallback || '').trim();
+            var clone = th.cloneNode(true);
+            var arrow = clone.querySelector('.sort-arrow');
+            if (arrow && arrow.parentNode) {
+                arrow.parentNode.removeChild(arrow);
+            }
+            return (clone.textContent || fallback || '').trim();
         }
 
         function handleSeriesSortClick(e) {
@@ -246,6 +275,8 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             applySeriesSorting();
             updateSeriesSortIndicators();
             updateSeriesTable();
+            helpers.announce(view, 'Series sorted by ' + getSortHeaderLabel(th, col) +
+                ', ' + (sortAscending ? 'ascending' : 'descending') + '.');
         }
 
         // ── Movie Sorting ──
@@ -281,9 +312,11 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var arrow = th.querySelector('.sort-arrow');
                 if (th.getAttribute('data-sort') === movieSortColumn) {
                     th.classList.add('sort-active');
+                    th.setAttribute('aria-sort', movieSortAscending ? 'ascending' : 'descending');
                     arrow.innerHTML = movieSortAscending ? '&#9650;' : '&#9660;';
                 } else {
                     th.classList.remove('sort-active');
+                    th.removeAttribute('aria-sort');
                     arrow.innerHTML = '&#9650;';
                 }
             });
@@ -302,6 +335,19 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             applyMovieSorting();
             updateMovieSortIndicators();
             updateMovieTable();
+            helpers.announce(view, 'Movies sorted by ' + getSortHeaderLabel(th, col) +
+                ', ' + (movieSortAscending ? 'ascending' : 'descending') + '.');
+        }
+
+        // Activate a sortable header via keyboard (Enter or Space).
+        function handleSortKeydown(handler) {
+            return function (e) {
+                if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+                var th = e.target.closest('th[data-sort]');
+                if (!th) return;
+                e.preventDefault();
+                handler(e);
+            };
         }
 
         // ── Chart ──
@@ -320,6 +366,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 chart = helpers.createSegmentChart(Chart, ctx, chartData.labels,
                     { withBoth: chartData.withBoth, introOnly: chartData.introOnly, creditsOnly: chartData.creditsOnly, withNeither: chartData.withNeither },
                     view, {
+                        ariaCaption: contentType === 'movies' ? 'Coverage by movie' : 'Coverage by series',
                         xTickOptions: { maxRotation: 45, minRotation: 0 },
                         tooltipCallbacks: {
                             footer: function (tooltipItems) {
@@ -899,11 +946,13 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 var seriesThead = view.querySelector('#seriesTable thead');
                 if (seriesThead) {
                     seriesThead.addEventListener('click', handleSeriesSortClick);
+                    seriesThead.addEventListener('keydown', handleSortKeydown(handleSeriesSortClick));
                 }
 
                 var movieThead = view.querySelector('#movieTable thead');
                 if (movieThead) {
                     movieThead.addEventListener('click', handleMovieSortClick);
+                    movieThead.addEventListener('keydown', handleSortKeydown(handleMovieSortClick));
                 }
 
                 var searchBox = view.querySelector('#searchBox');

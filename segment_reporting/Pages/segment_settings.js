@@ -74,6 +74,12 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                         }
                     }
                 });
+
+                helpers.describeChart(
+                    view.querySelector('#palettePreviewChart'),
+                    'Sample chart previewing the selected color palette with example data. For illustration only.',
+                    null
+                );
             });
         }
 

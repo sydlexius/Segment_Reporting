@@ -156,6 +156,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
                 chart = helpers.createSegmentChart(Chart, ctx, labels,
                     { withBoth: withBoth, introOnly: introOnly, creditsOnly: creditsOnly, withNeither: withNeither },
                     view, {
+                        ariaCaption: 'Coverage by library',
                         tooltipCallbacks: {
                             footer: function (tooltipItems) {
                                 var index = tooltipItems[0].dataIndex;

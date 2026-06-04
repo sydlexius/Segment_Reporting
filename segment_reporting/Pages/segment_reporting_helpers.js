@@ -628,6 +628,9 @@ function segmentReportingCreateSegmentChart(Chart, ctx, labels, segmentData, vie
             xTicks[xKeys[xi]] = options.xTickOptions[xKeys[xi]];
         }
     }
+    if (ctx && ctx.canvas) {
+        segmentReportingDescribeSegmentChart(ctx.canvas, options.ariaCaption || 'Segment coverage', labels, segmentData);
+    }
     return new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1444,6 +1447,154 @@ function segmentReportingShowOffsetSnackbar(message, onUndo) {
     return bar;
 }
 
+// ── Accessibility (a11y) helpers ──
+
+// Standard "visually hidden" style: content stays in the accessibility tree
+// (readable by screen readers) but is removed from the visual layout.
+var SEGMENT_REPORTING_SR_ONLY_STYLE = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;';
+
+// Find (or lazily create) the page-level polite live region used to announce
+// dynamic changes (filtering, sorting, bulk actions) to screen readers.
+function segmentReportingGetLiveRegion(view) {
+    if (!view) return null;
+    var region = view.querySelector('#srLiveRegion');
+    if (!region) {
+        region = document.createElement('div');
+        region.id = 'srLiveRegion';
+        region.setAttribute('role', 'status');
+        region.setAttribute('aria-live', 'polite');
+        region.setAttribute('aria-atomic', 'true');
+        region.style.cssText = SEGMENT_REPORTING_SR_ONLY_STYLE;
+        var host = view.querySelector('.content-primary') || view;
+        host.appendChild(region);
+    }
+    return region;
+}
+
+// Announce a message to screen readers via the polite live region. The text is
+// cleared first and re-set on a short delay so identical consecutive messages
+// are still announced.
+function segmentReportingAnnounce(view, message) {
+    if (!view || !message) return;
+    var region = segmentReportingGetLiveRegion(view);
+    if (!region) return;
+    // Cancel any pending announcement so back-to-back calls can't fire stale text
+    // after a newer message (the clear-then-set delay otherwise races).
+    if (region._srAnnounceTimer) {
+        clearTimeout(region._srAnnounceTimer);
+    }
+    region.textContent = '';
+    region._srAnnounceTimer = setTimeout(function () {
+        region.textContent = message;
+        region._srAnnounceTimer = null;
+    }, 60);
+}
+
+// Monotonic counter for synthesizing canvas ids when a chart canvas has none,
+// so aria-describedby always references a valid, unique id.
+var segmentReportingChartDescSeq = 0;
+
+// Mark a <canvas> chart as an image with a concise label, and optionally link a
+// visually-hidden data table (or summary element) via aria-describedby so the
+// chart's data is available to screen readers.
+function segmentReportingDescribeChart(canvas, ariaLabel, describeEl) {
+    if (!canvas) return;
+    canvas.setAttribute('role', 'img');
+    if (ariaLabel) canvas.setAttribute('aria-label', ariaLabel);
+
+    // All current callers pass a canvas with an id, but guard against an
+    // id-less canvas so describeId can never become "undefinedDesc" (which
+    // would collide across canvases and break the aria-describedby linkage).
+    if (!canvas.id) {
+        segmentReportingChartDescSeq += 1;
+        canvas.id = 'srChart' + segmentReportingChartDescSeq;
+    }
+    var describeId = canvas.id + 'Desc';
+    var existing = document.getElementById(describeId);
+    if (existing && existing.parentNode) {
+        existing.parentNode.removeChild(existing);
+    }
+    if (describeEl && canvas.parentNode) {
+        describeEl.id = describeId;
+        describeEl.style.cssText = SEGMENT_REPORTING_SR_ONLY_STYLE;
+        canvas.parentNode.appendChild(describeEl);
+        canvas.setAttribute('aria-describedby', describeId);
+    } else {
+        // No description element: drop any stale aria-describedby so the canvas
+        // does not reference an id we just removed (or never created).
+        canvas.removeAttribute('aria-describedby');
+    }
+}
+
+// Build a visually-hidden data table from column headers and rows for use as a
+// screen-reader-accessible alternative to a chart. caption gives the table an
+// accessible name; columns is an array of header strings; rows is an array of
+// arrays of cell strings (the first cell is treated as the row header).
+function segmentReportingBuildDataTable(caption, columns, rows) {
+    var table = document.createElement('table');
+
+    if (caption) {
+        var cap = document.createElement('caption');
+        cap.textContent = caption;
+        table.appendChild(cap);
+    }
+
+    var thead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    for (var c = 0; c < columns.length; c++) {
+        var th = document.createElement('th');
+        th.setAttribute('scope', 'col');
+        th.textContent = columns[c];
+        headRow.appendChild(th);
+    }
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    var tbody = document.createElement('tbody');
+    for (var r = 0; r < rows.length; r++) {
+        var tr = document.createElement('tr');
+        var cells = rows[r];
+        for (var k = 0; k < cells.length; k++) {
+            var cell;
+            if (k === 0) {
+                cell = document.createElement('th');
+                cell.setAttribute('scope', 'row');
+            } else {
+                cell = document.createElement('td');
+            }
+            cell.textContent = cells[k];
+            tr.appendChild(cell);
+        }
+        tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+
+    return table;
+}
+
+// Describe a stacked segment-coverage chart (the Both / Intro Only / Credits
+// Only / No Segments bar charts) for screen readers: sets a concise summary
+// label and links a hidden per-category data table.
+function segmentReportingDescribeSegmentChart(canvas, caption, labels, segmentData) {
+    if (!canvas) return;
+    var columns = ['Item', 'Both Segments', 'Intro Only', 'Credits Only', 'No Segments'];
+    var rows = [];
+    for (var i = 0; i < labels.length; i++) {
+        rows.push([
+            String(labels[i]),
+            String((segmentData.withBoth && segmentData.withBoth[i]) || 0),
+            String((segmentData.introOnly && segmentData.introOnly[i]) || 0),
+            String((segmentData.creditsOnly && segmentData.creditsOnly[i]) || 0),
+            String((segmentData.withNeither && segmentData.withNeither[i]) || 0)
+        ]);
+    }
+    var table = segmentReportingBuildDataTable(caption, columns, rows);
+    var label = caption + '. Stacked bar chart of segment coverage across ' +
+        labels.length + ' item' + (labels.length === 1 ? '' : 's') +
+        '. A data table with the same values follows for screen readers.';
+    segmentReportingDescribeChart(canvas, label, table);
+}
+
 function getSegmentReportingHelpers() {
     return {
         ticksToTime: segmentReportingTicksToTime,
@@ -1507,7 +1658,12 @@ function getSegmentReportingHelpers() {
         applyBulkSet: segmentReportingApplyBulkSet,
         applyBulkSetStrict: segmentReportingApplyBulkSetStrict,
         createOffsetModal: segmentReportingCreateOffsetModal,
-        showOffsetSnackbar: segmentReportingShowOffsetSnackbar
+        showOffsetSnackbar: segmentReportingShowOffsetSnackbar,
+        announce: segmentReportingAnnounce,
+        getLiveRegion: segmentReportingGetLiveRegion,
+        describeChart: segmentReportingDescribeChart,
+        buildDataTable: segmentReportingBuildDataTable,
+        describeSegmentChart: segmentReportingDescribeSegmentChart
     };
 }
 

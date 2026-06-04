@@ -3,7 +3,7 @@
      data-controller="__plugin/segment_dashboard.js">
 
     <div data-role="content">
-        <div class="content-primary">
+        <div class="content-primary" role="main" aria-label="Segment coverage dashboard">
 
             <!-- Header -->
             <div class="sectionTitleContainer flex align-items-center">
@@ -14,27 +14,29 @@
                 <button id="btnDetectAllCredits" class="raised emby-button" style="margin-left: 0.5em; display: none;">
                     <span>Detect All Credits</span>
                 </button>
-                <button id="btnCustomQuery" class="raised emby-button" style="margin-left: 0.5em;">
-                    <span>Custom Query</span>
-                </button>
-                <button id="btnSettings" class="raised emby-button" style="margin-left: 0.5em;">
-                    <span>Settings</span>
-                </button>
-                <button id="btnAbout" class="raised emby-button" style="margin-left: 0.5em;">
-                    <span>About</span>
-                </button>
+                <nav aria-label="Plugin pages" style="display: contents;">
+                    <button id="btnCustomQuery" class="raised emby-button" style="margin-left: 0.5em;">
+                        <span>Custom Query</span>
+                    </button>
+                    <button id="btnSettings" class="raised emby-button" style="margin-left: 0.5em;">
+                        <span>Settings</span>
+                    </button>
+                    <button id="btnAbout" class="raised emby-button" style="margin-left: 0.5em;">
+                        <span>About</span>
+                    </button>
+                </nav>
             </div>
 
             <!-- Sync Status Indicator -->
-            <div id="syncStatusSection" style="margin-bottom: 2em; padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
+            <div id="syncStatusSection" role="status" aria-live="polite" style="margin-bottom: 2em; padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
                 <div style="display: flex; align-items: center;">
-                    <i class="md-icon" style="margin-right: 0.5em;">sync</i>
+                    <i class="md-icon" aria-hidden="true" style="margin-right: 0.5em;">sync</i>
                     <span id="syncStatusText">Loading sync status...</span>
                 </div>
             </div>
 
             <!-- Summary Cards -->
-            <div id="summaryCards" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em; margin-bottom: 2em;">
+            <div id="summaryCards" role="group" aria-label="Coverage summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1em; margin-bottom: 2em;">
 
                 <div class="card" style="padding: 1em; background-color: rgba(128, 128, 128, 0.1); border-radius: 4px;">
                     <div style="font-size: 0.9em; opacity: 0.7; margin-bottom: 0.5em;">Total Items</div>
@@ -76,17 +78,18 @@
                 <h3 class="sectionTitle">Library Details</h3>
                 <div class="paperList">
                     <table id="libraryTable" class="tblLibraries" style="width: 100%;">
+                        <caption class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Segment coverage by library. Activate a row to view library details.</caption>
                         <thead>
                             <tr>
-                                <th style="text-align: left;">Library Name</th>
-                                <th style="text-align: left;">Total Items</th>
-                                <th style="text-align: left;">With Intro</th>
-                                <th style="text-align: left;">With Credits</th>
-                                <th style="text-align: left;">Both</th>
-                                <th style="text-align: left;">Neither</th>
-                                <th style="text-align: left;">Intro %</th>
-                                <th style="text-align: left;">Credits %</th>
-                                <th id="thLibraryActions" style="text-align: center; display: none;">Actions</th>
+                                <th scope="col" style="text-align: left;">Library Name</th>
+                                <th scope="col" style="text-align: left;">Total Items</th>
+                                <th scope="col" style="text-align: left;">With Intro</th>
+                                <th scope="col" style="text-align: left;">With Credits</th>
+                                <th scope="col" style="text-align: left;">Both</th>
+                                <th scope="col" style="text-align: left;">Neither</th>
+                                <th scope="col" style="text-align: left;">Intro %</th>
+                                <th scope="col" style="text-align: left;">Credits %</th>
+                                <th scope="col" id="thLibraryActions" style="text-align: center; display: none;">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="libraryTableBody">

@@ -779,6 +779,37 @@ to run.
 
 ---
 
+## Accessibility
+
+The plugin's admin pages target WCAG 2.1 Level AA and are built to work with
+screen readers and keyboard-only navigation.
+
+- **Landmarks** - each page exposes a main content landmark, and the Library and
+  Series pages mark their breadcrumb trail as a navigation landmark, so you can
+  jump straight to the content with your screen reader's landmark shortcuts.
+- **Charts** - every coverage chart is announced as an image with a short
+  summary, and the same data is provided as a hidden data table that screen
+  readers can read row by row. Decorative previews (such as the color palette
+  sample in Settings) are labeled as illustrative only.
+- **Tables** - column headers are announced for each cell. Sortable headers
+  (on the Library page) are reachable with Tab and can be activated with Enter
+  or Space; the current sort direction is announced.
+- **Filtering and searching** - after you change a filter, run a search, sort a
+  table, or run a custom query, the number of matching results (or the action
+  taken) is announced via a live region.
+- **Custom Query widgets** - the value pickers in the visual query builder use
+  the standard combobox/listbox pattern. Multi-value "chips" can be removed with
+  the keyboard (focus the remove control and press Enter or Space).
+- **Color contrast** - if a custom chart palette is hard to read, the Settings
+  page lets you pick higher-contrast colors (see
+  [Chart Color Palettes](#chart-color-palettes)).
+
+Manual screen-reader verification (NVDA on Windows, VoiceOver on macOS) is
+ongoing; please report any accessibility issues via the
+[issue tracker](https://github.com/sydlexius/Segment_Reporting/issues).
+
+---
+
 ## Getting Help
 
 - **Emby Forums** - post questions or feedback in the

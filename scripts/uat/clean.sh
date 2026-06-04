@@ -12,23 +12,9 @@ SR_UAT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 LOCAL_BRU="$REPO_ROOT/bruno-tests/segment-reporting-api/environments/Local.bru"
 
-delete_lib() {
-    # delete_lib <Name> -- resolve the VirtualFolder ItemId and delete by id;
-    # name-based delete throws a NullReferenceException on Emby 4.9.5.
-    local name="$1" id
-    id="$(sr_get /emby/Library/VirtualFolders '' \
-        | jq -r --arg n "$name" 'map(select(.Name==$n)) | (.[0].ItemId // .[0].Id // empty)')"
-    if [ -n "$id" ]; then
-        log "Deleting library '$name' (id=$id)"
-        curl -s -o /dev/null -X DELETE -H "X-Emby-Token: ${API_KEY}" \
-            "${BASE_URL}/emby/Library/VirtualFolders?id=${id}" || true
-    else
-        log "Library '$name' not present"
-    fi
-}
-
-delete_lib "SR-UAT-TV"
-delete_lib "SR-UAT-Movies"
+# Remove every synthetic library by prefix (primary pair, themed extras, and any
+# symlink duplicate-root libraries). Shared helper lives in lib.sh.
+delete_uat_libraries "SR-UAT"
 
 log "Removing /uat-media in container '$CONTAINER'"
 docker exec "$CONTAINER" sh -c 'rm -rf /uat-media' || true
