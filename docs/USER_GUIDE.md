@@ -370,11 +370,13 @@ markers earlier or later in 250 ms steps without opening the full inline editor.
      this to trim or extend the intro's end point.
    - **Credits** - moves CreditsStart earlier or later.
 4. For each row, click the left arrow to move that marker **earlier** or the
-   right arrow to move it **later** (each click = 250 ms).
+   right arrow to move it **later** (each click = 250 ms). You can also adjust a
+   row from the keyboard - see [Keyboard Shortcuts](#keyboard-shortcuts) below.
 5. Click **Apply** to save the change.
 
 A brief **Undo** prompt appears after applying. Click it immediately to restore
-the previous values if the adjustment was wrong.
+the previous values if the adjustment was wrong. The Undo control is keyboard
+focusable, so you can reach it with Tab and activate it with Enter or Space.
 
 **Notes:**
 
@@ -384,6 +386,48 @@ the previous values if the adjustment was wrong.
   prevent negative timestamps.
 - This is available on the Series Detail page (episode rows), the Library page
   (movie rows), and the Custom Query results table.
+
+---
+
+## Keyboard Shortcuts
+
+Several controls can be operated entirely from the keyboard, which is useful for
+fast adjustments and required for screen-reader and keyboard-only access.
+
+### Timing Adjustment Dialog
+
+When the **Adjust timing** dialog is open (per-row or bulk), each marker value is
+a focusable control. Tab moves between them and the dialog buttons; focus stays
+inside the dialog until you close it.
+
+| Key | Action |
+|-----|--------|
+| Tab / Shift+Tab | Move between the marker rows and the Cancel / Apply buttons |
+| Up arrow or Right arrow | Move the focused marker **later** by 250 ms |
+| Down arrow or Left arrow | Move the focused marker **earlier** by 250 ms |
+| Shift + arrow | Larger 1-second step in the same direction |
+| Page Up / Page Down | 5-second step (later / earlier) |
+| Enter | Apply the changes |
+| Escape | Cancel and close the dialog without saving |
+
+When the dialog closes, focus returns to the control you opened it from.
+
+### Inline Editing
+
+While editing a row's time fields in the inline editor:
+
+| Key | Action |
+|-----|--------|
+| Enter | Save the row |
+| Escape | Cancel editing and discard the changes |
+| Left / Right arrow | Move the text cursor within the time field (normal typing behavior) |
+
+### Tables and Lists
+
+- **Sortable column headers** (Series and Movie tables): press Tab to focus a
+  header, then Enter or Space to sort by that column.
+- **Snackbar Undo**: after applying a timing change, press Tab to reach the
+  **Undo** control in the prompt, then Enter or Space to undo.
 
 ---
 
@@ -475,7 +519,8 @@ You can apply the same timing shift to all selected items at once using the
 2. Click **Adjust timing** in the bulk action bar.
 3. Choose the shift direction and amount (250 ms per step) for each marker
    type in the modal - the same three rows as the per-row modal (Intro, Intro
-   end, Credits).
+   end, Credits). The dialog supports the same keyboard shortcuts as the per-row
+   version (see [Keyboard Shortcuts](#keyboard-shortcuts)).
 4. Review the confirmation prompt showing how many items will be updated (up
    to 500 items per operation).
 5. Click **Apply** to commit the shift to all selected items.

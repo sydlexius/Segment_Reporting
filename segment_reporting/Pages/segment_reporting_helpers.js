@@ -1025,6 +1025,21 @@ function segmentReportingCreateInlineEditor(config) {
             input.placeholder = '00:00:00.000';
             input.style.cssText = 'width: 120px; text-align: center; font-size: inherit; font-family: inherit; color: inherit; background: transparent; border: 1px solid rgba(128,128,128,0.4); border-radius: 3px; padding: 0.1em 0.3em;';
 
+            // M2 (issue #133): Enter saves the whole row, Escape cancels. Arrow
+            // keys are deliberately NOT captured here so the native text caret
+            // (Left/Right to move within the field, Up/Down as no-ops) keeps its
+            // default behavior - per the resolved design, in-text-field nudging
+            // is out of scope and arrows must never be hijacked on text inputs.
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    save();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancel();
+                }
+            });
+
             cell.innerHTML = '';
             cell.appendChild(input);
         }
@@ -1137,7 +1152,15 @@ function segmentReportingCreateInlineEditor(config) {
 
 // ── Offset adjustment (issue #80) ──
 
-var SEGMENT_REPORTING_OFFSET_STEP_TICKS = 2500000; // 250ms
+var SEGMENT_REPORTING_OFFSET_STEP_TICKS = 2500000; // 250ms (fine step; matches the +/- buttons)
+
+// Keyboard-nudge step sizes for the offset dialog spinbuttons (issue #133, M1).
+// These are intentionally hardcoded constants, not user settings:
+//   - Shift+Arrow nudges by a coarse 1s step.
+//   - PageUp/PageDown nudge by a 5s step.
+// One tick = 100ns, so 10,000,000 ticks = 1 second.
+var SEGMENT_REPORTING_OFFSET_COARSE_STEP_TICKS = 10000000; // 1s
+var SEGMENT_REPORTING_OFFSET_PAGE_STEP_TICKS = 50000000;   // 5s
 
 // items: array of { ItemId, introStart, introEnd, credits } where each tick
 // field is a number (absolute target) or null/undefined (leave untouched).
@@ -1206,6 +1229,14 @@ function segmentReportingApplyBulkSetStrict(items) {
 //              individual result: { introStart, introEnd, credits } absolute (or null)
 //              bulk result:       { introDelta, introEndDelta, creditsDelta } in ticks
 //   onClose  - optional function() called after the modal is dismissed
+//
+// Keyboard accessibility (issue #133): milestones M1 (spinbutton nudging) and
+// M3 (real modal: focus trap, initial/return focus, Enter=Apply, Escape=Cancel)
+// are implemented here; M2 (inline-editor Enter/Escape) lives in
+// segmentReportingCreateInlineEditor. M4 (in-table roving tabindex on marker
+// rows) and M5 (page-level/global shortcuts) are DEFERRED to a follow-up - all
+// nudging deliberately routes through this dialog (single commit/undo path) and
+// no handler is ever attached at the document/window level.
 function segmentReportingCreateOffsetModal(config) {
     if (document.querySelector('.segment-offset-overlay')) {
         return null;
@@ -1213,18 +1244,29 @@ function segmentReportingCreateOffsetModal(config) {
     var STEP = SEGMENT_REPORTING_OFFSET_STEP_TICKS;
     var isBulk = config.mode === 'bulk';
 
+    // Remember the element that opened the dialog so focus can be returned to it
+    // on close (issue #133, M3). Falls back to body if there is no active element.
+    var triggerEl = document.activeElement;
+
     var overlay = document.createElement('div');
     overlay.className = 'segment-offset-overlay';
     overlay.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
 
+    // Real modal dialog semantics (issue #133, M3): role=dialog + aria-modal so
+    // assistive tech treats it as a focus-trapped modal, labelled by its heading.
     var dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
     dialog.style.cssText = 'background: ' + (config.isLight ? '#ffffff' : '#1f1f1f') +
         '; color: ' + (config.isLight ? '#000000' : '#ffffff') +
         '; border-radius: 6px; padding: 1.25em 1.5em; min-width: 360px; max-width: 90vw; box-shadow: 0 4px 24px rgba(0,0,0,0.4);';
 
+    var headingId = 'segmentOffsetHeading_' + Date.now();
     var heading = document.createElement('h3');
+    heading.id = headingId;
     heading.textContent = config.title;
     heading.style.cssText = 'margin: 0 0 0.75em 0; font-size: 1.1em;';
+    dialog.setAttribute('aria-labelledby', headingId);
     dialog.appendChild(heading);
 
     var state;
@@ -1244,25 +1286,36 @@ function segmentReportingCreateOffsetModal(config) {
         return (ticks < 0 ? '-' : '+') + segmentReportingTicksToTime(Math.abs(ticks));
     }
 
+    // Each row's step(d, stepTicks) nudges by `d` (-1 earlier / +1 later) times
+    // `stepTicks`. The +/- buttons pass the fine STEP; the keyboard handler
+    // (issue #133, M1) passes the fine, coarse (Shift), or page (PageUp/Down)
+    // step. valueNow()/valueMin() back the spinbutton ARIA state so screen
+    // readers announce the current target value as it changes.
     var rows = [];
     if (isBulk) {
         rows.push({ label: 'Intro', hint: 'moves whole intro', enabled: true,
-            step: function (d) { state.introDelta += d * STEP; },
+            step: function (d, stepTicks) { state.introDelta += d * stepTicks; },
             leftDisabled: function () { return false; },
+            valueNow: function () { return state.introDelta; },
+            valueMin: function () { return null; },
             display: function () { return fmtDelta(state.introDelta); } });
         rows.push({ label: 'Intro end', hint: 'trim / extend end', enabled: true,
-            step: function (d) { state.introEndDelta += d * STEP; },
+            step: function (d, stepTicks) { state.introEndDelta += d * stepTicks; },
             leftDisabled: function () { return false; },
+            valueNow: function () { return state.introEndDelta; },
+            valueMin: function () { return null; },
             display: function () { return fmtDelta(state.introEndDelta); } });
         rows.push({ label: 'Credits', hint: '', enabled: true,
-            step: function (d) { state.creditsDelta += d * STEP; },
+            step: function (d, stepTicks) { state.creditsDelta += d * stepTicks; },
             leftDisabled: function () { return false; },
+            valueNow: function () { return state.creditsDelta; },
+            valueMin: function () { return null; },
             display: function () { return fmtDelta(state.creditsDelta); } });
     } else {
         var hasIntro = state.introStart != null && state.introEnd != null;
         rows.push({ label: 'Intro', hint: 'moves whole intro, keeps length', enabled: hasIntro,
-            step: function (d) {
-                var delta = d * STEP;
+            step: function (d, stepTicks) {
+                var delta = d * stepTicks;
                 if (delta < 0) {
                     var present = [];
                     if (state.introStart != null) { present.push(state.introStart); }
@@ -1279,24 +1332,30 @@ function segmentReportingCreateOffsetModal(config) {
                 if (state.introEnd != null) { vals.push(state.introEnd); }
                 return vals.length === 0 || Math.min.apply(null, vals) <= 0;
             },
+            valueNow: function () { return state.introStart != null ? state.introStart : state.introEnd; },
+            valueMin: function () { return 0; },
             display: function () {
                 return segmentReportingTicksToTime(state.introStart) + ' -> ' + segmentReportingTicksToTime(state.introEnd);
             } });
         rows.push({ label: 'Intro end', hint: 'trim / extend the end only', enabled: state.introEnd != null,
-            step: function (d) {
+            step: function (d, stepTicks) {
                 if (state.introEnd != null) {
                     var floor = state.introStart != null ? state.introStart : 0;
-                    state.introEnd = Math.max(floor, state.introEnd + d * STEP);
+                    state.introEnd = Math.max(floor, state.introEnd + d * stepTicks);
                 }
             },
             leftDisabled: function () {
                 var floor = state.introStart != null ? state.introStart : 0;
                 return state.introEnd == null || state.introEnd <= floor;
             },
+            valueNow: function () { return state.introEnd; },
+            valueMin: function () { return state.introStart != null ? state.introStart : 0; },
             display: function () { return segmentReportingTicksToTime(state.introEnd); } });
         rows.push({ label: 'Credits', hint: '', enabled: state.credits != null,
-            step: function (d) { if (state.credits != null) { state.credits = Math.max(0, state.credits + d * STEP); } },
+            step: function (d, stepTicks) { if (state.credits != null) { state.credits = Math.max(0, state.credits + d * stepTicks); } },
             leftDisabled: function () { return state.credits == null || state.credits <= 0; },
+            valueNow: function () { return state.credits; },
+            valueMin: function () { return 0; },
             display: function () { return segmentReportingTicksToTime(state.credits); } });
     }
 
@@ -1315,8 +1374,18 @@ function segmentReportingCreateOffsetModal(config) {
         leftBtn.innerHTML = '&#8592;';
         leftBtn.style.cssText = 'padding: 0.1em 0.6em; font-size: 1.1em;';
 
+        // The value display doubles as an ARIA spinbutton (issue #133, M1): it is
+        // focusable and accepts arrow-key nudging. Each enabled spinbutton joins
+        // the dialog's tab order so Tab / Shift+Tab moves between marker rows.
         var valueEl = document.createElement('div');
-        valueEl.style.cssText = 'flex: 1 1 auto; text-align: center; font-family: monospace; min-width: 9em;';
+        valueEl.style.cssText = 'flex: 1 1 auto; text-align: center; font-family: monospace; min-width: 9em; border-radius: 3px; outline-offset: 2px;';
+        valueEl.setAttribute('role', 'spinbutton');
+        valueEl.setAttribute('aria-label', r.label + (config.title ? ' (' + config.title + ')' : ''));
+        if (r.enabled) {
+            valueEl.tabIndex = 0;
+        } else {
+            valueEl.setAttribute('aria-disabled', 'true');
+        }
 
         var rightBtn = document.createElement('button');
         rightBtn.type = 'button';
@@ -1325,13 +1394,61 @@ function segmentReportingCreateOffsetModal(config) {
         rightBtn.style.cssText = 'padding: 0.1em 0.6em; font-size: 1.1em;';
 
         function refresh() {
-            valueEl.textContent = r.display();
+            var text = r.display();
+            valueEl.textContent = text;
+            valueEl.setAttribute('aria-valuetext', text);
+            var now = r.valueNow();
+            if (now != null) {
+                valueEl.setAttribute('aria-valuenow', String(now));
+            } else {
+                valueEl.removeAttribute('aria-valuenow');
+            }
+            var min = r.valueMin();
+            if (min != null) {
+                valueEl.setAttribute('aria-valuemin', String(min));
+            } else {
+                valueEl.removeAttribute('aria-valuemin');
+            }
             leftBtn.disabled = !r.enabled || r.leftDisabled();
         }
 
         if (r.enabled) {
-            leftBtn.addEventListener('click', function () { r.step(-1); refreshAll(); });
-            rightBtn.addEventListener('click', function () { r.step(1); refreshAll(); });
+            leftBtn.addEventListener('click', function () { r.step(-1, STEP); refreshAll(); valueEl.focus(); });
+            rightBtn.addEventListener('click', function () { r.step(1, STEP); refreshAll(); valueEl.focus(); });
+
+            // Arrow-key nudging, scoped to this focused spinbutton only (never
+            // document/window level), so it cannot conflict with the Emby
+            // dashboard shell. ARIA-conventional direction: Up/Right = later,
+            // Down/Left = earlier. Shift = coarse 1s step; PageUp/Down = 5s.
+            // preventDefault fires only when the handler actually consumes the
+            // key, leaving Tab and everything else to the browser.
+            valueEl.addEventListener('keydown', function (e) {
+                var dir = 0;
+                var stepTicks = e.shiftKey ? SEGMENT_REPORTING_OFFSET_COARSE_STEP_TICKS : STEP;
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'ArrowRight':
+                        dir = 1;
+                        break;
+                    case 'ArrowDown':
+                    case 'ArrowLeft':
+                        dir = -1;
+                        break;
+                    case 'PageUp':
+                        dir = 1;
+                        stepTicks = SEGMENT_REPORTING_OFFSET_PAGE_STEP_TICKS;
+                        break;
+                    case 'PageDown':
+                        dir = -1;
+                        stepTicks = SEGMENT_REPORTING_OFFSET_PAGE_STEP_TICKS;
+                        break;
+                    default:
+                        return; // not a key we handle; let it bubble
+                }
+                e.preventDefault();
+                r.step(dir, stepTicks);
+                refreshAll();
+            });
         } else {
             leftBtn.disabled = true;
             rightBtn.disabled = true;
@@ -1379,9 +1496,60 @@ function segmentReportingCreateOffsetModal(config) {
 
     var applyInFlight = false;
     function close() {
+        dialog.removeEventListener('keydown', onDialogKeydown);
         overlay.remove();
+        // Return focus to whatever opened the dialog (issue #133, M3).
+        if (triggerEl && typeof triggerEl.focus === 'function' && document.contains(triggerEl)) {
+            triggerEl.focus();
+        }
         if (config.onClose) { config.onClose(); }
     }
+
+    // Collect the dialog's focusable controls for the focus trap. Recomputed on
+    // each Tab so disabled buttons (e.g. a left-nudge at the floor) are skipped.
+    function focusableEls() {
+        var nodes = dialog.querySelectorAll(
+            'button:not([disabled]), [role="spinbutton"][tabindex="0"], a[href], input:not([disabled])'
+        );
+        return Array.prototype.slice.call(nodes);
+    }
+
+    // Dialog-scoped key handling (issue #133, M3):
+    //   - Escape cancels (unless an apply is in flight).
+    //   - Enter applies, EXCEPT when focus is on a button (let the button's own
+    //     activation handle Enter/Space) so Enter on Cancel does not apply.
+    //   - Tab / Shift+Tab is trapped within the dialog.
+    // Arrow keys are intentionally NOT handled here; they are consumed by the
+    // focused spinbutton's own listener, so this never interferes with nudging.
+    function onDialogKeydown(e) {
+        if (e.key === 'Escape') {
+            if (applyInFlight) { return; }
+            e.preventDefault();
+            close();
+            return;
+        }
+        if (e.key === 'Enter') {
+            var tag = (e.target.tagName || '').toLowerCase();
+            if (tag === 'button') { return; } // let the focused button activate
+            e.preventDefault();
+            applyBtn.click();
+            return;
+        }
+        if (e.key === 'Tab') {
+            var els = focusableEls();
+            if (!els.length) { return; }
+            var first = els[0];
+            var last = els[els.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
+            }
+        }
+    }
+    dialog.addEventListener('keydown', onDialogKeydown);
 
     cancelBtn.addEventListener('click', function () { if (applyInFlight) { return; } close(); });
     overlay.addEventListener('click', function (e) { if (applyInFlight) { return; } if (e.target === overlay) { close(); } });
@@ -1407,6 +1575,12 @@ function segmentReportingCreateOffsetModal(config) {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
+    // Initial focus into the dialog (issue #133, M3): the first enabled
+    // spinbutton if any, otherwise the Apply button, so a keyboard user lands
+    // inside the modal rather than behind it.
+    var firstSpin = dialog.querySelector('[role="spinbutton"][tabindex="0"]');
+    (firstSpin || applyBtn).focus();
+
     return { close: close };
 }
 
@@ -1418,6 +1592,10 @@ function segmentReportingShowOffsetSnackbar(message, onUndo) {
 
     var bar = document.createElement('div');
     bar.className = 'segment-offset-snackbar';
+    // role=status (issue #133, M3) so screen readers announce the result, with a
+    // keyboard-focusable Undo control (a real <button>, see below).
+    bar.setAttribute('role', 'status');
+    bar.setAttribute('aria-live', 'polite');
     bar.style.cssText = 'position: fixed; bottom: 1.5em; left: 50%; transform: translateX(-50%); background: #323232; color: #fff; padding: 0.75em 1.25em; border-radius: 4px; box-shadow: 0 2px 10px rgba(0,0,0,0.4); z-index: 1100; display: flex; align-items: center; gap: 1em;';
 
     var msgEl = document.createElement('span');

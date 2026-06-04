@@ -16,6 +16,13 @@ pre-commit:
       glob: "segment_reporting/Pages/*.js"
       exclude: "*.min.js"
       run: npx --prefix segment_reporting eslint --config segment_reporting/eslint.config.mjs {staged_files}
+    html-validate:
+      # Static a11y/WCAG lint on the embedded plugin pages. Catches missing form
+      # labels, bad ARIA, duplicate ids, missing img alt, table-header scope, etc.
+      # Runtime-only checks (color contrast) are covered by scripts/axe-a11y.mjs,
+      # a local UAT-only tool that is not wired into this gate.
+      glob: "segment_reporting/Pages/*.html"
+      run: npx --prefix segment_reporting html-validate --config segment_reporting/.htmlvalidate.json {staged_files}
     whitespace:
       run: git diff --cached --check
     gitleaks:

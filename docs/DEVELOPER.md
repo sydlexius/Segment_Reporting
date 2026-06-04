@@ -1755,8 +1755,8 @@ call that backs both per-row and bulk apply/undo.
 
 | Function | Description |
 |----------|-------------|
-| `createOffsetModal(config)` | Builds and returns the offset adjustment modal DOM element. `config` describes which marker rows to show (intro, introEnd, credits) and their current tick values. The modal renders left/right arrow buttons for each row; arrows that would produce a negative tick are disabled. |
-| `showOffsetSnackbar(message, onUndo)` | Displays a transient snackbar with the given message and an **Undo** button; auto-dismisses after 12 seconds (12000 ms). Calls `onUndo()` if the user clicks Undo before it dismisses. |
+| `createOffsetModal(config)` | Builds and returns the offset adjustment modal DOM element. `config` describes which marker rows to show (intro, introEnd, credits) and their current tick values. The modal renders left/right arrow buttons for each row; arrows that would produce a negative tick are disabled. It is a real ARIA modal (`role="dialog"`, `aria-modal="true"`, `aria-labelledby` the heading) with a focus trap, initial focus into the dialog, and focus return to the trigger on close. Each adjustable value is a `role="spinbutton"` (with `aria-valuenow` / `aria-valuetext` / `aria-valuemin`) that accepts arrow-key nudging (see Keyboard Shortcuts below). Enter applies, Escape cancels. |
+| `showOffsetSnackbar(message, onUndo)` | Displays a transient snackbar (`role="status"`) with the given message and a keyboard-focusable **Undo** button; auto-dismisses after 12 seconds (12000 ms). Calls `onUndo()` if the user clicks (or activates via keyboard) Undo before it dismisses. |
 | `buildBulkSetBody(items)` | Accepts an array of objects (each with `itemId`, `introStartTicks`, `introEndTicks`, `creditsStartTicks`; null means untouched) and constructs the comma-separated query-string parameters expected by `POST /segment_reporting/bulk_set_segments`. |
 | `applyBulkSet(items)` | Calls `buildBulkSetBody`, posts to `bulk_set_segments`, and returns a Promise resolving to the `{ succeeded, failed, errors }` response. Used by both the single-item modal Apply path and the multi-item bulk Apply path. |
 
@@ -1804,6 +1804,43 @@ accessible alternative.
   `aria-expanded`, `aria-controls`, `aria-activedescendant`); the dropdown is
   `role="listbox"` with `role="option"` items. Chips expose a keyboard-operable
   remove button (`role="button"`, `aria-label="Remove ..."`).
+
+#### Keyboard Shortcuts (issue #133)
+
+Keyboard support is scoped to the focused control - there are no document- or
+window-level handlers, so nothing conflicts with the Emby dashboard shell, and
+`preventDefault()` is called only when a handler actually consumes the key.
+
+**Offset adjustment dialog (`createOffsetModal`).** Each marker value is an ARIA
+spinbutton in the dialog's tab order:
+
+| Key | Action |
+|-----|--------|
+| Tab / Shift+Tab | Move focus between marker spinbuttons and the dialog buttons (focus is trapped inside the dialog) |
+| ArrowUp / ArrowRight | Nudge the focused marker later by the fine step (250 ms) |
+| ArrowDown / ArrowLeft | Nudge the focused marker earlier by the fine step (250 ms) |
+| Shift+Arrow | Coarse nudge (1 s) |
+| PageUp / PageDown | Page nudge (5 s, later / earlier) |
+| Enter | Apply (unless focus is on a button, which activates normally) |
+| Escape | Cancel |
+
+Step sizes are hardcoded constants in `segment_reporting_helpers.js`
+(`SEGMENT_REPORTING_OFFSET_STEP_TICKS` = 250 ms,
+`SEGMENT_REPORTING_OFFSET_COARSE_STEP_TICKS` = 1 s,
+`SEGMENT_REPORTING_OFFSET_PAGE_STEP_TICKS` = 5 s), not user settings. All marker
+nudging routes through this dialog (a single Apply/Undo commit path); in-table
+nudging is intentionally not provided. Arrow keys are never captured on text
+inputs, `<select>`, or the Custom Query combobox/listbox.
+
+**Inline editor (`createInlineEditor`).** While editing a row's time fields,
+Enter saves the row and Escape cancels. Arrow keys are deliberately left to the
+native text caret (they are not captured), so editing within a field behaves
+normally.
+
+**Deferred.** Milestone M4 (in-table roving tabindex on marker rows) and M5
+(page-level / global shortcuts) are out of scope for this change and tracked as a
+follow-up; the implemented surface is M1 (spinbutton nudging), M2 (inline-editor
+Enter/Escape), and M3 (modal dialog + focusable snackbar Undo).
 
 ---
 
@@ -2486,6 +2523,65 @@ build in CI and the local pre-push gate.
 
 The same validators are also fuzzed with SharpFuzz (Docker, local-only); see
 [Fuzzing the SQL Validators](#fuzzing-the-sql-validators-docker-manual) below.
+
+### Accessibility (a11y) Testing
+
+The plugin targets WCAG 2.1 AA. Accessibility is checked in two tiers, a static
+tier in the gate and a runtime tier run locally against a real Emby.
+
+**Static tier - html-validate (CI + pre-commit gate).** `html-validate` lints the
+embedded plugin pages (`segment_reporting/Pages/*.html`) for the structural
+ARIA/WCAG issues that are visible in the markup: missing form labels, misused or
+invalid ARIA, duplicate ids, missing `<img>` alt text, missing table-header
+`scope`, and broken `aria-*` references. The ruleset lives in
+`segment_reporting/.htmlvalidate.json` (extends `html-validate:recommended` plus
+the relevant `wcag/*` rules). Run it with:
+
+```bash
+npm run lint:html --prefix segment_reporting    # or: cd segment_reporting && npm run lint:html
+```
+
+It is wired into both the lefthook **pre-commit** stage (the `html-validate`
+command, on staged `Pages/*.html`) and the CI **build** job (the "Lint HTML
+accessibility" step), and is also run by `scripts/pre-push-gate.sh` so a local
+`make gate` matches CI. Two `html-validate:recommended` rules are deliberately
+turned off in the config because they are false positives for this codebase, not
+real defects: `prefer-native-element` (the pages use `role="main"` on a `<div>`
+because the Emby SPA shell already provides the `<main>` landmark, and sortable
+`<th>` headers use `role="button"` rather than a nested native `<button>`) and
+`element-permitted-content` (Emby plugin pages legitimately inline a `<style>`
+block inside the page `<div>` fragment).
+
+**Runtime tier - axe-core (local / UAT only).** Color contrast and other checks
+that can only be evaluated against rendered, themed, data-loaded pages are not
+statically detectable, so they are covered by `scripts/axe-a11y.mjs`. It reuses
+the same SPA login and hash-route navigation as `scripts/capture-screenshots.mjs`,
+drives each top-level plugin page in headless Chromium, runs `@axe-core/playwright`
+with the WCAG 2.1 AA tag set, and (optionally, with `AXE_TREE=1`) dumps the
+accessibility tree. Because it needs a running Emby server and an authenticated
+user session, it is **local/UAT-only and intentionally NOT part of the blocking
+CI gate** (same boundary as the screenshot tooling). Run it with:
+
+```bash
+npm run a11y:axe --prefix segment_reporting
+# or, against the UAT Emby:
+CAPTURE_TARGET=uat node scripts/axe-a11y.mjs
+# subset of pages, plus accessibility-tree dump:
+AXE_ONLY=settings,about AXE_TREE=1 node scripts/axe-a11y.mjs
+```
+
+It exits non-zero if any audited page reports a violation, printing the rule,
+impact, target selector, and failure summary for each.
+
+> **Color-contrast note (issue #132).** axe flagged serious color-contrast
+> violations on the Dashboard, Custom Query, Settings, and About pages. The
+> low-opacity descriptive text on Custom Query, Settings, and About was raised to
+> a higher opacity (a strictly contrast-improving, theme-independent change) in
+> the page markup. The remaining cases use `color: inherit` (the live Emby theme
+> supplies the foreground/background pair), so the exact contrast ratio can only
+> be confirmed at runtime with `npm run a11y:axe` against a themed Emby; re-run it
+> after any change to a page's muted-text styling to confirm AA is met in the
+> active theme.
 
 ### Concurrency Stress (UAT, manual)
 

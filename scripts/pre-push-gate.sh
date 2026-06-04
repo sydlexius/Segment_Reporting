@@ -59,4 +59,11 @@ echo "=== JavaScript lint (npm run lint:js) ==="
 npm run lint:js --prefix "$NPM_PREFIX"
 
 echo ""
+echo "=== HTML accessibility lint (npm run lint:html) ==="
+# Static a11y/WCAG check on the embedded pages (missing labels, bad ARIA,
+# duplicate ids, missing img alt, etc). Runtime contrast checks (axe) are a
+# local UAT-only tool and are intentionally not part of this gate.
+npm run lint:html --prefix "$NPM_PREFIX"
+
+echo ""
 echo "All pre-push checks passed (matches CI build job)."
