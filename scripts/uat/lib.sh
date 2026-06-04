@@ -119,7 +119,7 @@ jqf() { jq -r "$1"; }
 # prefix (instead of by exact name) is what lets the seed grow or shrink the set
 # of synthetic libraries without leaving orphans behind.
 delete_uat_libraries() {
-    local prefix="${1:-SR-UAT}" id name
+    local prefix="${1:-SR-UAT}" id name status
     sr_get /emby/Library/VirtualFolders '' \
         | jq -r --arg p "$prefix" '
             map(select((.Name // "") | startswith($p)))
@@ -127,8 +127,12 @@ delete_uat_libraries() {
     | while IFS=$'\t' read -r id name; do
         [ -n "$id" ] || continue
         log "Removing library '$name' (id=$id)"
-        curl -s -o /dev/null -X DELETE -H "X-Emby-Token: ${API_KEY}" \
-            "${BASE_URL}/emby/Library/VirtualFolders?id=${id}" || true
+        status="$(curl -s -o /dev/null -w '%{http_code}' "${SR_CURL_OPTS[@]}" -X DELETE \
+            -H "X-Emby-Token: ${API_KEY}" \
+            "${BASE_URL}/emby/Library/VirtualFolders?id=${id}" || echo "000")"
+        if [ "$status" != "204" ] && [ "$status" != "404" ]; then
+            log "WARN: failed to remove library '$name' (id=$id, status=$status)"
+        fi
     done
 }
 

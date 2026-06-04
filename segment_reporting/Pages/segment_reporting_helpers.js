@@ -1478,8 +1478,16 @@ function segmentReportingAnnounce(view, message) {
     if (!view || !message) return;
     var region = segmentReportingGetLiveRegion(view);
     if (!region) return;
+    // Cancel any pending announcement so back-to-back calls can't fire stale text
+    // after a newer message (the clear-then-set delay otherwise races).
+    if (region._srAnnounceTimer) {
+        clearTimeout(region._srAnnounceTimer);
+    }
     region.textContent = '';
-    setTimeout(function () { region.textContent = message; }, 60);
+    region._srAnnounceTimer = setTimeout(function () {
+        region.textContent = message;
+        region._srAnnounceTimer = null;
+    }, 60);
 }
 
 // Monotonic counter for synthesizing canvas ids when a chart canvas has none,
@@ -1511,6 +1519,10 @@ function segmentReportingDescribeChart(canvas, ariaLabel, describeEl) {
         describeEl.style.cssText = SEGMENT_REPORTING_SR_ONLY_STYLE;
         canvas.parentNode.appendChild(describeEl);
         canvas.setAttribute('aria-describedby', describeId);
+    } else {
+        // No description element: drop any stale aria-describedby so the canvas
+        // does not reference an id we just removed (or never created).
+        canvas.removeAttribute('aria-describedby');
     }
 }
 

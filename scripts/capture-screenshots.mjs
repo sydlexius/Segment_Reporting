@@ -62,10 +62,18 @@ const SCREENSHOTS_DIR = process.env.SCREENSHOTS_DIR
 
 const EMBY_URL = process.env.EMBY_URL
     || (UAT ? process.env.EMBY_UAT_URL : undefined)
-    || 'http://localhost:8096';
+    || (!UAT ? 'http://localhost:8096' : undefined);
 const API_KEY = process.env.EMBY_API_KEY || (UAT ? process.env.EMBY_UAT_API_KEY : undefined);
 const EMBY_USER = process.env.EMBY_USER || (UAT ? process.env.EMBY_UAT_USER : undefined);
 const EMBY_PASSWORD = process.env.EMBY_PASSWORD || (UAT ? process.env.EMBY_UAT_PASSWORD : '');
+
+// Fail closed in UAT mode: anonymization is disabled there, so a missing URL must
+// never silently fall back to localhost (which could be a non-UAT server holding
+// real library names that would then be captured unanonymized).
+if (UAT && !EMBY_URL) {
+    console.error('Error: CAPTURE_TARGET=uat requires EMBY_URL or EMBY_UAT_URL to be set explicitly.');
+    process.exit(1);
+}
 
 if (!EMBY_USER) {
     const userVar = UAT ? 'EMBY_USER or EMBY_UAT_USER' : 'EMBY_USER';

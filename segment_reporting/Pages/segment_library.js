@@ -250,6 +250,18 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             });
         }
 
+        // Header label text for screen-reader announcements, excluding the
+        // visual .sort-arrow glyph (which would otherwise be read verbosely).
+        function getSortHeaderLabel(th, fallback) {
+            if (!th) return (fallback || '').trim();
+            var clone = th.cloneNode(true);
+            var arrow = clone.querySelector('.sort-arrow');
+            if (arrow && arrow.parentNode) {
+                arrow.parentNode.removeChild(arrow);
+            }
+            return (clone.textContent || fallback || '').trim();
+        }
+
         function handleSeriesSortClick(e) {
             var th = e.target.closest('th[data-sort]');
             if (!th) return;
@@ -263,7 +275,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             applySeriesSorting();
             updateSeriesSortIndicators();
             updateSeriesTable();
-            helpers.announce(view, 'Series sorted by ' + (th.textContent || col).trim() +
+            helpers.announce(view, 'Series sorted by ' + getSortHeaderLabel(th, col) +
                 ', ' + (sortAscending ? 'ascending' : 'descending') + '.');
         }
 
@@ -323,7 +335,7 @@ define([Dashboard.getConfigurationResourceUrl('segment_reporting_helpers.js')], 
             applyMovieSorting();
             updateMovieSortIndicators();
             updateMovieTable();
-            helpers.announce(view, 'Movies sorted by ' + (th.textContent || col).trim() +
+            helpers.announce(view, 'Movies sorted by ' + getSortHeaderLabel(th, col) +
                 ', ' + (movieSortAscending ? 'ascending' : 'descending') + '.');
         }
 

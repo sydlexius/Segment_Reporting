@@ -77,6 +77,23 @@ MOVIE_NAMES=(
 EP_DURATIONS=(600 720 900 1080 1320)
 MOVIE_DURATIONS=(1500 1800 2100 2400)
 
+# --- Validate tunables -----------------------------------------------------
+# These env knobs are part of the script's public contract, so fail fast on
+# values the generation logic can't honor rather than producing modulo-by-zero
+# errors, a silently-wrong shape, or pool wrap that overwrites earlier folders.
+for v in SR_UAT_SHOWS_PER_LIB SR_UAT_MAX_SEASONS SR_UAT_MAX_EPISODES \
+         SR_UAT_MOVIES_PER_LIB SR_UAT_DUP_ROOTS; do
+    [[ ${!v} =~ ^[0-9]+$ ]] || { log "FATAL: $v must be a non-negative integer (got '${!v}')"; exit 1; }
+done
+# MAX_SEASONS feeds a modulo (idx % SR_UAT_MAX_SEASONS), so 0 would divide by zero.
+[ "$SR_UAT_MAX_SEASONS" -ge 1 ] || { log "FATAL: SR_UAT_MAX_SEASONS must be >= 1"; exit 1; }
+# Episode count floors at 4 (4..MAX_EPISODES), so anything below 4 is misleading.
+[ "$SR_UAT_MAX_EPISODES" -ge 4 ] || { log "FATAL: SR_UAT_MAX_EPISODES must be >= 4"; exit 1; }
+# Per-library counts index into fixed title pools; exceeding the pool wraps and
+# overwrites earlier folders instead of creating distinct content.
+[ "$SR_UAT_SHOWS_PER_LIB" -le "${#SHOW_NAMES[@]}" ] || { log "FATAL: SR_UAT_SHOWS_PER_LIB exceeds title pool size (${#SHOW_NAMES[@]})"; exit 1; }
+[ "$SR_UAT_MOVIES_PER_LIB" -le "${#MOVIE_NAMES[@]}" ] || { log "FATAL: SR_UAT_MOVIES_PER_LIB exceeds title pool size (${#MOVIE_NAMES[@]})"; exit 1; }
+
 # --- ffmpeg clip helper ----------------------------------------------------
 # clip <out.mp4> <seconds>
 clip() {
