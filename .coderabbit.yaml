@@ -1,0 +1,5 @@
+# Disable CodeRabbit auto-review to honor this org's manual-reviews-only policy.
+# Manual `@coderabbitai review` still triggers a full review on demand.
+reviews:
+  auto_review:
+    enabled: false
