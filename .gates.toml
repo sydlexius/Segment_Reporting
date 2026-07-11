@@ -1,0 +1,12 @@
+# Gate definition read by the cc-orchestrator gate-runner (prep-pr / handle-review /
+# review-stack). Delegates to the repo's own CI-parity gate: `make gate` ->
+# `scripts/pre-push-gate.sh` (build -warnaserror -> dotnet test -> dotnet format
+# --verify-no-changes -> eslint Pages -> html-validate Pages).
+#
+# PREREQ: the default gate builds the 4.10 Emby ABI, which needs the reference DLLs in
+# segment_reporting/embylibs/ (gitignored; fetched by CI from a GitHub release). A fresh
+# clone or git worktree must have them present. This intentionally mirrors the repo's
+# design -- the pre-push gate and CI build the 4.10 ABI; only the pre-commit dotnet-format
+# check uses the ABI-independent 4.9 Emby SDK (see lefthook.yml).
+[prep_pr]
+gate = "make gate"

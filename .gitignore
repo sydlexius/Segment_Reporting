@@ -44,3 +44,6 @@ tests/segment_reporting.Fuzz/testcases/
 ## diagnostic builds (proprietary; never commit). See RCA checkpoint memory.
 embylibs/
 segment_reporting/embylibs/
+
+# Orchestrate session checkpoint (machine-local, transient; never committed)
+/SESSION-STATE.md
