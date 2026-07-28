@@ -78,16 +78,51 @@ jobs:
             exit 0
           fi
 
-          git config user.name "segrep-emby-bump[bot]"
-          git config user.email "segrep-emby-bump[bot]@users.noreply.github.com"
-          git checkout -b "$branch"
-          printf '%s\n' "$TARGET" > .emby-version
-          git add .emby-version
-          git commit -m "ci: bump pinned Emby version to ${TARGET}
+          # The branch and commit are created through the REST Contents API
+          # rather than git push, because main requires signed commits (see the
+          # "Protect main" ruleset). A commit made by `git commit` on a runner
+          # is unsigned - the App token authenticates the push, not the commit
+          # object - so the PR opened fine and was then unmergeable (#180).
+          # Squash-only merging does not rescue this: required_signatures is
+          # evaluated against the branch's own commits, not the squash result,
+          # so #180 stayed BLOCKED with every check green and the branch current.
+          #
+          # GitHub signs a commit it creates through the API only when the
+          # caller is an App installation token or the web flow; the same call
+          # made with a PAT is left unsigned, so this depends on GH_TOKEN being
+          # the minted App token above. This is also why dependabot's commits
+          # in this repo show committer "GitHub" and verified: true.
+          #
+          # Do not swap this for the low-level Git Data API (POST /git/commits):
+          # that writes the commit object verbatim and does not sign it.
+          default_branch=$(gh api "repos/${REPO}" --jq '.default_branch')
+          base_sha=$(gh api "repos/${REPO}/git/ref/heads/${default_branch}" --jq '.object.sha')
 
-          ${REASON}"
+          # A branch can survive a closed-without-merge PR. Reset it to the
+          # current base so the bump lands on today's main, not a stale tip.
+          if gh api "repos/${REPO}/git/ref/heads/${branch}" >/dev/null 2>&1; then
+            # -f keeps sha a string; -F would coerce a value that parses as a
+            # number, so the two flags are not interchangeable here.
+            gh api -X PATCH "repos/${REPO}/git/refs/heads/${branch}" \
+              -f sha="$base_sha" -F force=true >/dev/null
+          else
+            gh api -X POST "repos/${REPO}/git/refs" \
+              -f ref="refs/heads/${branch}" -f sha="$base_sha" >/dev/null
+          fi
 
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git" "$branch"
+          file_sha=$(gh api "repos/${REPO}/contents/.emby-version?ref=${base_sha}" --jq '.sha')
+          content=$(printf '%s\n' "$TARGET" | base64 -w0)
+
+          # Built with printf rather than an inline heredoc-style string: a
+          # literal newline inside the -f value would carry this block's YAML
+          # indentation into the commit message body.
+          message=$(printf 'ci: bump pinned Emby version to %s\n\n%s\n' "$TARGET" "$REASON")
+
+          gh api -X PUT "repos/${REPO}/contents/.emby-version" \
+            -f message="$message" \
+            -f content="$content" \
+            -f branch="$branch" \
+            -f sha="$file_sha" >/dev/null
 
           body_file="$(mktemp)"
           {
