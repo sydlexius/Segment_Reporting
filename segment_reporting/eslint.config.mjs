@@ -1,5 +1,11 @@
 import noUnsanitized from "eslint-plugin-no-unsanitized";
 
+// Scope note (#177): this config covers the browser-side plugin pages only.
+// The repo-root Node modules (scripts/*.mjs, tests/js/*.mjs) are deliberately
+// NOT linted. Covering them needs a separate Node-globals block and a lint
+// invocation reaching outside segment_reporting/, which buys little while those
+// files stay small and are now exercised by `node --test` in the gate and CI.
+// Revisit if repo-root JS grows beyond the version-watcher helpers.
 export default [
     {
         ignores: ["Pages/*.min.js", "node_modules/**", "scripts/**"]
