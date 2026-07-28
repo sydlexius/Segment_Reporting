@@ -78,7 +78,7 @@ can always run the underlying command shown below by hand.
 | `make format` | `dotnet format` | Apply C# code formatting in place. |
 | `make format-check` | `dotnet format --verify-no-changes` | Verify formatting without writing changes (matches CI). |
 | `make lint` | `npm run lint:js` | ESLint the page JavaScript. |
-| `make gate` | `bash scripts/pre-push-gate.sh` | Full CI-parity pre-push gate (Release build + format-check + lint). |
+| `make gate` | `bash scripts/pre-push-gate.sh` | Full CI-parity pre-push gate (Release build + format-check + lint + JS unit tests). |
 | `make hooks` | `bash scripts/check-hooks.sh` | Verify the git hooks are wired to lefthook. |
 | `make hooks-install` | `npx lefthook install` + `fix-hooks.mjs` | Install the pre-commit and pre-push git hooks. |
 | `make docs-deps` | `pip install -r dev-requirements.txt` | Install the docs toolchain (ProperDocs + Material). |
@@ -2413,8 +2413,13 @@ branches. Runs on `ubuntu-latest`.
    --no-build` runs the xUnit suite (see the Testing section)
 10. **Check code formatting** -- `dotnet format --verify-no-changes` ensures
    code style matches `.editorconfig` rules
-11. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
-12. **Verify 4.9 ABI also compiles** -- `dotnet build ... -p:EmbyAbi=4.9` so a PR
+11. **Lint JavaScript** -- `npm run lint:js` (ESLint over `Pages/*.js`)
+12. **Lint HTML accessibility** -- `npm run lint:html` (html-validate over
+    `Pages/*.html`)
+13. **Run JavaScript tests** -- `node --test 'tests/js/*.test.mjs'` runs the
+    node:test suite covering the repo-root build tooling (see the Testing section)
+14. **Upload artifact** -- the compiled DLL is uploaded as a build artifact
+15. **Verify 4.9 ABI also compiles** -- `dotnet build ... -p:EmbyAbi=4.9` so a PR
     that breaks the 4.9 channel fails CI (the default gate builds the 4.10 ABI)
 
 **Key point:** JS minification happens *before* `dotnet build` so the minified
@@ -2615,6 +2620,30 @@ build in CI and the local pre-push gate.
 
 The same validators are also fuzzed with SharpFuzz (Docker, local-only); see
 [Fuzzing the SQL Validators](#fuzzing-the-sql-validators-docker-manual) below.
+
+### JavaScript Unit Tests (node:test)
+
+`tests/js/` covers the repo-root Node modules that support the build and CI
+tooling, currently `scripts/emby-version.mjs`: version parsing, four-part
+numeric comparison (a string sort would place `4.10.0.20` below `4.10.0.9`),
+release-line filtering, and the classification branches that decide whether a
+pinned Emby version is current, stale, or deleted upstream. Run them with:
+
+```bash
+node --test 'tests/js/*.test.mjs'
+```
+
+Quote the glob and do not pass a directory: `node --test tests/js/` throws
+`ERR_UNSUPPORTED_DIR_IMPORT` on Node 22 and 24.
+
+The suite runs in `scripts/pre-push-gate.sh` (so `make gate` and the lefthook
+pre-push stage both enforce it) and as the "Run JavaScript tests" step in the CI
+build job, so enforcement does not depend on local hooks. It previously ran in
+none of them (#177), which meant a regression in the version watcher could land
+with every gate green.
+
+These files are deliberately outside ESLint's scope; see the scope note at the
+top of `segment_reporting/eslint.config.mjs`.
 
 ### Accessibility (a11y) Testing
 

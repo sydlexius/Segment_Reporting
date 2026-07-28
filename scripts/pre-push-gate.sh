@@ -6,7 +6,8 @@
 #
 # CI runs, in order: minify JS, restore deps, `dotnet build <sln> -c Release
 # -warnaserror`, `dotnet test <sln> -c Release --no-build`,
-# `dotnet format --verify-no-changes`, `npm run lint:js`. A
+# `dotnet format --verify-no-changes`, `npm run lint:js`,
+# `npm run lint:html`, `node --test 'tests/js/*.test.mjs'`. A
 # Release build already minifies the JS (MinifyJS target, BeforeTargets
 # CoreCompile) and restores the originals (RestoreJS target, AfterTargets
 # Build) on its own, so we do not minify separately. The catch: RestoreJS only
@@ -64,6 +65,18 @@ echo "=== HTML accessibility lint (npm run lint:html) ==="
 # duplicate ids, missing img alt, etc). Runtime contrast checks (axe) are a
 # local UAT-only tool and are intentionally not part of this gate.
 npm run lint:html --prefix "$NPM_PREFIX"
+
+echo ""
+echo "=== JavaScript unit tests (node --test) ==="
+# Covers the pure-logic Node modules under scripts/ (Emby version parsing,
+# four-part numeric comparison, release classification). Without this step the
+# suite ran nowhere automatically, so a regression in the version watcher would
+# have left every gate green (#177).
+#
+# A quoted glob, not a directory: `node --test tests/js/` throws
+# ERR_UNSUPPORTED_DIR_IMPORT on Node 22 and 24. Quoted so the glob is expanded
+# by node, not the shell.
+node --test 'tests/js/*.test.mjs'
 
 echo ""
 echo "All pre-push checks passed (matches CI build job)."
