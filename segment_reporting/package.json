@@ -18,12 +18,12 @@
     "prepare": "cd .. && npx --prefix segment_reporting lefthook install && node segment_reporting/scripts/fix-hooks.mjs"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.12.1",
+    "@axe-core/playwright": "^4.13.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-terser": "^1.0.0",
     "chart.js": "4.5.1",
-    "esbuild": "^0.28.1",
-    "eslint": "^10.8.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.8.1",
     "eslint-plugin-no-unsanitized": "^4.1.5",
     "html-validate": "^11.6.2",
     "lefthook": "^2.1.10",
