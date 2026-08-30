@@ -3,9 +3,9 @@
 # still compiles, and leaving the pipeline red helps nobody. Routine and stale
 # bumps are deliberately excluded and wait for human review.
 #
-# This mirrors the existing dependabot-merge.yml workflow_run pattern rather
-# than using gh pr merge --auto, so the readiness conditions stay explicit and
-# reviewable in one place.
+# This uses an explicit workflow_run pattern rather than gh pr merge --auto, so
+# the readiness conditions (dead pin, green build) stay explicit and reviewable
+# in one place. Dependabot PRs, by contrast, now use native auto-merge.
 
 name: Merge urgent Emby pin bumps
 
