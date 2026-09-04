@@ -16,5 +16,5 @@
 # of truth). C#/.NET and Node tooling are managed via the csproj and
 # segment_reporting/package.json, not here.
 properdocs==1.6.7
-mkdocs-material==9.7.6
+mkdocs-material==9.7.7
 mkdocs-git-revision-date-localized-plugin==1.5.3
