@@ -4,16 +4,21 @@
 # MkDocs 1.x) using the Material for MkDocs theme. ProperDocs is used instead of
 # MkDocs because its dev server's live-reload works reliably on macOS, and MkDocs
 # core has been unmaintained since 2024. The Material theme is in maintenance
-# mode (security/bug fixes through ~Nov 2026); if needed the site can later move
-# to Zensical, which reads this same config natively.
+# mode (security fixes through 2027-05-05); the site is planned to move to
+# Zensical, which reads this same config (#238).
+#
+# Requires Python 3.11+ (the mkdocs-material 9.8.0 floor); CI uses 3.12.
 #
 # Local preview (live-reload):
 #   uv run --with-requirements dev-requirements.txt properdocs serve
 # or:
 #   pip install -r dev-requirements.txt && properdocs serve
 #
-# CI (.github/workflows/pages.yml) installs from this same file (single source
-# of truth). C#/.NET and Node tooling are managed via the csproj and
+# This file is the source of truth for local installs (`make docs-deps`). CI
+# (.github/workflows/pages.yml) installs the hash-pinned dev-requirements.lock
+# generated from it; regenerate the lock after any change here with:
+#   uv pip compile --generate-hashes --universal dev-requirements.txt -o dev-requirements.lock
+# C#/.NET and Node tooling are managed via the csproj and
 # segment_reporting/package.json, not here.
 properdocs==1.6.7
 mkdocs-material==9.8.0

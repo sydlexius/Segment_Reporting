@@ -34,7 +34,7 @@ workflow you are touching requires.
 |------|---------|---------|
 | .NET 8 runtime | `make test` (`dotnet test`) | Runs the xUnit suite. The test project targets `net8.0` with `RollForward`, so a newer runtime (9 or 10) also works; the 8.0 runtime is only needed if you have nothing newer. |
 | GNU Make | every `make` target | Runs the convenience targets in the `Makefile`. CI calls the underlying commands directly, so Make itself is never required. |
-| Python 3 + ProperDocs | `make docs`, `make docs-serve` | Builds and live-serves the documentation site. Install with `make docs-deps` (`pip install -r dev-requirements.txt`). |
+| Python 3.11+ + ProperDocs | `make docs`, `make docs-serve` | Builds and live-serves the documentation site (mkdocs-material 9.8.0 needs Python 3.11 or newer; CI uses 3.12). Install with `make docs-deps` (`pip install -r dev-requirements.txt`). |
 | Playwright + Chromium | `make screenshots` | Headless browser that captures the plugin-page screenshots (`npm install --no-save playwright && npx playwright install chromium`). |
 | ImageMagick (`magick`) | `make screenshots` | Crops the full-page captures into the feature-highlight images. |
 | lefthook | `make hooks-install` | Installs the pre-commit and pre-push git hooks (run via `npx`; declared in `segment_reporting/package.json`). |
