@@ -20,14 +20,14 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-terser": "^1.0.0",
-    "chart.js": "4.5.1",
+    "@rollup/plugin-terser": "^1.0.2",
+    "chart.js": "4.6.1",
     "esbuild": "^0.28.2",
     "eslint": "^10.13.0",
     "eslint-plugin-no-unsanitized": "^4.1.5",
-    "html-validate": "^11.16.2",
+    "html-validate": "^11.17.0",
     "lefthook": "^2.2.2",
-    "rollup": "^4.64.7",
+    "rollup": "^4.65.0",
     "sharp": "^0.35.5"
   }
 }
