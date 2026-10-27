@@ -9,4 +9,8 @@
 # design -- the pre-push gate and CI build the 4.10 ABI; only the pre-commit dotnet-format
 # check uses the ABI-independent 4.9 Emby SDK (see lefthook.yml).
 [prep_pr]
+# Cost in the machine-wide gate pool (cc-orchestrator 0.107.0; inert until a
+# [pool] budget exists in ~/.claude/gate-queue/config.toml). Measured 2026-10-26
+# against budget 10 on a 10-core Mac: gate ~1.5 cores avg.
+weight = 2
 gate = "make gate"
