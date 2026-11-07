@@ -1,5 +1,9 @@
 # Disable CodeRabbit auto-review to honor this org's manual-reviews-only policy.
 # Manual `@coderabbitai review` still triggers a full review on demand.
+# Inherit the organization CodeRabbit settings for every key not set here.
+# Without this, CodeRabbit uses ONLY this file and ignores the org config.
+inheritance: true
+
 reviews:
   auto_review:
     enabled: false
