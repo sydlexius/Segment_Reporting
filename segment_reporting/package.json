@@ -25,9 +25,9 @@
     "esbuild": "^0.28.2",
     "eslint": "^10.14.0",
     "eslint-plugin-no-unsanitized": "^4.1.5",
-    "html-validate": "^11.18.0",
+    "html-validate": "^11.21.1",
     "lefthook": "^2.2.2",
-    "rollup": "^4.68.0",
+    "rollup": "^4.68.3",
     "sharp": "^0.35.5"
   }
 }
